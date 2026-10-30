@@ -1,0 +1,158 @@
+{
+  "eyebrow": "Integrated steel manufacturing · planned development",
+  "headline": "FROM TANZANIAN IRON ORE TO HIGH-QUALITY STEEL BILLETS",
+  "introduction": "Chalinze Steel Mills Ltd is developing an integrated steel manufacturing platform designed to transform Tanzania's Run-of-Mine iron ore into high-quality steel billets through mineral beneficiation, ironmaking, advanced steelmaking and continuous casting.",
+  "valueStatement": "The integrated production model connects mineral resources with modern industrial manufacturing, with the intention of creating a domestic source of steelmaking feedstock for downstream industries.",
+  "stages": [
+    {
+      "id": "rom-ore",
+      "title": "ROM IRON ORE MINING & EXTRACTION",
+      "shortTitle": "ROM iron ore",
+      "status": "Planned input · mine and supply details require confirmation",
+      "description": "The integrated steel manufacturing journey begins with Run-of-Mine (ROM) iron ore obtained from identified mineral resources before processing and upgrading. This stage establishes the raw-material foundation for the proposed beneficiation and steelmaking processes. The available company information does not verify operating mine ownership, permits, reserves, supply agreements, or current extraction.",
+      "input": "Identified iron-ore resources (planned feed; source and supply details to confirm)",
+      "output": "Run-of-Mine iron ore for preparation",
+      "machinery": "Mining, material-handling and crushing-feed systems are conceptual; mine fleet and equipment selection are not confirmed.",
+      "operations": ["Geological resource evaluation", "Mine planning and development", "Ore extraction", "Material handling", "Grade-control planning", "Raw-material supply planning"],
+      "technical": "No ore assay, resource estimate, reserve, mine permit, production rate or supply agreement has been supplied for publication.",
+      "hotspots": [
+        { "label": "Mineral resource", "detail": "Resource identification is part of the project concept. An approved geological resource statement and supporting assays have not been supplied." },
+        { "label": "Material handling", "detail": "Ore reception and transfer toward processing are conceptual material-flow steps, not verified installed equipment." }
+      ],
+      "scene": "ore"
+    },
+    {
+      "id": "beneficiation",
+      "title": "IRON ORE BENEFICIATION & FEED PREPARATION",
+      "shortTitle": "Beneficiation & feed preparation",
+      "status": "Planned process · design details pending",
+      "description": "Following extraction, ROM iron ore is planned to undergo beneficiation and feed preparation to improve its suitability for steel manufacturing. Conceptually, valuable iron-bearing material is separated from unwanted mineral fractions and conditioned as a more consistent feedstock. The final process design remains subject to approved engineering.",
+      "input": "ROM iron ore",
+      "output": "Prepared iron-bearing feedstock (product form and specification to confirm)",
+      "machinery": "Crushing, screening, grinding, separation, conveying and storage are illustrative process categories only; final equipment selection is not confirmed.",
+      "operations": ["Crushing and screening", "Grinding and mineral liberation (route-dependent)", "Separation and concentration (design-dependent)", "Product conditioning", "Chemical and physical feedstock control", "Moisture and material-consistency management"],
+      "technical": "No ore grade, concentrate specification, recovery rate, process yield, water balance or equipment duty is asserted.",
+      "hotspots": [
+        { "label": "Size reduction", "detail": "Crushing and screening are illustrative beneficiation operations; installed equipment and sizing strategy have not been confirmed." },
+        { "label": "Mineral separation", "detail": "Separation illustrates the principle of upgrading iron-bearing material. No specific technology, recovery or concentrate grade is claimed." }
+      ],
+      "scene": "beneficiation"
+    },
+    {
+      "id": "ironmaking",
+      "title": "IRONMAKING — CONVERSION INTO METALLIC IRON",
+      "shortTitle": "Ironmaking",
+      "status": "Technology route to confirm",
+      "description": "Prepared iron feedstock enters the proposed ironmaking stage, where oxygen is removed from iron oxides to create metallic iron for steelmaking. The source material refers both to natural-gas-based Direct Reduced Iron (DRI) and to electric ironmaking configurations. The visualization therefore shows a neutral, conceptual ironmaking stage rather than selecting either route.",
+      "input": "Prepared iron-bearing feedstock; process route and reductant to confirm",
+      "output": "Metallic iron units for steelmaking (route-dependent)",
+      "machinery": "The reduction vessel, gas systems, electric systems, material handling and plant arrangement are not selected or represented as a final equipment design.",
+      "operations": ["Iron-feedstock preparation", "Reduction and oxygen removal", "Metallic iron production", "Process monitoring", "Metallurgical control", "Iron recovery and material utilisation"],
+      "technical": "Route conflict requiring company decision: the main narrative describes natural-gas DRI; an alternate diagram describes electric ironmaking. Final approved project engineering must determine the technology.",
+      "hotspots": [
+        { "label": "Process route", "detail": "Natural-gas DRI and electric ironmaking are both referenced in source material. Neither is selected by this conceptual scene." },
+        { "label": "Reduction", "detail": "Reduction represents oxygen removal from iron oxides in principle; process chemistry, equipment and reductant depend on the approved route." }
+      ],
+      "scene": "ironmaking"
+    },
+    {
+      "id": "steelmaking",
+      "title": "STEELMAKING — PRODUCING MOLTEN STEEL",
+      "shortTitle": "Steelmaking",
+      "status": "Planned process · engineering details pending",
+      "description": "Metallic iron is planned to be melted and refined into liquid steel. Steelmaking aims to control chemical composition, temperature, cleanliness and metallurgical characteristics for continuous casting. The company document discusses Electric Arc Furnace steelmaking as a proposed concept; selection, configuration and operating status require approved engineering confirmation.",
+      "input": "Metallic iron units and approved process additions (details to confirm)",
+      "output": "Liquid steel prepared for casting",
+      "machinery": "The conceptual vessel does not establish furnace selection, capacity, supplier, refractory design, ladle configuration, crane arrangement or installed equipment.",
+      "operations": ["Metallic iron charging", "Melting", "Chemical composition control", "Carbon management", "Impurity removal", "Alloying adjustments where specified", "Temperature control", "Metallurgical refining"],
+      "technical": "No steel chemistry, temperature, cycle time, yield, grade, furnace specification or production capacity is supplied.",
+      "hotspots": [
+        { "label": "Melting & refining", "detail": "Melting and refining describe process objectives; equipment, charge mix and operating parameters remain subject to approved design." },
+        { "label": "Chemistry control", "detail": "Steel composition must be defined by an approved product specification. No grade or composition is represented here." }
+      ],
+      "scene": "steelmaking"
+    },
+    {
+      "id": "continuous-casting",
+      "title": "CONTINUOUS CASTING OF STEEL BILLETS",
+      "shortTitle": "Continuous casting",
+      "status": "Planned process · product dimensions to confirm",
+      "description": "Molten steel is planned to pass through a continuous-casting system, where controlled cooling transforms liquid steel into solid billet sections. Casting, cooling and process monitoring are intended to support consistent billet formation. Machine design, casting speed and final product tolerances have not been supplied.",
+      "input": "Liquid steel",
+      "output": "Solid cast steel billets",
+      "machinery": "Ladle transfer, moulds, casting equipment, cooling infrastructure, rollers and handling are conceptual categories; no as-built plant configuration is depicted.",
+      "operations": ["Molten-steel transfer", "Mould filling", "Controlled solidification", "Cooling", "Casting-process monitoring", "Billet formation", "Dimensional consistency"],
+      "technical": "The company document lists nominal cross-sections of 130 × 130 mm and 150 × 150 mm; confirm against the final engineering and product specification before publication.",
+      "hotspots": [
+        { "label": "Mould & solidification", "detail": "The scene illustrates the conceptual liquid-to-solid transition. Mould design, cooling regime and casting parameters are not specified." },
+        { "label": "Billet dimensions", "detail": "130 × 130 mm and 150 × 150 mm are project-document references, not final approved product specifications." }
+      ],
+      "scene": "casting"
+    },
+    {
+      "id": "inspection-dispatch",
+      "title": "STEEL BILLETS — QUALITY INSPECTION & DISPATCH",
+      "shortTitle": "Inspection & dispatch",
+      "status": "Planned product · inspection framework to confirm",
+      "description": "The final primary-manufacturing stage focuses on the identification, inspection, handling, storage and dispatch of steel billets. Quality assurance is a process-wide activity, with checks planned from raw-material assessment through production monitoring and final product inspection.",
+      "input": "Cast steel billets and approved product requirements",
+      "output": "Inspected, identified billets prepared for storage or dispatch",
+      "machinery": "Inspection stations, measuring instruments, handling cranes, storage systems and dispatch equipment are representative categories only.",
+      "operations": ["Raw-material testing", "Process monitoring", "Metallurgical analysis", "Chemical-composition testing", "Dimensional inspection", "Surface-condition inspection", "Product identification and traceability", "Storage and dispatch"],
+      "technical": "No standards, certifications, testing results, grades, tolerances, lengths, stock or delivery commitments have been verified.",
+      "hotspots": [
+        { "label": "Dimensional inspection", "detail": "Dimensional checks are part of the planned quality framework. Tolerances and acceptance criteria await an approved product specification." },
+        { "label": "Identification & dispatch", "detail": "Traceability and dispatch are intended process steps. No logistics partner, storage capacity or delivery schedule is stated." }
+      ],
+      "scene": "inspection"
+    }
+  ],
+  "quality": [
+    { "stageId": "rom-ore", "title": "Incoming material", "detail": "Assess raw-material identity, physical characteristics and chemical composition against criteria approved by the project." },
+    { "stageId": "beneficiation", "title": "Prepared feedstock", "detail": "Plan monitoring of feedstock consistency, moisture and process outputs. No numerical target is supplied." },
+    { "stageId": "ironmaking", "title": "Metallurgical process", "detail": "Process monitoring and metallurgical analysis depend on the selected ironmaking route and approved engineering." },
+    { "stageId": "steelmaking", "title": "Steel chemistry", "detail": "Chemical composition, temperature and refining objectives require approved grade specifications and process design." },
+    { "stageId": "continuous-casting", "title": "Casting & dimensions", "detail": "Casting monitoring and dimensional checks support billet consistency; acceptance limits have not been supplied." },
+    { "stageId": "inspection-dispatch", "title": "Final inspection & traceability", "detail": "The planned framework includes surface inspection, product identification and traceability before storage or dispatch." }
+  ],
+  "billet": {
+    "name": "Steel billets",
+    "description": "Steel billets are the principal planned output of the primary manufacturing chain and a semi-finished feedstock for downstream steel processing facilities.",
+    "dimensions": [
+      { "label": "130 × 130 mm", "width": 130, "height": 130, "status": "Project-document reference · final engineering confirmation required" },
+      { "label": "150 × 150 mm", "width": 150, "height": 150, "status": "Project-document reference · final engineering confirmation required" }
+    ],
+    "specificationNote": "Grades, chemistry, length, weight, tolerances, standards, production volumes and availability have not been supplied. Cross-sections require final engineering confirmation."
+  },
+  "downstream": [
+    { "id": "reinforcement-bars", "name": "Reinforcement bars", "description": "A downstream rolled steel product made by reheating and rolling billet feedstock.", "applications": "Illustrative applications include reinforced construction and infrastructure.", "industries": "Construction · civil engineering · infrastructure", "model": "bar" },
+    { "id": "wire-rods", "name": "Wire rods", "description": "A downstream long product produced by rolling billet feedstock into a smaller section.", "applications": "May serve as feedstock for wire drawing and other downstream forming.", "industries": "Wire processing · manufacturing · construction", "model": "coil" },
+    { "id": "structural-sections", "name": "Structural sections", "description": "Structural shapes such as beams and channels can be produced in downstream rolling facilities.", "applications": "Structural framing and fabricated infrastructure components.", "industries": "Construction · infrastructure · fabrication", "model": "beam" },
+    { "id": "merchant-bars", "name": "Merchant bars", "description": "A broad category of downstream rolled long products made from steel billet feedstock.", "applications": "Potential feedstock for general metalworking and fabrication.", "industries": "Metal fabrication · engineering · manufacturing", "model": "rod" },
+    { "id": "industrial-components", "name": "Industrial steel components", "description": "Billets may supply downstream facilities that further process steel into industrial components.", "applications": "Components are shaped and finished by specialist downstream manufacturers.", "industries": "Mining · energy · industrial equipment", "model": "component" },
+    { "id": "fabricated-products", "name": "Fabricated steel products", "description": "Fabricators can transform processed steel sections into assemblies and finished products.", "applications": "Cut, formed, joined or finished products made by downstream operators.", "industries": "Fabrication · engineering · construction", "model": "fabrication" }
+  ],
+  "infrastructure": [
+    { "title": "Materials handling", "detail": "The proposed integrated project discusses reception, conveying, process transfer and storage. Final layouts and equipment are subject to design." },
+    { "title": "Plant utilities", "detail": "The company document outlines a planned utilities design basis. Final supply arrangements, capacities and installed status have not been verified." },
+    { "title": "Automation & control", "detail": "Automation, process monitoring and digital manufacturing are described as technology themes, not as installed or operating systems." },
+    { "title": "Logistics & dispatch", "detail": "Internal material handling, storage and product dispatch are part of the proposed scope; delivery routes and operating capacity are not confirmed." }
+  ],
+  "sustainability": [
+    { "title": "Responsible development", "detail": "Environmental, health, safety and community considerations are part of project development. No permit, assessment outcome or operating result is claimed here." },
+    { "title": "Resource stewardship", "detail": "The project brief discusses efficient use of materials, water and energy as design intentions. Quantified performance data has not been supplied." },
+    { "title": "Emissions & energy", "detail": "A low-carbon ambition appears in company materials and brand artwork; no verified emissions baseline, reduction, certification or operating performance is asserted." }
+  ],
+  "industries": [
+    { "title": "Construction & infrastructure", "detail": "Downstream steel products may serve construction and public-infrastructure applications." },
+    { "title": "Mining & mineral processing", "detail": "Steel materials can support equipment, plant and infrastructure needs in mining supply chains." },
+    { "title": "Energy & utilities", "detail": "Potential customer industries identified in company materials include energy and utility development." },
+    { "title": "Manufacturing & fabrication", "detail": "Steel processors, engineering firms and fabricators can further transform billet-derived products." }
+  ],
+  "approvalNote": "This page describes the proposed manufacturing concept. Technical routes, equipment, product specifications, project status and imagery require approval against current company and engineering information before publication.",
+  "media": {
+    "heroImage": "",
+    "heroVideo": "",
+    "stageImages": {}
+  }
+}
