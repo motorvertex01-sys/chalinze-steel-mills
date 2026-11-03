@@ -1,12 +1,13 @@
 import { lazy, Suspense, useEffect, useState } from "react";
 import { ArrowDown, ArrowRight, ArrowUpRight, MapPin, Menu, X } from "lucide-react";
 import { Link, NavLink, Navigate, Route, Routes, useLocation } from "react-router-dom";
-import { contactDetails, departments, enquiryTypes, faqs, pages, processStages, type SitePage } from "./content";
+import { contactDetails, enquiryTypes, faqs, pages, processStages, type SitePage } from "./content";
 import { applicationGallery, manufacturingGallery } from "./galleryData";
 import { ProcessGallery } from "./ProcessGallery";
 import { LeadershipPage } from "./LeadershipPage";
 import { AdminPage } from "./AdminPage";
 import { ManufacturingExperience } from "./ManufacturingExperience";
+import { useSiteConfig } from "./siteConfig";
 
 const IndustrialScene = lazy(() => import("./IndustrialScene").then((module) => ({ default: module.IndustrialScene })));
 
@@ -16,8 +17,9 @@ function Scene({ kind, size }: { kind?: "billet" | "ore" | "process" | "logo"; s
 
 function PageMetadata() {
   const { pathname } = useLocation();
+  const config = useSiteConfig();
   useEffect(() => {
-    const page = pages.find((candidate) => candidate.path === pathname);
+    const page = config.pages[pathname] ?? pages.find((candidate) => candidate.path === pathname);
     const title = pathname === "/manufacturing" || pathname === "/technology" ? "Integrated Manufacturing | Chalinze Steel Mills Ltd"
       : pathname === "/leadership" ? "Leadership & Governance | Chalinze Steel Mills Ltd"
       : pathname === "/admin" ? "Leadership Administration | Chalinze Steel Mills Ltd"
@@ -45,7 +47,7 @@ function PageMetadata() {
     updateMeta('meta[property="og:description"]', { property: "og:description" }, description);
     updateMeta('meta[property="og:url"]', { property: "og:url" }, canonicalUrl);
     updateMeta('meta[name="robots"]', { name: "robots" }, pathname === "/admin" ? "noindex, nofollow" : "index, follow");
-  }, [pathname]);
+  }, [pathname, config.pages]);
   return null;
 }
 
@@ -63,26 +65,27 @@ function ScrollToTop() {
 
 function Header() {
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [manufacturingOpen, setManufacturingOpen] = useState(false);
-  const [exploreOpen, setExploreOpen] = useState(false);
+  const [openGroup, setOpenGroup] = useState("");
   const location = useLocation();
+  const config = useSiteConfig();
 
   const closeMenus = () => {
     setMobileOpen(false);
-    setManufacturingOpen(false);
-    setExploreOpen(false);
+    setOpenGroup("");
   };
 
-  const renderMenu = (title: string, groups: readonly (typeof departments)[number][], isOpen: boolean, toggle: () => void) => (
+  const renderMenu = (group: (typeof config.navigation)[number]) => (
     <div className="nav-departments">
-      <button type="button" className={`nav-link nav-menu-trigger ${isOpen ? "active" : ""}`} aria-expanded={isOpen} onClick={toggle}>
-        {title} <span aria-hidden="true">⌄</span>
+      <button type="button" className={`nav-link nav-menu-trigger ${openGroup === group.label ? "active" : ""}`} aria-expanded={openGroup === group.label} onClick={() => setOpenGroup((open) => open === group.label ? "" : group.label)}>
+        {group.label} <span aria-hidden="true">⌄</span>
       </button>
-      {isOpen && <div className="department-menu">
-        {groups.map((department) => <section key={department.name}>
-          <h2>{department.name}</h2>
-          {department.links.map(([label, path]) => <NavLink key={path} to={path} onClick={closeMenus}>{label}<ArrowUpRight size={13} aria-hidden="true" /></NavLink>)}
-        </section>)}
+      {openGroup === group.label && <div className="department-menu">
+        <section>
+          <h2>{group.label}</h2>
+          {group.links.map(({ label, path }) => path.startsWith("/")
+            ? <NavLink key={`${label}-${path}`} to={path} onClick={closeMenus}>{label}<ArrowUpRight size={13} aria-hidden="true" /></NavLink>
+            : <a key={`${label}-${path}`} href={path} target="_blank" rel="noreferrer">{label}<ArrowUpRight size={13} aria-hidden="true" /></a>)}
+        </section>
       </div>}
     </div>
   );
@@ -95,21 +98,15 @@ function Header() {
           <span className="brand-copy"><strong>CHALINZE</strong><small>STEEL MILLS LTD</small></span>
         </Link>
         <nav className={`main-nav ${mobileOpen ? "is-open" : ""}`} aria-label="Main navigation">
-          <Link className={location.pathname === "/" ? "nav-link active" : "nav-link"} to="/" onClick={closeMenus}>Overview</Link>
-          <NavLink className="nav-link" to="/company" onClick={closeMenus}>Company</NavLink>
-          <NavLink className="nav-link" to="/leadership" onClick={closeMenus}>Leadership & Governance</NavLink>
-          {renderMenu("Manufacturing", departments.slice(0, 1), manufacturingOpen, () => {
-            setManufacturingOpen((open) => !open);
-            setExploreOpen(false);
-          })}
-          <NavLink className="nav-link" to="/products" onClick={closeMenus}>Products</NavLink>
-          {renderMenu("Explore", departments.slice(1), exploreOpen, () => {
-            setExploreOpen((open) => !open);
-            setManufacturingOpen(false);
-          })}
-          <NavLink className="nav-link" to="/contact" onClick={closeMenus}>Contact</NavLink>
+          {config.navigation.map((group) => group.links.length === 1 && group.links[0].path === "/" ? (
+            <Link key={group.label} className={location.pathname === "/" ? "nav-link active" : "nav-link"} to="/" onClick={closeMenus}>{group.links[0].label}</Link>
+          ) : group.links.length === 1 ? (
+            group.links[0].path.startsWith("/")
+              ? <NavLink key={group.label} className="nav-link" to={group.links[0].path} onClick={closeMenus}>{group.links[0].label}</NavLink>
+              : <a key={group.label} className="nav-link" href={group.links[0].path} target="_blank" rel="noreferrer">{group.links[0].label}</a>
+          ) : renderMenu(group))}
         </nav>
-        <Link className="header-action" to="/investment">Investor relations <ArrowUpRight size={14} /></Link>
+        <ConfigLink className="header-action" path={config.headerAction.path}>{config.headerAction.label} <ArrowUpRight size={14} /></ConfigLink>
         <button type="button" className="mobile-toggle" aria-label={mobileOpen ? "Close navigation" : "Open navigation"} aria-expanded={mobileOpen} onClick={() => setMobileOpen((open) => !open)}>
           {mobileOpen ? <X size={21} /> : <Menu size={21} />}
         </button>
@@ -119,23 +116,26 @@ function Header() {
 }
 
 function Footer() {
+  const config = useSiteConfig();
   return <footer className="site-footer">
     <div className="footer-main">
       <div className="footer-brand">
         <img className="footer-approved-logo" src="/assets/brand/chalinze-logo-approved.webp" alt="Approved Chalinze Steel Mills Ltd logo, showing the journey from Tanzanian minerals to low-carbon steel billets." />
         <div className="brand-copy"><strong>CHALINZE</strong><small>STEEL MILLS LTD</small></div>
-        <p>Developing an integrated mineral-to-steel project in Tanzania.</p>
+        <p>{config.footer.tagline}</p>
       </div>
-      <div><h2>Explore</h2><Link to="/company">Company</Link><Link to="/project">Project</Link><Link to="/technology">Technology</Link><Link to="/leadership">Leadership & Governance</Link><Link to="/admin">Administration</Link></div>
-      <div><h2>Discover</h2><Link to="/products">Products</Link><Link to="/sustainability">Sustainability</Link><Link to="/markets">Markets</Link></div>
-      <div><h2>Connect</h2><Link to="/investment">Partnerships</Link><Link to="/careers">Careers</Link><Link to="/contact">Contact</Link><a href={`mailto:${contactDetails.email}`}>{contactDetails.email}</a><a href={`tel:${contactDetails.phones[0].replace(/[^\d+]/g, "")}`}>{contactDetails.phones[0]}</a></div>
+      {config.footer.groups.map((group, index) => <div key={group.label}><h2>{group.label}</h2>{group.links.map(({ label, path }) => <ConfigLink key={`${label}-${path}`} path={path}>{label}</ConfigLink>)}{index === config.footer.groups.length - 1 && <><a href={`mailto:${config.footer.email}`}>{config.footer.email}</a><a href={`tel:${config.footer.phone.replace(/[^\d+]/g, "")}`}>{config.footer.phone}</a></>}</div>)}
     </div>
-    <div className="footer-bottom"><span>© {new Date().getFullYear()} Chalinze Steel Mills Ltd</span><span>Planned steel manufacturing · Tanzania</span></div>
+    <div className="footer-bottom"><span>© {new Date().getFullYear()} Chalinze Steel Mills Ltd</span><span>{config.footer.copyrightNote}</span></div>
   </footer>;
 }
 
 function Pill({ children }: { children: React.ReactNode }) {
   return <span className="eyebrow"><i aria-hidden="true" />{children}</span>;
+}
+
+function ConfigLink({ path, className, children }: { path: string; className?: string; children: React.ReactNode }) {
+  return path.startsWith("/") ? <Link className={className} to={path}>{children}</Link> : <a className={className} href={path} target="_blank" rel="noreferrer">{children}</a>;
 }
 
 const billetSizes = [
@@ -183,6 +183,7 @@ function BilletDimensions({ size }: { size: number }) {
 
 function Home() {
   const [stage, setStage] = useState(0);
+  const { home } = useSiteConfig();
   const process = [
     { name: "Mineral resources", kind: "ore" as const, label: "01 / SOURCE", detail: "ROM iron ore is identified in the project concept as the starting material." },
     { name: "Integrated processing", kind: "process" as const, label: "02 / TRANSFORM", detail: "Processing and ironmaking route details remain subject to authorized technical confirmation." },
@@ -193,10 +194,10 @@ function Home() {
     <section className="hero">
       <div className="hero-image-grid" aria-hidden="true" />
       <div className="hero-copy">
-        <Pill>Industrial ambition. Tanzanian foundation.</Pill>
-        <h1>Engineering the<br /><em>next material</em><br />frontier.</h1>
-        <p className="hero-lede">Transforming Tanzania’s ROM iron ore into world-class steel billets through advanced integrated steel manufacturing.</p>
-        <div className="hero-actions"><Link className="button button-orange" to="/project">Explore the project <ArrowRight size={17} /></Link><Link className="text-link" to="/technology">Discover our technology <ArrowUpRight size={15} /></Link></div>
+        <Pill>{home.heroEyebrow}</Pill>
+        <h1>{home.heroHeadline.split("\n").map((line, index, lines) => <span key={`${line}-${index}`}>{index === lines.length - 1 ? <em>{line}</em> : line}{index < lines.length - 1 && <br />}</span>)}</h1>
+        <p className="hero-lede">{home.heroDescription}</p>
+        <div className="hero-actions"><ConfigLink className="button button-orange" path={home.primaryPath}>{home.primaryAction} <ArrowRight size={17} /></ConfigLink><ConfigLink className="text-link" path={home.secondaryPath}>{home.secondaryAction} <ArrowUpRight size={15} /></ConfigLink></div>
         <div className="hero-meta"><span><b>01</b> TANZANIA</span><span><b>02</b> INTEGRATED STEEL</span><span><b>03</b> FUTURE-FOCUSED</span></div>
       </div>
       <div className="hero-object"><Scene kind="ore" /><div className="scene-caption"><span>RAW MATERIAL / CONCEPT</span><span>ROTATE TO EXPLORE ↗</span></div></div>
@@ -205,22 +206,22 @@ function Home() {
     </section>
 
     <section className="intro-section section-pad">
-      <div className="section-index">01 — THE OPPORTUNITY</div>
+      <div className="section-index">{home.introEyebrow}</div>
       <div className="intro-grid">
-        <h2>Built around<br />what comes <em>next.</em></h2>
-        <div><p className="large-copy">A new chapter in Tanzania’s industrial story—connecting mineral resources with the ambition to create value closer to home.</p><p className="muted-copy">Chalinze Steel Mills Ltd is developing an integrated steel manufacturing project. Project facts and technical details on this site are clearly marked where they still require company approval.</p><Link className="text-link" to="/company">Meet the company <ArrowUpRight size={15} /></Link></div>
+        <h2 className="multiline-heading">{home.introHeadline.split("\n").map((line, index, lines) => <span key={`${line}-${index}`}>{index === lines.length - 1 ? <em>{line}</em> : line}{index < lines.length - 1 && <br />}</span>)}</h2>
+        <div><p className="large-copy">{home.introPrimary}</p><p className="muted-copy">{home.introSecondary}</p><ConfigLink className="text-link" path={home.introPath}>{home.introAction} <ArrowUpRight size={15} /></ConfigLink></div>
       </div>
       <div className="facts-strip"><div><span>PROJECT</span><strong>Integrated steel</strong><small>Planned development</small></div><div><span>ORIGIN</span><strong>Tanzania</strong><small>Company project</small></div><div><span>PRODUCT</span><strong>Steel billets</strong><small>Principal planned product</small></div><div><span>STATUS</span><strong>In development</strong><small>Confirm approved progress</small></div></div>
     </section>
 
     <section className="brand-story">
       <div className="brand-story-copy">
-        <div className="section-index">02 — THE APPROVED COMPANY MARK</div>
-        <Pill>From Tanzanian minerals to steel billets</Pill>
-        <h2>A mark of<br /><em>transformation.</em></h2>
-        <p>The approved Chalinze Steel Mills Ltd artwork brings together Tanzanian mineral resources, beneficiation, steelmaking and billet production. Explore the official mark as a three-dimensional presentation.</p>
-        <p className="brand-caveat">The “low-carbon” wording is part of the approved brand artwork. It is not a measured emissions result or an independently verified product claim.</p>
-        <Link className="text-link" to="/company">Explore the company <ArrowUpRight size={15} /></Link>
+        <div className="section-index">{home.brandEyebrow}</div>
+        <Pill>{home.brandLabel}</Pill>
+        <h2 className="multiline-heading">{home.brandHeadline.split("\n").map((line, index, lines) => <span key={`${line}-${index}`}>{index === lines.length - 1 ? <em>{line}</em> : line}{index < lines.length - 1 && <br />}</span>)}</h2>
+        <p>{home.brandDescription}</p>
+        <p className="brand-caveat">{home.brandCaveat}</p>
+        <ConfigLink className="text-link" path={home.brandPath}>{home.brandAction} <ArrowUpRight size={15} /></ConfigLink>
       </div>
       <div className="brand-story-object">
         <Scene kind="logo" />
@@ -365,6 +366,8 @@ function FAQList() {
 
 function ContentPage({ page }: { page: SitePage }) {
   const [selected, setSelected] = useState(0);
+  const config = useSiteConfig();
+  page = config.pages[page.path] ?? page;
   const product = page.path === "/products";
   const technology = page.path === "/technology";
   const company = page.path === "/company";
@@ -374,7 +377,7 @@ function ContentPage({ page }: { page: SitePage }) {
   const selectedBillet = billetSizes[selected];
   const sceneKind = company ? "logo" : product ? "billet" : technology ? processStages[selected]?.kind ?? "ore" : manufacturing ? "ore" : "process";
 
-  return <main className="content-page">
+  return <main className={`content-page page-layout-${"layout" in page ? page.layout : config.layout}`}>
     <section className="inner-hero"><div className="inner-hero-copy"><Pill>{page.eyebrow}</Pill><h1>{page.title}</h1><p>{page.summary}</p><div className="breadcrumbs"><Link to="/">Home</Link><span>/</span><span>{page.eyebrow}</span></div></div><div className="inner-hero-visual"><Scene kind={sceneKind} size={product ? selectedBillet.size : undefined} /><span className="concept-stamp">{company ? "APPROVED BRAND / 3D PRESENTATION" : "CONCEPT VISUALIZATION"}</span></div></section>
     {(technology || manufacturing) && <section className="explorer-section section-pad"><div className="section-index">INTERACTIVE PROCESS EXPLORER</div><h2>Follow the <em>transformation.</em></h2><div className="explorer-layout"><div className="explorer-tabs" role="tablist" aria-label="Process stages">{processStages.map((stage, index) => <button role="tab" aria-selected={selected === index} className={selected === index ? "selected" : ""} onClick={() => setSelected(index)} key={stage.title}><span>{String(index + 1).padStart(2, "0")}</span>{stage.title}<ArrowRight size={15} /></button>)}</div><div className="explorer-model"><Scene kind={processStages[selected]?.kind ?? "ore"} /><div className="process-stage-detail" aria-live="polite"><span>{String(selected + 1).padStart(2, "0")} / {processStages[selected].status}</span><h3>{processStages[selected].title}</h3><p>{processStages[selected].description}</p><dl className="process-data"><div><dt>Input</dt><dd>{processStages[selected].input}</dd></div><div><dt>Output</dt><dd>{processStages[selected].output}</dd></div><div><dt>Equipment & status</dt><dd>{processStages[selected].equipment}</dd></div></dl></div><p className="concept-disclaimer">Concept models illustrate process categories only; they are not the approved equipment selection or final plant configuration.</p></div></div></section>}
     {product && <section className="product-select section-pad">
@@ -399,7 +402,7 @@ function ContentPage({ page }: { page: SitePage }) {
         <BilletDimensions size={selectedBillet.width} />
       </div>
     </section>}
-    <section className="content-cards section-pad"><div className="section-index">DETAILS & STATUS</div><div className="content-grid">{page.sections.map((section, index) => <article className="content-card" key={section.title}><span className="card-number">0{index + 1}</span><span className="card-tag">{section.tag ?? "Company information"}</span><h2>{section.title}</h2><p>{section.body}</p></article>)}</div></section>
+    <section className="content-cards section-pad"><div className="section-index">DETAILS & STATUS</div><div className={`content-grid layout-${"layout" in page ? page.layout : config.layout}`}>{page.sections.map((section, index) => <article className="content-card" key={`${section.title}-${index}`}><span className="card-number">0{index + 1}</span><span className="card-tag">{section.tag ?? "Company information"}</span><h2>{section.title}</h2><p>{section.body}</p></article>)}</div></section>
     {manufacturing && <section className="gallery-section section-pad"><div className="section-index">PROCESS & PRODUCT VISUALS</div><div className="gallery-heading"><h2>From raw material<br /><em>to billet.</em></h2><p>Explore each planned stage. The supplied document’s billet photographs are included as illustrative source-document images; they are not verified as Chalinze production photographs.</p></div><ProcessGallery items={manufacturingGallery} title="Manufacturing process and billet gallery" /></section>}
     {markets && <section className="gallery-section section-pad"><div className="section-index">APPLICATIONS & CUSTOMER SEGMENTS</div><div className="gallery-heading"><h2>Steel for a<br /><em>growing economy.</em></h2><p>Potential downstream applications from the company document. These examples do not assert existing customer relationships or direct Chalinze production of finished steel items.</p></div><ProcessGallery items={applicationGallery} title="Markets and applications gallery" /></section>}
     {page.path === "/quality" && <section className="gallery-section section-pad"><div className="section-index">PLANNED QUALITY ACTIVITIES</div><ProcessGallery items={manufacturingGallery.filter((item) => item.category === "Quality assurance")} title="Quality assurance illustration" /></section>}

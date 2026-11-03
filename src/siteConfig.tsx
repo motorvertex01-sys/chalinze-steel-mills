@@ -1,0 +1,135 @@
+import { createContext, useContext, useEffect, useMemo, useState } from "react";
+import type { ReactNode } from "react";
+import { contactDetails, departments, pages, type SitePage } from "./content";
+
+export type SiteLink = { label: string; path: string };
+export type SiteGroup = { label: string; links: SiteLink[] };
+export type SiteConfig = {
+  version: 1;
+  theme: { accent: string; background: string; panel: string; headingFont: string; bodyFont: string };
+  layout: "cards" | "editorial" | "split";
+  home: {
+    heroEyebrow: string; heroHeadline: string; heroDescription: string; primaryAction: string;
+    primaryPath: string; secondaryAction: string; secondaryPath: string; introEyebrow: string;
+    introHeadline: string; introPrimary: string; introSecondary: string; introAction: string; introPath: string;
+    brandEyebrow: string; brandLabel: string; brandHeadline: string; brandDescription: string;
+    brandCaveat: string; brandAction: string; brandPath: string;
+  };
+  headerAction: SiteLink;
+  navigation: SiteGroup[];
+  footer: { tagline: string; groups: SiteGroup[]; email: string; phone: string; copyrightNote: string };
+  pages: Record<string, SitePage & { layout: "cards" | "editorial" | "split" }>;
+};
+
+const pageLayouts = ["cards", "editorial", "split"] as const;
+const pageFromStatic = (page: SitePage): SiteConfig["pages"][string] => ({ ...page, sections: page.sections.map((section) => ({ ...section })), layout: "cards" });
+
+export function createDefaultSiteConfig(): SiteConfig {
+  return {
+    version: 1,
+    theme: { accent: "#f47721", background: "#090a0c", panel: "#111418", headingFont: "Manrope", bodyFont: "Arial" },
+    layout: "cards",
+    home: {
+      heroEyebrow: "Industrial ambition. Tanzanian foundation.",
+      heroHeadline: "Engineering the\nnext material\nfrontier.",
+      heroDescription: "Transforming Tanzania’s ROM iron ore into world-class steel billets through advanced integrated steel manufacturing.",
+      primaryAction: "Explore the project", primaryPath: "/project",
+      secondaryAction: "Discover our technology", secondaryPath: "/technology",
+      introEyebrow: "01 — THE OPPORTUNITY",
+      introHeadline: "Built around\nwhat comes next.",
+      introPrimary: "A new chapter in Tanzania’s industrial story—connecting mineral resources with the ambition to create value closer to home.",
+      introSecondary: "Chalinze Steel Mills Ltd is developing an integrated steel manufacturing project. Project facts and technical details on this site are clearly marked where they still require company approval.",
+      introAction: "Meet the company", introPath: "/company",
+      brandEyebrow: "02 — THE APPROVED COMPANY MARK",
+      brandLabel: "From Tanzanian minerals to steel billets",
+      brandHeadline: "A mark of\ntransformation.",
+      brandDescription: "The approved Chalinze Steel Mills Ltd artwork brings together Tanzanian mineral resources, beneficiation, steelmaking and billet production. Explore the official mark as a three-dimensional presentation.",
+      brandCaveat: "The “low-carbon” wording is part of the approved brand artwork. It is not a measured emissions result or an independently verified product claim.",
+      brandAction: "Explore the company", brandPath: "/company",
+    },
+    headerAction: { label: "Investor relations", path: "/investment" },
+    navigation: [
+      { label: "Overview", links: [{ label: "Overview", path: "/" }] },
+      { label: "Company & project", links: [{ label: "Company", path: "/company" }, { label: "Leadership & Governance", path: "/leadership" }, { label: "Project overview", path: "/project" }, { label: "Development roadmap", path: "/development" }] },
+      { label: "Manufacturing", links: departments[0].links.map(([label, path]) => ({ label, path })) },
+      { label: "Products & markets", links: [{ label: "Products", path: "/products" }, { label: "Markets", path: "/markets" }] },
+      { label: "Explore", links: departments.slice(1).flatMap((department) => department.links.map(([label, path]) => ({ label, path }))).filter((link) => !["/company", "/project", "/development", "/products", "/markets", "/contact"].includes(link.path)) },
+      { label: "Contact", links: [{ label: "Contact", path: "/contact" }] },
+    ],
+    footer: {
+      tagline: "Developing an integrated mineral-to-steel project in Tanzania.",
+      groups: [
+        { label: "Explore", links: [{ label: "Company", path: "/company" }, { label: "Project", path: "/project" }, { label: "Technology", path: "/technology" }, { label: "Leadership & Governance", path: "/leadership" }, { label: "Administration", path: "/admin" }] },
+        { label: "Discover", links: [{ label: "Products", path: "/products" }, { label: "Sustainability", path: "/sustainability" }, { label: "Markets", path: "/markets" }] },
+        { label: "Connect", links: [{ label: "Partnerships", path: "/investment" }, { label: "Careers", path: "/careers" }, { label: "Contact", path: "/contact" }] },
+      ],
+      email: contactDetails.email, phone: contactDetails.phones[0], copyrightNote: "Planned steel manufacturing · Tanzania",
+    },
+    pages: Object.fromEntries(pages.filter((page) => !["/manufacturing", "/technology", "/quality"].includes(page.path)).map((page) => [page.path, pageFromStatic(page)])),
+  };
+}
+
+export function mergeSiteConfig(value: Partial<SiteConfig> | null | undefined): SiteConfig {
+  const defaults = createDefaultSiteConfig();
+  if (!value) return defaults;
+  return {
+    ...defaults, ...value,
+    theme: { ...defaults.theme, ...value.theme },
+    home: { ...defaults.home, ...value.home },
+    headerAction: { ...defaults.headerAction, ...value.headerAction },
+    navigation: Array.isArray(value.navigation) && value.navigation.length ? value.navigation : defaults.navigation,
+    footer: { ...defaults.footer, ...value.footer, groups: value.footer?.groups?.length ? value.footer.groups : defaults.footer.groups },
+    pages: Object.fromEntries(Object.entries(defaults.pages).map(([path, page]) => {
+      const override = value.pages?.[path];
+      return [path, override ? { ...page, ...override, sections: Array.isArray(override.sections) ? override.sections : page.sections } : page];
+    })),
+  } as SiteConfig;
+}
+
+export function siteConfigPathIsSafe(path: string) {
+  if (path.startsWith("/") && !path.startsWith("//") && /^\/[a-zA-Z0-9_./#?=&%-]*$/.test(path)) {
+    try {
+      const decoded = decodeURIComponent(path);
+      return !decoded.startsWith("//") && !decoded.includes("\\") && !/[\u0000-\u001f]/.test(decoded);
+    } catch {
+      return false;
+    }
+  }
+  try {
+    const url = new URL(path);
+    return url.protocol === "https:" && Boolean(url.hostname) && !url.username && !url.password;
+  } catch {
+    return false;
+  }
+}
+
+const SiteConfigContext = createContext<SiteConfig>(createDefaultSiteConfig());
+
+export function SiteConfigProvider({ children }: { children: ReactNode }) {
+  const [config, setConfig] = useState(createDefaultSiteConfig);
+  useEffect(() => {
+    let active = true;
+    const refresh = () => fetch("/api/site-config").then((response) => response.ok ? response.json() : null)
+      .then((value: Partial<SiteConfig> | null) => { if (active && value) setConfig(mergeSiteConfig(value)); })
+      .catch(() => undefined);
+    void refresh();
+    window.addEventListener("site-config-updated", refresh);
+    return () => { active = false; window.removeEventListener("site-config-updated", refresh); };
+  }, []);
+  useEffect(() => {
+    const root = document.documentElement;
+    root.style.setProperty("--orange", config.theme.accent);
+    root.style.setProperty("--black", config.theme.background);
+    root.style.setProperty("--panel", config.theme.panel);
+    root.style.setProperty("--display", `"${config.theme.headingFont}", sans-serif`);
+    root.style.setProperty("--body-font", `"${config.theme.bodyFont}", sans-serif`);
+  }, [config.theme]);
+  const value = useMemo(() => config, [config]);
+  return <SiteConfigContext.Provider value={value}>{children}</SiteConfigContext.Provider>;
+}
+
+export function useSiteConfig() {
+  return useContext(SiteConfigContext);
+}
+
+export const availablePageLayouts = pageLayouts;

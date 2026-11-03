@@ -6,7 +6,7 @@ import fs from "node:fs";
 import path from "node:path";
 import sharp from "sharp";
 import { fileURLToPath } from "node:url";
-import { db, originalMediaDirectory, profileFromRow, ready, uploadDirectory, writeAudit } from "./store.js";
+import { db, originalMediaDirectory, profileFromRow, ready, recordChange, uploadDirectory, writeAudit } from "./store.js";
 
 const app = express();
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -25,6 +25,111 @@ const suppliedLeadershipPhotos = new Set([
   "/assets/leadership/juliette-a-kimaro.webp",
   "/assets/leadership/ridhiwani-m-mbaruku.webp",
 ]);
+const sitePagePaths = new Set(["/company", "/project", "/products", "/infrastructure", "/sustainability", "/investment", "/markets", "/development", "/news", "/careers", "/faqs", "/contact"]);
+const allowedLayouts = new Set(["cards", "editorial", "split"]);
+const allowedFonts = new Set(["Manrope", "Arial", "Georgia", "Verdana", "Tahoma", "Trebuchet MS", "system-ui"]);
+
+function isPlainText(value, maxLength = 10000, allowEmpty = true) {
+  return typeof value === "string" && value.length <= maxLength && (allowEmpty || Boolean(value.trim()));
+}
+
+function validSiteLink(link) {
+  if (!link || typeof link !== "object" || Array.isArray(link) || !isPlainText(link.label, 120, false) || !isPlainText(link.path, 500, false)) return false;
+  if (link.path.startsWith("/") && !link.path.startsWith("//") && /^\/[a-zA-Z0-9_./#?=&%-]*$/.test(link.path)) {
+    try {
+      const decoded = decodeURIComponent(link.path);
+      return !decoded.startsWith("//") && !decoded.includes("\\") && !/[\u0000-\u001f]/.test(decoded);
+    } catch {
+      return false;
+    }
+  }
+  try {
+    const url = new URL(link.path);
+    return url.protocol === "https:" && Boolean(url.hostname) && !url.username && !url.password;
+  } catch {
+    return false;
+  }
+}
+
+function validSiteGroups(groups) {
+  return Array.isArray(groups) && groups.length > 0 && groups.length <= 12 && groups.every((group) =>
+    group && typeof group === "object" && isPlainText(group.label, 120, false) &&
+    Array.isArray(group.links) && group.links.length <= 20 && group.links.every(validSiteLink));
+}
+
+function validateSiteConfig(config) {
+  if (!config || typeof config !== "object" || Array.isArray(config) || config.version !== 1) return "A supported site configuration is required.";
+  if (!config.theme || typeof config.theme !== "object") return "Choose valid global design settings.";
+  for (const field of ["accent", "background", "panel"]) {
+    if (typeof config.theme[field] !== "string" || !/^#[0-9a-f]{6}$/i.test(config.theme[field])) return `The ${field} color must be a six-digit hex color.`;
+  }
+  if (!allowedFonts.has(config.theme.headingFont) || !allowedFonts.has(config.theme.bodyFont)) return "Choose a supported typography preset.";
+  if (!allowedLayouts.has(config.layout)) return "Choose a valid page layout preset.";
+  const homeFields = ["heroEyebrow", "heroHeadline", "heroDescription", "primaryAction", "primaryPath", "secondaryAction", "secondaryPath", "introEyebrow", "introHeadline", "introPrimary", "introSecondary", "introAction", "introPath", "brandEyebrow", "brandLabel", "brandHeadline", "brandDescription", "brandCaveat", "brandAction", "brandPath"];
+  if (!config.home || typeof config.home !== "object" || homeFields.some((field) => !isPlainText(config.home[field], 2000, false))) return "Complete all home-page content fields.";
+  for (const field of ["primaryPath", "secondaryPath", "introPath", "brandPath"]) {
+    if (!validSiteLink({ label: "Action", path: config.home[field] })) return `The home-page ${field} must be a safe internal or HTTPS link.`;
+  }
+  if (!validSiteLink(config.headerAction)) return "The header action must have a label and safe internal or HTTPS link.";
+  if (!validSiteGroups(config.navigation)) return "Navigation must contain valid groups and safe links.";
+  if (!config.footer || typeof config.footer !== "object" || !isPlainText(config.footer.tagline, 1000, false) ||
+      !validSiteGroups(config.footer.groups) || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(config.footer.email) ||
+      !isPlainText(config.footer.phone, 80, false) || !isPlainText(config.footer.copyrightNote, 300, false)) return "Complete valid footer content and contact details.";
+  if (!config.pages || typeof config.pages !== "object" || Array.isArray(config.pages)) return "Page content must be an object.";
+  for (const [pathname, page] of Object.entries(config.pages)) {
+    if (!sitePagePaths.has(pathname) || !page || typeof page !== "object" || !allowedLayouts.has(page.layout)) return `Unsupported content page: ${pathname}.`;
+    if (!isPlainText(page.title, 500, false) || !isPlainText(page.eyebrow, 160, false) || !isPlainText(page.summary, 3000, false) ||
+        !Array.isArray(page.sections) || page.sections.length > 30 ||
+        page.sections.some((section) => !section || !isPlainText(section.title, 300, false) || !isPlainText(section.body, 10000, false) || !isPlainText(section.tag ?? "", 160))) {
+      return `The ${pathname} page has invalid title, summary or section content.`;
+    }
+  }
+  return null;
+}
+
+function siteConfigState(row) {
+  return {
+    draft: JSON.parse(row.draft_json),
+    published: JSON.parse(row.published_json),
+    updated_by: row.updated_by,
+    updated_at: row.updated_at,
+  };
+}
+
+async function manufacturingState(tx) {
+  const row = await tx.get("SELECT published_json, draft_json, updated_by, updated_at FROM site_content WHERE content_key = 'manufacturing'");
+  return {
+    draft: JSON.parse(row.draft_json), published: JSON.parse(row.published_json),
+    updated_by: row.updated_by, updated_at: row.updated_at,
+  };
+}
+
+async function restoreHistoryState(tx, entry, value) {
+  if (entry.content_type === "profile") {
+    if (!value) {
+      await tx.run("DELETE FROM profiles WHERE id = ?", entry.entity_id);
+      return;
+    }
+    await tx.run(`INSERT INTO profiles
+      (id, section, placement, name, title, biography, background, qualifications, responsibilities, photo_url, is_vacant, status, sort_order, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ON CONFLICT(id) DO UPDATE SET section=excluded.section, placement=excluded.placement, name=excluded.name, title=excluded.title,
+      biography=excluded.biography, background=excluded.background, qualifications=excluded.qualifications,
+      responsibilities=excluded.responsibilities, photo_url=excluded.photo_url, is_vacant=excluded.is_vacant,
+      status=excluded.status, sort_order=excluded.sort_order, updated_at=excluded.updated_at`,
+    value.id, value.section, value.placement, value.name, value.title, value.biography, value.background,
+    value.qualifications, value.responsibilities, value.photo_url, value.is_vacant ? 1 : 0,
+    value.status, value.sort_order, value.updated_at);
+    return;
+  }
+  if (entry.content_type === "site-config" || entry.content_type === "manufacturing") {
+    const contentKey = entry.content_type;
+    const published = JSON.stringify(value.published);
+    const draft = JSON.stringify(value.draft);
+    await tx.run("UPDATE site_content SET published_json = ?, draft_json = ?, updated_by = ?, updated_at = ? WHERE content_key = ?",
+      published, draft, value.updated_by, value.updated_at, contentKey);
+  }
+}
 
 async function bootstrapInitialAdministrator() {
   const email = process.env.ADMIN_EMAIL?.trim().toLowerCase();
@@ -58,7 +163,7 @@ async function bootstrapInitialAdministrator() {
 await ready;
 await bootstrapInitialAdministrator();
 app.disable("x-powered-by");
-app.use(express.json({ limit: "25kb" }));
+app.use(express.json({ limit: "256kb" }));
 app.use((request, response, next) => {
   response.setHeader("X-Content-Type-Options", "nosniff");
   response.setHeader("Referrer-Policy", "strict-origin-when-cross-origin");
@@ -231,6 +336,11 @@ app.get("/api/manufacturing", async (_request, response) => {
   response.json(JSON.parse(row.published_json));
 });
 
+app.get("/api/site-config", async (_request, response) => {
+  const row = await db.get("SELECT published_json FROM site_content WHERE content_key = 'site-config'");
+  response.json(JSON.parse(row.published_json));
+});
+
 app.get("/api/admin/session", async (request, response) => {
   const admin = await getAdmin(request);
   response.json({
@@ -305,6 +415,41 @@ app.get("/api/admin/profiles", requireAdmin, async (_request, response) => {
   response.json(profiles.map(profileFromRow));
 });
 
+app.get("/api/admin/site-config", requireAdmin, async (_request, response) => {
+  const row = await db.get("SELECT published_json, draft_json, updated_by, updated_at FROM site_content WHERE content_key = 'site-config'");
+  response.json(siteConfigState(row));
+});
+
+app.put("/api/admin/site-config", requireAdmin, async (request, response) => {
+  const issue = validateSiteConfig(request.body);
+  if (issue) return response.status(400).json({ error: issue });
+  const before = siteConfigState(await db.get("SELECT published_json, draft_json, updated_by, updated_at FROM site_content WHERE content_key = 'site-config'"));
+  const updatedAt = new Date().toISOString();
+  const after = { ...before, draft: request.body, updated_by: request.admin.email, updated_at: updatedAt };
+  await db.transaction(async (tx) => {
+    await tx.run("UPDATE site_content SET draft_json = ?, updated_by = ?, updated_at = ? WHERE content_key = 'site-config'",
+      JSON.stringify(request.body), request.admin.email, updatedAt);
+    await writeAudit({ tx, profileId: "site-config", email: request.admin.email, action: "site-wide content draft updated", before, after });
+    await recordChange(tx, { contentType: "site-config", entityId: "site-config", email: request.admin.email, action: "Site-wide content draft updated", before, after });
+  });
+  response.json({ saved: true, updated_by: request.admin.email, updated_at: updatedAt });
+});
+
+app.post("/api/admin/site-config/publish", requireAdmin, requireAdministrator, async (request, response) => {
+  const current = siteConfigState(await db.get("SELECT published_json, draft_json, updated_by, updated_at FROM site_content WHERE content_key = 'site-config'"));
+  const issue = validateSiteConfig(current.draft);
+  if (issue) return response.status(400).json({ error: issue });
+  const updatedAt = new Date().toISOString();
+  const after = { ...current, published: current.draft, updated_by: request.admin.email, updated_at: updatedAt };
+  await db.transaction(async (tx) => {
+    await tx.run("UPDATE site_content SET published_json = draft_json, updated_by = ?, updated_at = ? WHERE content_key = 'site-config'",
+      request.admin.email, updatedAt);
+    await writeAudit({ tx, profileId: "site-config", email: request.admin.email, action: "site-wide content published", before: current, after });
+    await recordChange(tx, { contentType: "site-config", entityId: "site-config", email: request.admin.email, action: "Site-wide content published", before: current, after });
+  });
+  response.json({ published: true, updated_by: request.admin.email, updated_at: updatedAt });
+});
+
 app.post("/api/admin/profiles", requireAdmin, async (request, response) => {
   const issue = validateProfile(request.body);
   if (issue) return response.status(400).json({ error: issue });
@@ -322,6 +467,7 @@ app.post("/api/admin/profiles", requireAdmin, async (request, response) => {
       profile.is_vacant, profile.status, profile.sort_order, now);
     const created = profileFromRow(await tx.get("SELECT * FROM profiles WHERE id = ?", id));
     await writeAudit({ tx, profileId: id, email: request.admin.email, action: "created", before: null, after: created });
+    await recordChange(tx, { contentType: "profile", entityId: id, email: request.admin.email, action: `Created profile: ${created.name}`, before: null, after: created });
     return created;
   });
   response.status(201).json(created);
@@ -345,6 +491,7 @@ app.put("/api/admin/profiles/:id", requireAdmin, async (request, response) => {
     profile.sort_order, updatedAt, before.id);
     const after = profileFromRow(await tx.get("SELECT * FROM profiles WHERE id = ?", before.id));
     await writeAudit({ tx, profileId: before.id, email: request.admin.email, action: "updated", before, after });
+    await recordChange(tx, { contentType: "profile", entityId: before.id, email: request.admin.email, action: `Updated profile: ${after.name}`, before, after });
     return after;
   });
   response.json(after);
@@ -356,6 +503,7 @@ app.delete("/api/admin/profiles/:id", requireAdmin, requireAdministrator, async 
   await db.transaction(async (tx) => {
     await tx.run("DELETE FROM profiles WHERE id = ?", before.id);
     await writeAudit({ tx, profileId: before.id, email: request.admin.email, action: "deleted", before, after: null });
+    await recordChange(tx, { contentType: "profile", entityId: before.id, email: request.admin.email, action: `Deleted profile: ${before.name}`, before, after: null });
   });
   response.json({ deleted: true });
 });
@@ -372,6 +520,44 @@ app.get("/api/admin/audit", requireAdmin, async (request, response) => {
   })));
 });
 
+app.get("/api/admin/history", requireAdmin, async (_request, response) => {
+  const undo = await db.get("SELECT id, action FROM change_history WHERE state = 'applied' ORDER BY id DESC LIMIT 1");
+  const redo = await db.get("SELECT id, action FROM change_history WHERE state = 'undone' ORDER BY id ASC LIMIT 1");
+  response.json({ canUndo: Boolean(undo), canRedo: Boolean(redo), undoLabel: undo?.action ?? null, redoLabel: redo?.action ?? null });
+});
+
+async function applyHistory(request, response, direction) {
+  if (request.admin.role !== "admin") return response.status(403).json({ error: "Administrator privileges are required to undo or redo published changes." });
+  const expectedState = direction === "undo" ? "applied" : "undone";
+  const targetField = direction === "undo" ? "before_json" : "after_json";
+  const outcome = await db.transaction(async (tx) => {
+    const historyRow = await tx.get(`SELECT * FROM change_history WHERE state = ? ORDER BY id ${direction === "undo" ? "DESC" : "ASC"} LIMIT 1`, expectedState);
+    if (!historyRow) return null;
+    const currentValue = historyRow.content_type === "profile"
+      ? profileFromRow(await tx.get("SELECT * FROM profiles WHERE id = ?", historyRow.entity_id))
+      : historyRow.content_type === "site-config"
+        ? siteConfigState(await tx.get("SELECT published_json, draft_json, updated_by, updated_at FROM site_content WHERE content_key = 'site-config'"))
+        : await manufacturingState(tx);
+    const targetValue = historyRow[targetField] ? JSON.parse(historyRow[targetField]) : null;
+    await restoreHistoryState(tx, historyRow, targetValue);
+    await tx.run("UPDATE change_history SET state = ? WHERE id = ?", direction === "undo" ? "undone" : "applied", historyRow.id);
+    await writeAudit({
+      tx,
+      profileId: historyRow.content_type === "profile" ? historyRow.entity_id : historyRow.entity_id,
+      email: request.admin.email,
+      action: `${direction}: ${historyRow.action}`,
+      before: currentValue,
+      after: targetValue,
+    });
+    return { action: historyRow.action };
+  });
+  if (!outcome) return response.status(409).json({ error: `There is no change available to ${direction}.` });
+  response.json({ applied: direction, action: outcome.action });
+}
+
+app.post("/api/admin/undo", requireAdmin, (request, response) => applyHistory(request, response, "undo"));
+app.post("/api/admin/redo", requireAdmin, (request, response) => applyHistory(request, response, "redo"));
+
 app.get("/api/admin/manufacturing", requireAdmin, async (_request, response) => {
   const row = await db.get("SELECT published_json, draft_json, updated_by, updated_at FROM site_content WHERE content_key = 'manufacturing'");
   response.json({
@@ -385,27 +571,31 @@ app.get("/api/admin/manufacturing", requireAdmin, async (_request, response) => 
 app.put("/api/admin/manufacturing", requireAdmin, async (request, response) => {
   const issue = validateManufacturingContent(request.body);
   if (issue) return response.status(400).json({ error: issue });
-  const before = await db.get("SELECT draft_json FROM site_content WHERE content_key = 'manufacturing'");
+  const before = await manufacturingState(db);
   const draft = JSON.stringify(request.body);
   const updatedAt = new Date().toISOString();
+  const after = { ...before, draft: request.body, updated_by: request.admin.email, updated_at: updatedAt };
   await db.transaction(async (tx) => {
     await tx.run("UPDATE site_content SET draft_json = ?, updated_by = ?, updated_at = ? WHERE content_key = 'manufacturing'",
       draft, request.admin.email, updatedAt);
-    await writeAudit({ tx, profileId: "manufacturing-content", email: request.admin.email, action: "manufacturing draft updated", before: JSON.parse(before.draft_json), after: request.body });
+    await writeAudit({ tx, profileId: "manufacturing-content", email: request.admin.email, action: "manufacturing draft updated", before, after });
+    await recordChange(tx, { contentType: "manufacturing", entityId: "manufacturing", email: request.admin.email, action: "Manufacturing draft updated", before, after });
   });
   response.json({ saved: true, updated_by: request.admin.email, updated_at: updatedAt });
 });
 
 app.post("/api/admin/manufacturing/publish", requireAdmin, requireAdministrator, async (_request, response) => {
-  const current = await db.get("SELECT published_json, draft_json FROM site_content WHERE content_key = 'manufacturing'");
-  const draft = JSON.parse(current.draft_json);
+  const current = await manufacturingState(db);
+  const draft = current.draft;
   const issue = validateManufacturingContent(draft);
   if (issue) return response.status(400).json({ error: issue });
   const updatedAt = new Date().toISOString();
+  const after = { ...current, published: draft, updated_by: _request.admin.email, updated_at: updatedAt };
   await db.transaction(async (tx) => {
     await tx.run("UPDATE site_content SET published_json = ?, updated_by = ?, updated_at = ? WHERE content_key = 'manufacturing'",
-      current.draft_json, _request.admin.email, updatedAt);
-    await writeAudit({ tx, profileId: "manufacturing-content", email: _request.admin.email, action: "manufacturing content published", before: JSON.parse(current.published_json), after: draft });
+      JSON.stringify(draft), _request.admin.email, updatedAt);
+    await writeAudit({ tx, profileId: "manufacturing-content", email: _request.admin.email, action: "manufacturing content published", before: current, after });
+    await recordChange(tx, { contentType: "manufacturing", entityId: "manufacturing", email: _request.admin.email, action: "Manufacturing content published", before: current, after });
   });
   response.json({ published: true, updated_by: _request.admin.email, updated_at: updatedAt });
 });

@@ -1,9 +1,11 @@
 import { useEffect, useState } from "react";
 import type { FormEvent } from "react";
-import { ArrowLeft, ArrowUpRight, Eye, Factory, LogOut, Plus, Save, Send, Trash2, Upload, X } from "lucide-react";
+import { ArrowLeft, ArrowUpRight, Eye, Factory, LogOut, Plus, Redo2, Save, Send, Trash2, Undo2, Upload, X } from "lucide-react";
 import { Link } from "react-router-dom";
 import { ProfileDetails } from "./LeadershipPage";
 import type { LeadershipProfile, ProfileInput, ProfileStatus } from "./leadershipTypes";
+import { availablePageLayouts, createDefaultSiteConfig, mergeSiteConfig, siteConfigPathIsSafe } from "./siteConfig";
+import type { SiteConfig, SiteGroup } from "./siteConfig";
 
 type AdminSession = { authenticated: boolean; email: string | null; role: "admin" | "editor" | null; configured: boolean };
 type AuditEntry = { id: number; profile_id: string; admin_email: string; action: string; before: unknown; after: unknown; created_at: string };
@@ -15,6 +17,7 @@ type ManufacturingContent = {
   [key: string]: unknown;
 };
 type ManufacturingAdminData = { published: ManufacturingContent; draft: ManufacturingContent; updated_by: string; updated_at: string };
+type HistoryStatus = { canUndo: boolean; canRedo: boolean; undoLabel: string | null; redoLabel: string | null };
 
 const emptyProfile = (): ProfileInput => ({
   section: "board",
@@ -61,6 +64,21 @@ function statusLabel(status: ProfileStatus) {
   return ({ draft: "Draft", pending_approval: "Pending Approval", published: "Published", archived: "Archived" })[status];
 }
 
+function SiteGroupEditor({ groups, onChange }: { groups: SiteGroup[]; onChange: (groups: SiteGroup[]) => void }) {
+  return <div className="site-group-editor">
+    {groups.map((group, groupIndex) => <fieldset className="site-group-card" key={`${group.label}-${groupIndex}`}>
+      <div className="site-group-heading"><label>Group label<input value={group.label} onChange={(event) => onChange(groups.map((item, index) => index === groupIndex ? { ...item, label: event.target.value } : item))} /></label><button className="admin-quiet-button" type="button" onClick={() => onChange(groups.filter((_, index) => index !== groupIndex))}>Remove group</button></div>
+      {group.links.map((link, linkIndex) => <div className="site-link-row" key={`${link.label}-${linkIndex}`}>
+        <label>Link label<input value={link.label} onChange={(event) => onChange(groups.map((item, index) => index === groupIndex ? { ...item, links: item.links.map((entry, entryIndex) => entryIndex === linkIndex ? { ...entry, label: event.target.value } : entry) } : item))} /></label>
+        <label>Path or HTTPS URL<input value={link.path} onChange={(event) => onChange(groups.map((item, index) => index === groupIndex ? { ...item, links: item.links.map((entry, entryIndex) => entryIndex === linkIndex ? { ...entry, path: event.target.value } : entry) } : item))} aria-invalid={!siteConfigPathIsSafe(link.path)} /></label>
+        <button className="admin-quiet-button" type="button" aria-label="Remove link" onClick={() => onChange(groups.map((item, index) => index === groupIndex ? { ...item, links: item.links.filter((_, entryIndex) => entryIndex !== linkIndex) } : item))}><X size={15} /></button>
+      </div>)}
+      <button className="admin-quiet-button" type="button" onClick={() => onChange(groups.map((item, index) => index === groupIndex ? { ...item, links: [...item.links, { label: "", path: "/" }] } : item))}><Plus size={14} /> Add link</button>
+    </fieldset>)}
+    <button className="button button-outline" type="button" onClick={() => onChange([...groups, { label: "", links: [{ label: "", path: "/" }] }])}><Plus size={15} /> Add group</button>
+  </div>;
+}
+
 export function AdminPage() {
   const [session, setSession] = useState<AdminSession | null>(null);
   const [profiles, setProfiles] = useState<LeadershipProfile[]>([]);
@@ -71,6 +89,12 @@ export function AdminPage() {
   const [manufacturingMediaTarget, setManufacturingMediaTarget] = useState("heroImage");
   const [manufacturingError, setManufacturingError] = useState("");
   const [manufacturingNotice, setManufacturingNotice] = useState("");
+  const [siteConfig, setSiteConfig] = useState<SiteConfig>(createDefaultSiteConfig);
+  const [siteConfigError, setSiteConfigError] = useState("");
+  const [siteConfigNotice, setSiteConfigNotice] = useState("");
+  const [siteConfigTab, setSiteConfigTab] = useState<"home" | "pages" | "navigation" | "design">("home");
+  const [selectedPagePath, setSelectedPagePath] = useState("/company");
+  const [historyStatus, setHistoryStatus] = useState<HistoryStatus>({ canUndo: false, canRedo: false, undoLabel: null, redoLabel: null });
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -81,15 +105,19 @@ export function AdminPage() {
   const [notice, setNotice] = useState("");
 
   const refreshAdminData = async () => {
-    const [nextProfiles, nextAudit, nextManufacturing] = await Promise.all([
+    const [nextProfiles, nextAudit, nextManufacturing, nextSiteConfig, nextHistory] = await Promise.all([
       apiRequest<LeadershipProfile[]>("/api/admin/profiles"),
       apiRequest<AuditEntry[]>("/api/admin/audit"),
       apiRequest<ManufacturingAdminData>("/api/admin/manufacturing"),
+      apiRequest<{ draft: Partial<SiteConfig> }>("/api/admin/site-config"),
+      apiRequest<HistoryStatus>("/api/admin/history"),
     ]);
     setProfiles(nextProfiles);
     setAudit(nextAudit);
     setManufacturingJson(JSON.stringify(nextManufacturing.draft, null, 2));
     setManufacturingMeta({ updated_by: nextManufacturing.updated_by, updated_at: nextManufacturing.updated_at });
+    setSiteConfig(mergeSiteConfig(nextSiteConfig.draft));
+    setHistoryStatus(nextHistory);
   };
 
   useEffect(() => {
@@ -234,6 +262,59 @@ export function AdminPage() {
     setForm((current) => ({ ...current, [field]: value }));
   };
 
+  const updateSiteConfig = (update: (current: SiteConfig) => SiteConfig) => setSiteConfig((current) => update(current));
+
+  const saveSiteConfig = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setSiteConfigError("");
+    setSiteConfigNotice("");
+    setBusy(true);
+    try {
+      await apiRequest("/api/admin/site-config", {
+        method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(siteConfig),
+      });
+      await refreshAdminData();
+      setSiteConfigNotice("Site-wide content draft saved. Public content remains unchanged until an administrator publishes it.");
+    } catch (cause) {
+      setSiteConfigError(cause instanceof Error ? cause.message : "Site-wide content could not be saved.");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const publishSiteConfig = async () => {
+    if (!window.confirm("Publish the saved site-wide content, navigation and design changes? Review all page copy and links first.")) return;
+    setSiteConfigError("");
+    setSiteConfigNotice("");
+    setBusy(true);
+    try {
+      await apiRequest("/api/admin/site-config/publish", { method: "POST" });
+      await refreshAdminData();
+      window.dispatchEvent(new Event("site-config-updated"));
+      setSiteConfigNotice("Site-wide content published and visible on the public website.");
+    } catch (cause) {
+      setSiteConfigError(cause instanceof Error ? cause.message : "Site-wide changes could not be published.");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const applyUndoRedo = async (direction: "undo" | "redo") => {
+    setBusy(true);
+    clearFeedback();
+    setSiteConfigError("");
+    try {
+      const result = await apiRequest<{ applied: string; action: string }>(`/api/admin/${direction}`, { method: "POST" });
+      await refreshAdminData();
+      window.dispatchEvent(new Event("site-config-updated"));
+      setNotice(`${direction === "undo" ? "Undid" : "Redid"}: ${result.action}. Reversal is recorded in the audit history.`);
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : `Could not ${direction} the recent change.`);
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const parseManufacturingDraft = () => {
     try {
       const parsed = JSON.parse(manufacturingJson) as ManufacturingContent;
@@ -362,8 +443,77 @@ export function AdminPage() {
         </section>
       )}
       {session?.authenticated && <>
-        <div className="admin-toolbar"><p>Signed in as <strong>{session.email}</strong> · {session.role === "admin" ? "Administrator" : "Content editor"}. Changes are recorded.</p><button className="admin-quiet-button" type="button" onClick={signOut}><LogOut size={15} /> Sign out</button></div>
+        <div className="admin-toolbar"><p>Signed in as <strong>{session.email}</strong> · {session.role === "admin" ? "Administrator" : "Content editor"}. Changes are recorded.</p><div className="admin-toolbar-actions"><button className="admin-quiet-button" type="button" disabled={busy || session.role !== "admin" || !historyStatus.canUndo} title={historyStatus.undoLabel ?? "No recent changes to undo"} onClick={() => void applyUndoRedo("undo")}><Undo2 size={15} /> Undo</button><button className="admin-quiet-button" type="button" disabled={busy || session.role !== "admin" || !historyStatus.canRedo} title={historyStatus.redoLabel ?? "No changes to redo"} onClick={() => void applyUndoRedo("redo")}><Redo2 size={15} /> Redo</button><button className="admin-quiet-button" type="button" onClick={signOut}><LogOut size={15} /> Sign out</button></div></div>
         <section className="admin-review-callout"><strong>Publication review</strong><span>Profiles in Draft, Pending Approval or Archived are not visible publicly. Set a profile to Published only after the company has approved its name, position, portrait and biography.</span></section>
+        <section className="admin-site-editor">
+          <div className="admin-section-heading"><div><span className="leadership-kicker">SITE-WIDE CONTENT MANAGEMENT</span><h2>Website content & design</h2></div></div>
+          <div className="admin-review-callout"><strong>Draft & publish</strong><span>Edit home-page messaging, page copy, navigation, footer and visual presets here. Text is displayed as plain text; links accept internal paths or HTTPS URLs. Only administrators can publish changes. Undo/redo tracks site, manufacturing and leadership edits across the change history.</span></div>
+          {siteConfigError && <p className="admin-feedback is-error" role="alert">{siteConfigError}</p>}
+          {siteConfigNotice && <p className="admin-feedback" role="status">{siteConfigNotice}</p>}
+          <div className="site-editor-tabs" role="tablist" aria-label="Site editor sections">
+            {(["home", "pages", "navigation", "design"] as const).map((tab) => <button key={tab} type="button" role="tab" aria-selected={siteConfigTab === tab} className={siteConfigTab === tab ? "is-selected" : ""} onClick={() => setSiteConfigTab(tab)}>{({ home: "Home page", pages: "Pages", navigation: "Navigation & footer", design: "Global design" })[tab]}</button>)}
+          </div>
+          <form onSubmit={saveSiteConfig}>
+            {siteConfigTab === "home" && <div className="site-editor-fields">
+              <h3>Home-page introduction</h3>
+              <label>Hero eyebrow<input value={siteConfig.home.heroEyebrow} onChange={(event) => updateSiteConfig((current) => ({ ...current, home: { ...current.home, heroEyebrow: event.target.value } }))} /></label>
+              <label>Hero headline <small>Use a new line to control line breaks; the final line is accented.</small><textarea rows={3} value={siteConfig.home.heroHeadline} onChange={(event) => updateSiteConfig((current) => ({ ...current, home: { ...current.home, heroHeadline: event.target.value } }))} /></label>
+              <label>Hero description<textarea rows={3} value={siteConfig.home.heroDescription} onChange={(event) => updateSiteConfig((current) => ({ ...current, home: { ...current.home, heroDescription: event.target.value } }))} /></label>
+              <div className="site-editor-pair"><label>Primary action<input value={siteConfig.home.primaryAction} onChange={(event) => updateSiteConfig((current) => ({ ...current, home: { ...current.home, primaryAction: event.target.value } }))} /></label><label>Primary action path<input value={siteConfig.home.primaryPath} onChange={(event) => updateSiteConfig((current) => ({ ...current, home: { ...current.home, primaryPath: event.target.value } }))} /></label></div>
+              <div className="site-editor-pair"><label>Secondary action<input value={siteConfig.home.secondaryAction} onChange={(event) => updateSiteConfig((current) => ({ ...current, home: { ...current.home, secondaryAction: event.target.value } }))} /></label><label>Secondary action path<input value={siteConfig.home.secondaryPath} onChange={(event) => updateSiteConfig((current) => ({ ...current, home: { ...current.home, secondaryPath: event.target.value } }))} /></label></div>
+              <h3>Opportunity introduction</h3>
+              <label>Section label<input value={siteConfig.home.introEyebrow} onChange={(event) => updateSiteConfig((current) => ({ ...current, home: { ...current.home, introEyebrow: event.target.value } }))} /></label>
+              <label>Heading<textarea rows={2} value={siteConfig.home.introHeadline} onChange={(event) => updateSiteConfig((current) => ({ ...current, home: { ...current.home, introHeadline: event.target.value } }))} /></label>
+              <label>Primary copy<textarea rows={3} value={siteConfig.home.introPrimary} onChange={(event) => updateSiteConfig((current) => ({ ...current, home: { ...current.home, introPrimary: event.target.value } }))} /></label>
+              <label>Secondary copy<textarea rows={3} value={siteConfig.home.introSecondary} onChange={(event) => updateSiteConfig((current) => ({ ...current, home: { ...current.home, introSecondary: event.target.value } }))} /></label>
+              <div className="site-editor-pair"><label>Company link label<input value={siteConfig.home.introAction} onChange={(event) => updateSiteConfig((current) => ({ ...current, home: { ...current.home, introAction: event.target.value } }))} /></label><label>Company link path<input value={siteConfig.home.introPath} onChange={(event) => updateSiteConfig((current) => ({ ...current, home: { ...current.home, introPath: event.target.value } }))} /></label></div>
+              <h3>Brand story</h3>
+              <label>Section label<input value={siteConfig.home.brandEyebrow} onChange={(event) => updateSiteConfig((current) => ({ ...current, home: { ...current.home, brandEyebrow: event.target.value } }))} /></label>
+              <label>Brand marker<input value={siteConfig.home.brandLabel} onChange={(event) => updateSiteConfig((current) => ({ ...current, home: { ...current.home, brandLabel: event.target.value } }))} /></label>
+              <label>Heading<textarea rows={2} value={siteConfig.home.brandHeadline} onChange={(event) => updateSiteConfig((current) => ({ ...current, home: { ...current.home, brandHeadline: event.target.value } }))} /></label>
+              <label>Brand story copy<textarea rows={3} value={siteConfig.home.brandDescription} onChange={(event) => updateSiteConfig((current) => ({ ...current, home: { ...current.home, brandDescription: event.target.value } }))} /></label>
+              <label>Brand caveat<textarea rows={3} value={siteConfig.home.brandCaveat} onChange={(event) => updateSiteConfig((current) => ({ ...current, home: { ...current.home, brandCaveat: event.target.value } }))} /></label>
+              <div className="site-editor-pair"><label>Brand story link label<input value={siteConfig.home.brandAction} onChange={(event) => updateSiteConfig((current) => ({ ...current, home: { ...current.home, brandAction: event.target.value } }))} /></label><label>Brand story link path<input value={siteConfig.home.brandPath} onChange={(event) => updateSiteConfig((current) => ({ ...current, home: { ...current.home, brandPath: event.target.value } }))} /></label></div>
+            </div>}
+            {siteConfigTab === "pages" && <div className="site-editor-fields">
+              <label>Select a page<select value={selectedPagePath} onChange={(event) => setSelectedPagePath(event.target.value)}>{Object.entries(siteConfig.pages).map(([pathname, page]) => <option key={pathname} value={pathname}>{page.eyebrow} · {pathname}</option>)}</select></label>
+              {siteConfig.pages[selectedPagePath] && <div className="site-page-editor">
+                <div className="site-editor-pair"><label>Page title<input value={siteConfig.pages[selectedPagePath].title} onChange={(event) => updateSiteConfig((current) => ({ ...current, pages: { ...current.pages, [selectedPagePath]: { ...current.pages[selectedPagePath], title: event.target.value } } }))} /></label><label>Eyebrow<input value={siteConfig.pages[selectedPagePath].eyebrow} onChange={(event) => updateSiteConfig((current) => ({ ...current, pages: { ...current.pages, [selectedPagePath]: { ...current.pages[selectedPagePath], eyebrow: event.target.value } } }))} /></label></div>
+                <label>Page summary<textarea rows={3} value={siteConfig.pages[selectedPagePath].summary} onChange={(event) => updateSiteConfig((current) => ({ ...current, pages: { ...current.pages, [selectedPagePath]: { ...current.pages[selectedPagePath], summary: event.target.value } } }))} /></label>
+                <label>Content layout preset<select value={siteConfig.pages[selectedPagePath].layout ?? siteConfig.layout} onChange={(event) => updateSiteConfig((current) => ({ ...current, pages: { ...current.pages, [selectedPagePath]: { ...current.pages[selectedPagePath], layout: event.target.value as SiteConfig["layout"] } } }))}>{availablePageLayouts.map((layout) => <option key={layout} value={layout}>{layout}</option>)}</select></label>
+                <h3>Content sections</h3>
+                {siteConfig.pages[selectedPagePath].sections.map((section, index) => <fieldset className="site-page-section" key={`${section.title}-${index}`}>
+                  <div className="site-group-heading"><strong>Section {index + 1}</strong><button className="admin-quiet-button" type="button" onClick={() => updateSiteConfig((current) => ({ ...current, pages: { ...current.pages, [selectedPagePath]: { ...current.pages[selectedPagePath], sections: current.pages[selectedPagePath].sections.filter((_, sectionIndex) => sectionIndex !== index) } } }))}>Remove</button></div>
+                  <label>Section heading<input value={section.title} onChange={(event) => updateSiteConfig((current) => ({ ...current, pages: { ...current.pages, [selectedPagePath]: { ...current.pages[selectedPagePath], sections: current.pages[selectedPagePath].sections.map((item, sectionIndex) => sectionIndex === index ? { ...item, title: event.target.value } : item) } } }))} /></label>
+                  <label>Section copy<textarea rows={4} value={section.body} onChange={(event) => updateSiteConfig((current) => ({ ...current, pages: { ...current.pages, [selectedPagePath]: { ...current.pages[selectedPagePath], sections: current.pages[selectedPagePath].sections.map((item, sectionIndex) => sectionIndex === index ? { ...item, body: event.target.value } : item) } } }))} /></label>
+                  <label>Optional source/status tag<input value={section.tag ?? ""} onChange={(event) => updateSiteConfig((current) => ({ ...current, pages: { ...current.pages, [selectedPagePath]: { ...current.pages[selectedPagePath], sections: current.pages[selectedPagePath].sections.map((item, sectionIndex) => sectionIndex === index ? { ...item, tag: event.target.value } : item) } } }))} /></label>
+                </fieldset>)}
+                <button className="button button-outline" type="button" onClick={() => updateSiteConfig((current) => ({ ...current, pages: { ...current.pages, [selectedPagePath]: { ...current.pages[selectedPagePath], sections: [...current.pages[selectedPagePath].sections, { title: "New section", body: "Add approved page content.", tag: "" }] } } }))}><Plus size={15} /> Add content section</button>
+              </div>}
+            </div>}
+            {siteConfigTab === "navigation" && <div className="site-editor-fields">
+              <h3>Header action</h3>
+              <div className="site-editor-pair"><label>Action label<input value={siteConfig.headerAction.label} onChange={(event) => updateSiteConfig((current) => ({ ...current, headerAction: { ...current.headerAction, label: event.target.value } }))} /></label><label>Action path<input value={siteConfig.headerAction.path} onChange={(event) => updateSiteConfig((current) => ({ ...current, headerAction: { ...current.headerAction, path: event.target.value } }))} /></label></div>
+              <h3>Main navigation groups</h3>
+              <SiteGroupEditor groups={siteConfig.navigation} onChange={(navigation) => updateSiteConfig((current) => ({ ...current, navigation }))} />
+              <h3>Footer</h3>
+              <label>Footer description<textarea rows={2} value={siteConfig.footer.tagline} onChange={(event) => updateSiteConfig((current) => ({ ...current, footer: { ...current.footer, tagline: event.target.value } }))} /></label>
+              <div className="site-editor-pair"><label>Contact email<input type="email" value={siteConfig.footer.email} onChange={(event) => updateSiteConfig((current) => ({ ...current, footer: { ...current.footer, email: event.target.value } }))} /></label><label>Contact phone<input value={siteConfig.footer.phone} onChange={(event) => updateSiteConfig((current) => ({ ...current, footer: { ...current.footer, phone: event.target.value } }))} /></label></div>
+              <label>Footer note<input value={siteConfig.footer.copyrightNote} onChange={(event) => updateSiteConfig((current) => ({ ...current, footer: { ...current.footer, copyrightNote: event.target.value } }))} /></label>
+              <h3>Footer link groups</h3>
+              <SiteGroupEditor groups={siteConfig.footer.groups} onChange={(groups) => updateSiteConfig((current) => ({ ...current, footer: { ...current.footer, groups } }))} />
+            </div>}
+            {siteConfigTab === "design" && <div className="site-editor-fields site-design-fields">
+              <label>Brand accent<input type="color" value={siteConfig.theme.accent} onChange={(event) => updateSiteConfig((current) => ({ ...current, theme: { ...current.theme, accent: event.target.value } }))} /></label>
+              <label>Page background<input type="color" value={siteConfig.theme.background} onChange={(event) => updateSiteConfig((current) => ({ ...current, theme: { ...current.theme, background: event.target.value } }))} /></label>
+              <label>Surface / card background<input type="color" value={siteConfig.theme.panel} onChange={(event) => updateSiteConfig((current) => ({ ...current, theme: { ...current.theme, panel: event.target.value } }))} /></label>
+              <label>Heading typography<select value={siteConfig.theme.headingFont} onChange={(event) => updateSiteConfig((current) => ({ ...current, theme: { ...current.theme, headingFont: event.target.value } }))}>{["Manrope", "Arial", "Georgia", "Verdana", "Tahoma", "Trebuchet MS", "system-ui"].map((font) => <option key={font}>{font}</option>)}</select></label>
+              <label>Body typography<select value={siteConfig.theme.bodyFont} onChange={(event) => updateSiteConfig((current) => ({ ...current, theme: { ...current.theme, bodyFont: event.target.value } }))}>{["Arial", "Manrope", "Georgia", "Verdana", "Tahoma", "Trebuchet MS", "system-ui"].map((font) => <option key={font}>{font}</option>)}</select></label>
+              <label>Default page layout<select value={siteConfig.layout} onChange={(event) => updateSiteConfig((current) => { const layout = event.target.value as SiteConfig["layout"]; return { ...current, layout, pages: Object.fromEntries(Object.entries(current.pages).map(([pathname, page]) => [pathname, { ...page, layout }])) }; })}>{availablePageLayouts.map((layout) => <option key={layout}>{layout}</option>)}</select></label>
+            </div>}
+            <div className="admin-form-actions"><button className="button button-orange" type="submit" disabled={busy}><Save size={15} /> Save site draft</button>{session.role === "admin" && <button className="button button-orange" type="button" disabled={busy} onClick={() => void publishSiteConfig()}><Send size={15} /> Publish site changes</button>}</div>
+          </form>
+        </section>
         <section className="admin-manufacturing">
           <div className="admin-section-heading"><div><span className="leadership-kicker">PUBLIC SITE CONTENT</span><h2>Manufacturing experience</h2></div><Factory size={22} aria-hidden="true" /></div>
           <div className="admin-review-callout"><strong>Draft & approval</strong><span>Save changes to the private draft, preview them, and publish only after company and engineering review. Every save and publication is recorded in the change history. {manufacturingMeta && <>Last content change: {new Date(manufacturingMeta.updated_at).toLocaleString()} by {manufacturingMeta.updated_by}.</>}</span></div>

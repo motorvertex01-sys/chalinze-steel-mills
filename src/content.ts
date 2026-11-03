@@ -3,6 +3,7 @@ export type SitePage = {
   title: string;
   eyebrow: string;
   summary: string;
+  layout?: "cards" | "editorial" | "split";
   sections: Array<{ title: string; body: string; tag?: string }>;
 };
 

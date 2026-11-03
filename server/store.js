@@ -106,6 +106,16 @@ export async function writeAudit(entry) {
   await writeAuditWith(entry.tx ?? db, entry);
 }
 
+export async function recordChange(tx, { contentType, entityId, email, action, before, after }) {
+  await tx.run("UPDATE change_history SET state = 'superseded' WHERE state = 'undone'");
+  await tx.run(
+    `INSERT INTO change_history (content_type, entity_id, admin_email, action, before_json, after_json, state, created_at)
+     VALUES (?, ?, ?, ?, ?, ?, 'applied', ?)`,
+    contentType, entityId, email, action, before === null ? null : JSON.stringify(before),
+    after === null ? null : JSON.stringify(after), new Date().toISOString(),
+  );
+}
+
 async function initialize() {
   sqlite.exec(`
     CREATE TABLE IF NOT EXISTS admins (
@@ -129,8 +139,14 @@ async function initialize() {
     CREATE TABLE IF NOT EXISTS site_content (
       content_key TEXT PRIMARY KEY, published_json TEXT NOT NULL, draft_json TEXT NOT NULL, updated_by TEXT NOT NULL, updated_at TEXT NOT NULL
     );
+    CREATE TABLE IF NOT EXISTS change_history (
+      id INTEGER PRIMARY KEY AUTOINCREMENT, content_type TEXT NOT NULL, entity_id TEXT NOT NULL,
+      admin_email TEXT NOT NULL, action TEXT NOT NULL, before_json TEXT, after_json TEXT,
+      state TEXT NOT NULL CHECK (state IN ('applied', 'undone', 'superseded')), created_at TEXT NOT NULL
+    );
     CREATE INDEX IF NOT EXISTS idx_profiles_public ON profiles(status, section, sort_order);
     CREATE INDEX IF NOT EXISTS idx_audit_profile ON audit_log(profile_id, id DESC);
+    CREATE INDEX IF NOT EXISTS idx_change_history_state ON change_history(state, id DESC);
   `);
   const adminColumns = sqlite.pragma("table_info(admins)").map((column) => column.name);
   if (!adminColumns.includes("role")) sqlite.exec("ALTER TABLE admins ADD COLUMN role TEXT NOT NULL DEFAULT 'admin'");
@@ -140,6 +156,19 @@ async function initialize() {
   await db.run(
     "INSERT OR IGNORE INTO site_content (content_key, published_json, draft_json, updated_by, updated_at) VALUES ('manufacturing', ?, ?, 'system', ?)",
     JSON.stringify(manufacturingDefault), JSON.stringify(manufacturingDefault), now,
+  );
+  const siteConfigDefault = {
+    version: 1,
+    theme: { accent: "#f47721", background: "#090a0c", panel: "#111418", headingFont: "Manrope", bodyFont: "Arial" },
+    layout: "cards",
+    home: {},
+    navigation: [],
+    footer: { tagline: "", groups: [], email: "", phone: "", copyrightNote: "" },
+    pages: {},
+  };
+  await db.run(
+    "INSERT OR IGNORE INTO site_content (content_key, published_json, draft_json, updated_by, updated_at) VALUES ('site-config', ?, ?, 'system', ?)",
+    JSON.stringify(siteConfigDefault), JSON.stringify(siteConfigDefault), now,
   );
 
   for (const profile of profiles) {

@@ -254,6 +254,56 @@ test("leadership roles, authenticated editing, image uploads and publishing", as
     if (!adminManufacturingPublish.ok) throw new Error("Administrator could not publish reviewed manufacturing content.");
     const manufacturingAfterPublish = await (await fetch(`${base}/api/manufacturing`)).json();
     if (manufacturingAfterPublish.introduction !== manufacturingDraft.draft.introduction) throw new Error("Published manufacturing content did not appear publicly.");
+    const forbiddenEditorUndo = await fetch(`${base}/api/admin/undo`, { method: "POST", headers: { Cookie: editorCookie, Origin: base } });
+    if (forbiddenEditorUndo.status !== 403) throw new Error("Content editor was able to undo a published change.");
+    const undoManufacturing = await fetch(`${base}/api/admin/undo`, { method: "POST", headers: { Cookie: adminCookie, Origin: base } });
+    if (!undoManufacturing.ok || (await (await fetch(`${base}/api/manufacturing`)).json()).introduction !== manufacturingPublicInitially.introduction) {
+      throw new Error("Undo did not restore the prior published manufacturing content.");
+    }
+    const redoManufacturing = await fetch(`${base}/api/admin/redo`, { method: "POST", headers: { Cookie: adminCookie, Origin: base } });
+    if (!redoManufacturing.ok || (await (await fetch(`${base}/api/manufacturing`)).json()).introduction !== manufacturingAfterPublish.introduction) {
+      throw new Error("Redo did not reapply the manufacturing publication.");
+    }
+
+    const siteConfig = {
+      version: 1,
+      theme: { accent: "#1199aa", background: "#111111", panel: "#222222", headingFont: "Georgia", bodyFont: "Arial" },
+      layout: "editorial",
+      home: {
+        heroEyebrow: "Test eyebrow", heroHeadline: "Test headline", heroDescription: "Test description",
+        primaryAction: "Project", primaryPath: "/project", secondaryAction: "Company", secondaryPath: "/company",
+        introEyebrow: "Test intro", introHeadline: "Introduction", introPrimary: "Primary copy", introSecondary: "Secondary copy",
+        introAction: "Company", introPath: "/company", brandEyebrow: "Brand", brandLabel: "Brand label",
+        brandHeadline: "Brand story", brandDescription: "Brand copy", brandCaveat: "Brand note",
+        brandAction: "Company", brandPath: "/company",
+      },
+      headerAction: { label: "Investor relations", path: "/investment" },
+      navigation: [{ label: "Main", links: [{ label: "Overview", path: "/" }, { label: "External", path: "https://example.com/" }] }],
+      footer: { tagline: "Test footer", groups: [{ label: "Explore", links: [{ label: "Home", path: "/" }] }], email: "hello@example.com", phone: "+255 700 000 000", copyrightNote: "Tanzania" },
+      pages: {},
+    };
+    const unsafeSiteConfig = { ...siteConfig, navigation: [{ label: "Main", links: [{ label: "Bad link", path: "javascript:alert(1)" }] }] };
+    const rejectedSiteConfig = await fetch(`${base}/api/admin/site-config`, { method: "PUT", headers: editorHeaders, body: JSON.stringify(unsafeSiteConfig) });
+    if (rejectedSiteConfig.status !== 400) throw new Error("Unsafe navigation URL was accepted by site configuration validation.");
+    const saveSiteConfig = await fetch(`${base}/api/admin/site-config`, {
+      method: "PUT", headers: editorHeaders, body: JSON.stringify(siteConfig),
+    });
+    if (!saveSiteConfig.ok) throw new Error("Content editor could not save a site-wide content draft.");
+    const unchangedSiteConfig = await (await fetch(`${base}/api/site-config`)).json();
+    if (unchangedSiteConfig.home?.heroHeadline) throw new Error("An editor's site-wide draft changed public content.");
+    const forbiddenSitePublish = await fetch(`${base}/api/admin/site-config/publish`, {
+      method: "POST", headers: { Cookie: editorCookie, Origin: base },
+    });
+    if (forbiddenSitePublish.status !== 403) throw new Error("Content editor was able to publish site-wide changes.");
+    const publishSiteConfig = await fetch(`${base}/api/admin/site-config/publish`, {
+      method: "POST", headers: { Cookie: adminCookie, Origin: base },
+    });
+    if (!publishSiteConfig.ok) throw new Error("Administrator could not publish site-wide content.");
+    if ((await (await fetch(`${base}/api/site-config`)).json()).home.heroHeadline !== "Test headline") throw new Error("Published site configuration was not exposed through the public read-only API.");
+    const undoSiteConfig = await fetch(`${base}/api/admin/undo`, { method: "POST", headers: { Cookie: adminCookie, Origin: base } });
+    if (!undoSiteConfig.ok || (await (await fetch(`${base}/api/site-config`)).json()).home.heroHeadline) throw new Error("Site-wide undo did not restore the previous public content.");
+    const redoSiteConfig = await fetch(`${base}/api/admin/redo`, { method: "POST", headers: { Cookie: adminCookie, Origin: base } });
+    if (!redoSiteConfig.ok || (await (await fetch(`${base}/api/site-config`)).json()).home.heroHeadline !== "Test headline") throw new Error("Site-wide redo did not reapply the published content.");
     const malformedCookie = await fetch(`${base}/api/admin/profiles`, { headers: { Cookie: "csm_admin=%ZZ" } });
     if (malformedCookie.status !== 401) throw new Error("Malformed session cookie was not safely rejected.");
 
@@ -263,10 +313,20 @@ test("leadership roles, authenticated editing, image uploads and publishing", as
     if (!unpublishResponse.ok) throw new Error(`Profile unpublication failed (${unpublishResponse.status}).`);
     publicProfiles = await (await fetch(`${base}/api/leadership`)).json();
     if (publicProfiles.some((profile) => profile.id === created.id)) throw new Error("Unpublished profile remained publicly visible.");
+    const undoProfileChange = await fetch(`${base}/api/admin/undo`, { method: "POST", headers: { Cookie: adminCookie, Origin: base } });
+    publicProfiles = await (await fetch(`${base}/api/leadership`)).json();
+    if (!undoProfileChange.ok || !publicProfiles.some((profile) => profile.id === created.id && profile.title === "Updated test title")) {
+      throw new Error("Undo did not restore the last leadership profile change.");
+    }
+    const redoProfileChange = await fetch(`${base}/api/admin/redo`, { method: "POST", headers: { Cookie: adminCookie, Origin: base } });
+    publicProfiles = await (await fetch(`${base}/api/leadership`)).json();
+    if (!redoProfileChange.ok || publicProfiles.some((profile) => profile.id === created.id)) throw new Error("Redo did not reapply the leadership profile change.");
 
     const audit = await (await fetch(`${base}/api/admin/audit`, { headers: { Cookie: adminCookie } })).json();
     if (!audit.some((entry) => entry.profile_id === created.id && entry.action === "updated")) throw new Error("Profile editing was not recorded in the audit history.");
     if (!audit.some((entry) => entry.profile_id === "manufacturing-content" && entry.action === "manufacturing content published")) throw new Error("Manufacturing publication was not recorded in the audit history.");
+    if (!audit.some((entry) => entry.profile_id === "site-config" && entry.action === "site-wide content published")) throw new Error("Site-wide publication was not recorded in the audit history.");
+    if (!audit.some((entry) => entry.action.startsWith("undo: ") && entry.action.includes("Site-wide content published"))) throw new Error("Undo was not recorded as an audited reversal.");
   } finally {
     if (server && server.exitCode === null) {
       server.kill();

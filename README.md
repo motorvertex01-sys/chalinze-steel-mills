@@ -1,6 +1,6 @@
 # Chalinze Steel Mills Ltd website
 
-Independent React, TypeScript, Vite and Three.js website project, kept separate from the UCC chatbot repository.
+Independent React, TypeScript, Vite and Three.js website project, kept separate from the UCC chatbot repository. The protected `/admin` area manages leadership, manufacturing drafts and the public site's page content, navigation and visual settings.
 
 ## Start the project
 
@@ -39,7 +39,9 @@ Create the first administrator on the server:
 1. Copy `.env.example` to `.env` and set `ADMIN_EMAIL` plus a unique password of at least 14 characters. `npm run admin:create` uses `ADMIN_ROLE` (`admin` or `editor`); hosted first-start bootstrap always creates an administrator.
 2. Locally, run `npm run admin:create` once. For a hosted first start, set `ADMIN_EMAIL` and `ADMIN_PASSWORD` as private service environment variables; the server creates one administrator only when no account exists.
 3. Remove `ADMIN_PASSWORD` from the service environment after account creation and sign-in. The password is stored as a salted scrypt hash; it is not needed to run the site.
-4. Sign in at `/admin` to review profiles, upload company-approved portraits, edit profile content and ordering, preview changes, and inspect the audit history. Administrators may publish/archive profiles and manufacturing content; editors can prepare unpublished changes but cannot publish, delete profiles or edit an already published profile.
+4. Sign in at `/admin` to review profiles, upload company-approved portraits, edit profile content and ordering, manage website copy/navigation/footer/design, preview changes, and inspect the audit history. The site editor provides controls for the home-page introduction, each content page's title/summary/sections/layout, navigation and footer links, brand colors and typography. Text is rendered as plain text; links are limited to safe internal paths or HTTPS URLs. Content editors can prepare unpublished site and manufacturing drafts but cannot publish, delete profiles, edit a published profile or undo/redo published changes. Administrators can publish reviewed drafts and use the cross-content Undo/Redo controls; reversals and reapplications are recorded in the audit history.
+
+The public site reads published site settings from a read-only API. Drafts and published settings, including page layouts and global theme choices, are stored in SQLite alongside manufacturing content. The site editor covers the page records, home-page introduction, navigation and footer data. Interactive 3D scenes, process illustrations, product diagrams, galleries, FAQs/contact widgets, and other experience-specific decorative or structured components remain code-defined; leadership profiles and the manufacturing experience continue to use their dedicated structured editors.
 
 Four supplied leadership portraits are optimized in `public/assets/leadership/` and associated with the matching profiles. The supplied mine-site photograph is used only as an illustrative image, not as evidence of the Chalinze project site. Public copies of the two supplied Tanzania Revenue Authority certificates are in `public/assets/corporate/`; taxpayer identifiers and signatures are redacted, and both are identified as documents issued to Gypsum Plus Mines Limited. Original source documents and unredacted tax certificates in the local `src/leadership/` folder are excluded from Git.
 
