@@ -72,10 +72,8 @@ export function ProfileDetails({ profile, onClose, onPrevious, onNext, position 
       <div className="leadership-dialog-copy">
         <span className="leadership-kicker">{profile.section === "board" ? "BOARD OF DIRECTORS" : profile.section === "management" ? "SENIOR MANAGEMENT" : "SUPPORTING STAFF"}</span>
         <h2 id="profile-dialog-title">{profile.name}</h2>
-        <p className="leader-title">{profile.title}</p>
-        {profile.is_vacant ? (
-          <p className="profile-pending-copy">This is a vacant position. No individual or portrait is associated with this role.</p>
-        ) : (
+        {profile.title !== profile.name && <p className="leader-title">{profile.title}</p>}
+        {!profile.is_vacant && (
           <>
             {profile.biography && <p className="profile-pending-copy">{profile.biography}</p>}
             <dl className="profile-details-list">
@@ -96,14 +94,15 @@ export function ProfileDetails({ profile, onClose, onPrevious, onNext, position 
 }
 
 function ProfileCard({ profile, onOpen, featured = false, ordinal }: { profile: LeadershipProfile; onOpen: () => void; featured?: boolean; ordinal: number }) {
-  const action = profile.is_vacant ? "Explore vacancy" : profile.section === "support" ? "View staff category" : "View full profile";
+  const action = profile.is_vacant ? "Explore vacancy" : profile.section === "support" ? "View staff category" : "View role";
+  const label = profile.title === profile.name ? profile.name : `${profile.name}, ${profile.title}`;
 
   return (
-    <button className={`leader-card${featured ? " is-featured" : ""}${profile.is_vacant ? " is-vacant" : ""}`} type="button" onClick={onOpen} aria-label={`${action}: ${profile.name}, ${profile.title}`}>
+    <button className={`leader-card${featured ? " is-featured" : ""}${profile.is_vacant ? " is-vacant" : ""}`} type="button" onClick={onOpen} aria-label={`${action}: ${label}`}>
       <span className="leader-card-media"><Portrait profile={profile} /><span className="leader-card-index">{String(ordinal).padStart(2, "0")}</span><span className="leader-card-open"><ArrowUpRight size={17} /></span></span>
       <span className="leader-card-copy">
-        <span className="leader-title">{profile.title}</span>
         <strong>{profile.name}</strong>
+        {profile.title !== profile.name && <span className="leader-title">{profile.title}</span>}
         <span className="leader-profile-link">{action} <ArrowUpRight size={14} /></span>
       </span>
     </button>
@@ -182,7 +181,6 @@ export function LeadershipPage() {
   }, []);
 
   const board = profiles.filter((profile) => profile.section === "board" && profile.placement === "board");
-  const governance = profiles.filter((profile) => profile.section === "board" && profile.placement === "governance");
   const management = profiles.filter((profile) => profile.section === "management");
   const support = profiles.filter((profile) => profile.section === "support");
 
@@ -198,7 +196,6 @@ export function LeadershipPage() {
         <div className="section-index">01 / GOVERNANCE LEADERSHIP</div>
         <div className="leadership-section-heading"><div><span className="leadership-kicker">ACCOUNTABILITY & DIRECTION</span><h2>Board of<br /><em>Directors.</em></h2></div><p>Board leadership and governance for Chalinze Steel Mills Ltd.</p></div>
         {!loading && !error && <ProfileGrid profiles={board} label="Board of Directors profiles" featured />}
-        {governance.length > 0 && <div className="governance-profiles"><div className="section-index">SHAREHOLDERS & PROFESSIONAL ADVISORY</div><ProfileGrid profiles={governance} label="Shareholder and professional advisory profiles" /></div>}
       </section>
       <section id="senior-management" className="leadership-section management-section">
         <div className="section-index">02 / EXECUTIVE OPERATIONS</div>

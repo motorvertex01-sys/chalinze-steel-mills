@@ -54,7 +54,7 @@ test("leadership roles, authenticated editing, image uploads and publishing", as
   await fs.mkdir(dataDirectory, { recursive: true });
   const port = await unusedPort();
   const base = `http://127.0.0.1:${port}`;
-  const env = { ...process.env, MYSQL_URL: "", DATA_DIRECTORY: dataDirectory, PORT: String(port), NODE_ENV: "test" };
+  const env = { ...process.env, DATA_DIRECTORY: dataDirectory, PORT: String(port), NODE_ENV: "test" };
   let server;
 
   try {
@@ -73,7 +73,32 @@ test("leadership roles, authenticated editing, image uploads and publishing", as
     });
 
     const publicInitially = await (await fetch(`${base}/api/leadership`)).json();
-    if (publicInitially.length !== 0) throw new Error("Profiles without company approval must not appear in the public roster.");
+    const expectedRoster = [
+      ["board", "Mr. Amini N. Kimaro", "Chief Executive Officer/ Board Chairman"],
+      ["board", "Dr. Humphrey Musyoka", "Director"],
+      ["board", "Dr. Alfred C. Msemo", "Director"],
+      ["board", "Denis A. Kimaro", "Director"],
+      ["board", "Mrs. Juliette Kimaro", "Chief Legal Counsel"],
+      ["board", "Technical Advisor", "Position Vacant"],
+      ["management", "Harish Kumar", "position/title to be confirmed"],
+      ["management", "Chief Finance Officer (CFO)", "name to be confirmed"],
+      ["management", "Nickson Kimbori", "Operations - Logistics"],
+      ["management", "Ridhiwani M. Mbaruku", "Mining Operations"],
+      ["management", "Mr. Sospeter Urassa", "Chief Accountant"],
+      ["management", "Godluck E. Urassa", "IT / Electrician Specialist"],
+      ["management", "Mining Engineer", "Position Vacant"],
+      ["management", "Geologist", "Position Vacant"],
+      ["support", "Chief Cashier", "Chief Cashier"],
+      ["support", "Drivers", "Drivers"],
+      ["support", "Cleaners", "Cleaners"],
+      ["support", "Machine Operators", "Machine Operators"],
+    ];
+    if (publicInitially.length !== expectedRoster.length) throw new Error(`Expected ${expectedRoster.length} public roster entries, received ${publicInitially.length}.`);
+    for (const [section, name, title] of expectedRoster) {
+      const profile = publicInitially.find((item) => item.name === name);
+      if (profile?.section !== section || profile.title !== title) throw new Error(`${name} is missing from the correct public section or has an incorrect title.`);
+      if (profile.biography || profile.background || profile.qualifications || profile.responsibilities) throw new Error(`${name} includes unsupported public profile details.`);
+    }
     const manufacturingPublicInitially = await (await fetch(`${base}/api/manufacturing`)).json();
 
     const adminCookie = await login(base, adminEmail);
@@ -91,38 +116,29 @@ test("leadership roles, authenticated editing, image uploads and publishing", as
     const denis = suppliedProfiles.find((profile) => profile.name === "Denis A. Kimaro");
     const juliette = suppliedProfiles.find((profile) => profile.name === "Mrs. Juliette Kimaro");
     const nickson = suppliedProfiles.find((profile) => profile.name === "Nickson Kimbori");
-    const ridhiwani = suppliedProfiles.find((profile) => profile.name === "Mr. Ridhiwani M. Mbaruku");
+    const ridhiwani = suppliedProfiles.find((profile) => profile.name === "Ridhiwani M. Mbaruku");
     const alfred = suppliedProfiles.find((profile) => profile.name === "Dr. Alfred C. Msemo");
     const advisor = suppliedProfiles.find((profile) => profile.name === "Technical Advisor");
-    const managementRoles = [
-      ["Harish Kumar", "Position/title to be confirmed."],
-      ["Chief Finance Officer (CFO)", "Name to be confirmed."],
-      ["Nickson Kimbori", "Operations – Logistics"],
-      ["Mr. Ridhiwani M. Mbaruku", "Mining Operations"],
-      ["Mr. Sospeter Urassa", "Chief Accountant"],
-      ["Godluck E. Urassa", "IT / Electrician Specialist"],
-      ["Mining Engineer", "Position Vacant"],
-      ["Geologist", "Position Vacant"],
-    ];
+    const managementRoles = expectedRoster.filter(([section]) => section === "management").map(([, name, title]) => [name, title]);
     const supportingRoles = ["Chief Cashier", "Drivers", "Cleaners", "Machine Operators"];
-    if (amini?.status !== "pending_approval" || !amini.biography.includes("mineral resources")) throw new Error("Amini's source profile was not seeded as pending approval.");
+    if (amini?.status !== "published" || amini.biography || amini.background || amini.qualifications || amini.responsibilities) throw new Error("Amini's supplied roster entry was not published without unsupported details.");
     if (amini?.photo_url !== "/assets/leadership/amini-n-kimaro.webp") throw new Error("Amini's supplied portrait was not seeded.");
-    if (humphrey?.status !== "pending_approval" || !humphrey.title.includes("confirmed")) throw new Error("Humphrey must remain unpublished pending confirmation.");
-    if (denis?.section !== "board" || denis.placement !== "board" || denis.title !== "Director" || denis.status !== "pending_approval") throw new Error("Denis was not classified as a pending Board Director.");
+    if (humphrey?.status !== "published" || humphrey.title !== "Director") throw new Error("Humphrey was not published as a Board Director.");
+    if (denis?.section !== "board" || denis.placement !== "board" || denis.title !== "Director" || denis.status !== "published") throw new Error("Denis was not published as a Board Director.");
     if (denis?.photo_url !== "/assets/leadership/denis-a-kimaro.webp") throw new Error("Denis's supplied portrait was not seeded.");
-    if (juliette?.section !== "board" || juliette.placement !== "board" || juliette.title !== "Chief Legal Counsel" || juliette.status !== "pending_approval") throw new Error("Juliette was not classified as pending Board Chief Legal Counsel.");
+    if (juliette?.section !== "board" || juliette.placement !== "board" || juliette.title !== "Chief Legal Counsel" || juliette.status !== "published") throw new Error("Juliette was not published as Board Chief Legal Counsel.");
     if (juliette?.photo_url !== "/assets/leadership/juliette-a-kimaro.webp") throw new Error("Juliette's supplied portrait was not seeded.");
-    if (nickson?.status !== "pending_approval" || nickson.section !== "management" || nickson.title !== "Operations – Logistics" || nickson.photo_url) throw new Error("Nickson was not classified only in Senior Management.");
-    if (ridhiwani?.status !== "pending_approval" || ridhiwani.photo_url !== "/assets/leadership/ridhiwani-m-mbaruku.webp") throw new Error("Ridhiwani's supplied portrait was not seeded for review.");
+    if (nickson?.status !== "published" || nickson.section !== "management" || nickson.title !== "Operations - Logistics" || nickson.photo_url) throw new Error("Nickson was not published only in Senior Management.");
+    if (ridhiwani?.name !== "Ridhiwani M. Mbaruku" || ridhiwani?.status !== "published" || ridhiwani.photo_url !== "/assets/leadership/ridhiwani-m-mbaruku.webp") throw new Error("Ridhiwani's supplied roster entry or portrait was not seeded.");
     if (alfred?.section !== "board" || alfred?.placement !== "board" || alfred?.title !== "Director") throw new Error("Alfred was not classified as a Board Director.");
-    if (advisor?.section !== "board" || advisor?.placement !== "board" || !advisor.is_vacant || advisor.status !== "pending_approval") throw new Error("Technical Advisor vacancy was not classified on the Board pending approval.");
+    if (advisor?.section !== "board" || advisor?.placement !== "board" || !advisor.is_vacant || advisor.status !== "published") throw new Error("Technical Advisor vacancy was not published on the Board.");
     for (const [name, title] of managementRoles) {
       const profile = suppliedProfiles.find((item) => item.name === name);
-      if (profile?.section !== "management" || profile.title !== title || profile.status !== "pending_approval") throw new Error(`${name} was not classified in Senior Management pending approval.`);
+      if (profile?.section !== "management" || profile.title !== title || profile.status !== "published") throw new Error(`${name} was not published in Senior Management.`);
     }
     for (const name of supportingRoles) {
       const profile = suppliedProfiles.find((item) => item.name === name);
-      if (profile?.section !== "support" || profile.title !== "Supporting Staff" || profile.status !== "pending_approval") throw new Error(`${name} was not classified only as Supporting Staff pending approval.`);
+      if (profile?.section !== "support" || profile.title !== name || profile.status !== "published") throw new Error(`${name} was not published only as Supporting Staff.`);
     }
     if (suppliedProfiles.filter((profile) => profile.section === "support").length !== supportingRoles.length) throw new Error("Non-support roles were included in Supporting Staff.");
     if (!amini) throw new Error("Amini's profile was not seeded.");
@@ -135,7 +151,7 @@ test("leadership roles, authenticated editing, image uploads and publishing", as
     const publishedRoster = await (await fetch(`${base}/api/leadership`)).json();
     const publishedAmini = publishedRoster.find((profile) => profile.id === amini.id);
     if (publishedAmini?.photo_url !== "/assets/leadership/amini-n-kimaro.webp") throw new Error("The published leadership page did not return Amini's supplied portrait.");
-    if (publishedRoster.length !== 1 || publishedRoster[0].name !== "Mr. Amini N. Kimaro") throw new Error("The public roster exposed profiles without company approval.");
+    if (publishedRoster.length !== expectedRoster.length) throw new Error("Publishing one profile changed the exact public roster.");
 
     const newProfile = {
       section: "management",
@@ -315,7 +331,7 @@ test("legacy leadership database migration corrects unconfirmed governance recor
   try {
     execFileSync(process.execPath, ["--input-type=module", "-e", "await import('./server/store.js')"], {
       cwd: root,
-      env: { ...process.env, MYSQL_URL: "", DATA_DIRECTORY: dataDirectory },
+      env: { ...process.env, DATA_DIRECTORY: dataDirectory },
       stdio: "pipe",
     });
     const migrated = new Database(path.join(dataDirectory, "chalinze.sqlite"), { readonly: true });
@@ -331,12 +347,16 @@ test("legacy leadership database migration corrects unconfirmed governance recor
       const migrations = migrated.prepare("SELECT COUNT(*) AS count FROM audit_log WHERE admin_email = 'system-migration'").get().count;
       if (profiles.length !== 19) throw new Error(`Expected 19 migrated profiles, received ${profiles.length}.`);
       if (!roles.includes("role")) throw new Error("Existing administrator schema did not gain role-based access.");
-      if (denis?.section !== "board" || denis?.placement !== "board" || denis?.title !== "Director" || denis?.status !== "pending_approval") throw new Error("Existing Denis Board classification was not safely corrected.");
-      if (juliette?.section !== "board" || juliette?.placement !== "board" || juliette?.title !== "Chief Legal Counsel" || juliette?.status !== "pending_approval") throw new Error("Existing Juliette Board classification was not safely corrected.");
-      if (amini?.title !== "Chief Executive Officer/ Board Chairman" || amini.status !== "pending_approval") throw new Error("Amini's source title was not migrated for approval.");
-      if (humphrey?.status !== "pending_approval" || !humphrey.title.includes("confirmed")) throw new Error("Humphrey was not kept unpublished pending confirmation.");
-      if (nickson?.section !== "management" || nickson.title !== "Operations – Logistics" || nickson.status !== "pending_approval") throw new Error("Nickson was not migrated into Senior Management pending approval.");
-      if (unconfirmed?.status !== "pending_approval") throw new Error("An unconfirmed legacy profile remained publicly published.");
+      if (denis?.section !== "board" || denis?.placement !== "board" || denis?.title !== "Director" || denis?.status !== "published") throw new Error("Existing Denis Board classification was not safely corrected.");
+      if (juliette?.section !== "board" || juliette?.placement !== "board" || juliette?.title !== "Chief Legal Counsel" || juliette?.status !== "published") throw new Error("Existing Juliette Board classification was not safely corrected.");
+      if (amini?.title !== "Chief Executive Officer/ Board Chairman" || amini.status !== "published") throw new Error("Amini's source title was not migrated for publication.");
+      if (humphrey?.status !== "published" || humphrey.title !== "Director") throw new Error("Humphrey was not migrated as a confirmed Board Director.");
+      if (nickson?.section !== "management" || nickson.title !== "Operations - Logistics" || nickson.status !== "published") throw new Error("Nickson was not migrated into Senior Management.");
+      if (unconfirmed?.status === "published") throw new Error("An unconfirmed legacy profile remained in the supplied public roster.");
+      if (profiles.filter((profile) => profile.status === "published").length !== 18) throw new Error("Legacy migration did not expose exactly the supplied roster.");
+      if (profiles.filter((profile) => profile.status === "published").some((profile) => profile.biography || profile.background || profile.qualifications || profile.responsibilities)) {
+        throw new Error("Legacy migration retained unsupported public profile details.");
+      }
       if (amini?.photo_url !== "/assets/leadership/amini-n-kimaro.webp" || denis?.photo_url !== "/assets/leadership/denis-a-kimaro.webp" || juliette?.photo_url !== "/assets/leadership/juliette-a-kimaro.webp") throw new Error("Existing leadership profiles were not assigned the supplied portraits.");
       if (migrations < 19) throw new Error("Existing roster migration changes were not entered in the audit history.");
     } finally {
@@ -347,7 +367,7 @@ test("legacy leadership database migration corrects unconfirmed governance recor
     editable.close();
     execFileSync(process.execPath, ["--input-type=module", "-e", "await import('./server/store.js')"], {
       cwd: root,
-      env: { ...process.env, MYSQL_URL: "", DATA_DIRECTORY: dataDirectory },
+      env: { ...process.env, DATA_DIRECTORY: dataDirectory },
       stdio: "pipe",
     });
     const rerun = new Database(path.join(dataDirectory, "chalinze.sqlite"), { readonly: true });
@@ -362,17 +382,19 @@ test("legacy leadership database migration corrects unconfirmed governance recor
   }
 });
 
-test("production startup requires MySQL instead of falling back to SQLite", () => {
+test("production startup uses the configured local SQLite database without a hosted database URL", async () => {
+  const dataDirectory = path.join(root, "data", "test-run", `production-sqlite-${process.pid}-${Date.now()}`);
+  const env = { ...process.env, NODE_ENV: "production", DATA_DIRECTORY: dataDirectory };
+  delete env.MYSQL_URL;
+  await fs.mkdir(dataDirectory, { recursive: true });
   try {
-    execFileSync(process.execPath, ["--input-type=module", "-e", "await import('./server/store.js')"], {
-      cwd: root,
-      env: { ...process.env, NODE_ENV: "production", MYSQL_URL: "", DATA_DIRECTORY: path.join(root, "data", "test-run", "production-no-db") },
-      stdio: "pipe",
-    });
-    throw new Error("Production startup unexpectedly accepted missing MYSQL_URL.");
-  } catch (error) {
-    if (error.message === "Production startup unexpectedly accepted missing MYSQL_URL.") throw error;
-    const output = Buffer.concat([error.stdout ?? Buffer.alloc(0), error.stderr ?? Buffer.alloc(0)]).toString();
-    if (!output.includes("MYSQL_URL is required in production")) throw error;
+    const output = execFileSync(process.execPath, [
+      "--input-type=module",
+      "-e",
+      "const { ready, db } = await import('./server/store.js'); await ready; const row = await db.get('PRAGMA database_list'); console.log(row.file); await db.close();",
+    ], { cwd: root, env, encoding: "utf8", stdio: "pipe" });
+    if (!output.includes(path.join(dataDirectory, "chalinze.sqlite"))) throw new Error("Production did not open the SQLite database under DATA_DIRECTORY.");
+  } finally {
+    await fs.rm(dataDirectory, { recursive: true, force: true });
   }
 });
