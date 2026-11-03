@@ -1,5 +1,5 @@
 import { lazy, Suspense, useEffect, useState } from "react";
-import { ArrowDown, ArrowRight, ArrowUpRight, Menu, X } from "lucide-react";
+import { ArrowDown, ArrowRight, ArrowUpRight, MapPin, Menu, X } from "lucide-react";
 import { Link, NavLink, Navigate, Route, Routes, useLocation } from "react-router-dom";
 import { contactDetails, departments, enquiryTypes, faqs, pages, processStages, type SitePage } from "./content";
 import { applicationGallery, manufacturingGallery } from "./galleryData";
@@ -255,6 +255,24 @@ function Home() {
 
 function ContactDirectory() {
   const whatsappNumber = contactDetails.whatsapp.replace(/[^\d]/g, "");
+  const locations = [
+    {
+      id: "office",
+      label: "DAR ES SALAAM · CORPORATE CONTACT OFFICE",
+      title: "Exchange Tower",
+      detail: "Corporate contact location. The supplied company document gives differing office address details; confirm the address before an in-person visit.",
+      embedUrl: "https://www.openstreetmap.org/export/embed.html?bbox=39.235%2C-6.805%2C39.295%2C-6.755&layer=mapnik&marker=-6.776874%2C39.263274#map=14/-6.776874/39.263274",
+      directionsUrl: contactDetails.officeMap,
+    },
+    {
+      id: "project",
+      label: "VIGWAZA · PLANNED PROJECT LOCATION",
+      title: "Chalinze project site",
+      detail: "Planned manufacturing project location, separate from the Dar es Salaam office. This map pin does not imply that the plant is operational.",
+      embedUrl: "https://www.openstreetmap.org/export/embed.html?bbox=38.390%2C-6.855%2C38.452%2C-6.795&layer=mapnik&marker=-6.825773%2C38.420857#map=14/-6.825773/38.420857",
+      directionsUrl: contactDetails.siteMap,
+    },
+  ] as const;
 
   return <section className="contact-directory section-pad">
     <div className="section-index">DIRECT CONTACT DETAILS · COMPANY SOURCE</div>
@@ -290,6 +308,49 @@ function ContactDirectory() {
       </article>
     </div>
     <div className="contact-verification-note"><strong>Contact information</strong><span>Contact details and locations are based on supplied company information. Please confirm current contact channels and the correct location before arranging a visit.</span></div>
+    <section className="corporate-documents" aria-labelledby="corporate-documents-title">
+      <div className="corporate-documents-heading">
+        <div><span className="card-tag">PARENT COMPANY REGISTRATION</span><h2 id="corporate-documents-title">Group credentials.</h2></div>
+        <p>Public viewing copies of the supplied Tanzania Revenue Authority certificates issued to Gypsum Plus Mines Limited. Tax identifiers and signatures are redacted.</p>
+      </div>
+      <div className="corporate-documents-grid">
+        <article className="corporate-document-card">
+          <span className="card-tag">TAXPAYER REGISTRATION</span>
+          <h3>Taxpayer Identification Certificate</h3>
+          <p>Issued to Gypsum Plus Mines Limited by the Tanzania Revenue Authority.</p>
+          <a className="text-link" href="/assets/corporate/taxpayer-registration-public.pdf" target="_blank" rel="noreferrer">View public certificate <ArrowUpRight size={15} /></a>
+        </article>
+        <article className="corporate-document-card">
+          <span className="card-tag">VALUE ADDED TAX</span>
+          <h3>VAT Registration Certificate</h3>
+          <p>Issued to Gypsum Plus Mines Limited by the Tanzania Revenue Authority.</p>
+          <a className="text-link" href="/assets/corporate/vat-registration-public.pdf" target="_blank" rel="noreferrer">View public certificate <ArrowUpRight size={15} /></a>
+        </article>
+      </div>
+    </section>
+    <section className="location-experience" aria-labelledby="location-experience-title">
+      <div className="location-experience-intro">
+        <figure className="location-art">
+          <img src="/assets/company/illustrative-mine-site.webp" alt="Illustrative mine-site scene; not a verified photograph of the Chalinze Steel Mills project site." loading="lazy" />
+          <figcaption><span>ILLUSTRATIVE MINING SCENE</span><span>NOT A VERIFIED CHALINZE SITE PHOTOGRAPH</span></figcaption>
+        </figure>
+        <div className="location-experience-copy">
+          <span className="card-tag">TANZANIA · LOCATION GUIDE</span>
+          <h2 id="location-experience-title">Two locations.<br /><em>One company.</em></h2>
+          <p>Explore the company contact office and the separately identified planned manufacturing location. Each map is interactive and includes directions.</p>
+        </div>
+      </div>
+      <div className="location-map-grid">
+        {locations.map((location) => <article className="location-map-card" key={location.id}>
+          <div className="location-map-heading"><span className="card-tag">{location.label}</span><h3><MapPin size={16} aria-hidden="true" />{location.title}</h3></div>
+          <div className="location-map-stage">
+            <iframe src={location.embedUrl} title={`Interactive map: ${location.title}`} loading="lazy" referrerPolicy="no-referrer-when-downgrade" />
+          </div>
+          <div className="location-map-actions"><span>Interactive 3D-style map · OpenStreetMap</span><a className="text-link" href={location.directionsUrl} target="_blank" rel="noreferrer">Open directions <ArrowUpRight size={14} /></a></div>
+          <p>{location.detail}</p>
+        </article>)}
+      </div>
+    </section>
     <div className="enquiry-options"><h3>Choose an email enquiry</h3><div>{enquiryTypes.map((enquiry) => <a key={enquiry.subject} href={`mailto:${contactDetails.email}?subject=${encodeURIComponent(enquiry.subject)}`}>{enquiry.label}<ArrowUpRight size={14} /></a>)}</div></div>
   </section>;
 }

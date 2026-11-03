@@ -19,7 +19,42 @@ const allowedSections = new Set(["board", "management", "support"]);
 const allowedStatuses = new Set(["draft", "pending_approval", "published", "archived"]);
 const allowedPlacements = new Set(["board", "governance"]);
 const allowedManufacturingScenes = new Set(["ore", "beneficiation", "ironmaking", "steelmaking", "casting", "inspection"]);
+const suppliedLeadershipPhotos = new Set([
+  "/assets/leadership/amini-n-kimaro.webp",
+  "/assets/leadership/denis-a-kimaro.webp",
+  "/assets/leadership/juliette-a-kimaro.webp",
+  "/assets/leadership/ridhiwani-m-mbaruku.webp",
+]);
 
+function bootstrapInitialAdministrator() {
+  const email = process.env.ADMIN_EMAIL?.trim().toLowerCase();
+  const password = process.env.ADMIN_PASSWORD;
+  const migrationKey = "initial-administrator-provisioned";
+  if (db.prepare("SELECT migration_key FROM applied_migrations WHERE migration_key = ?").get(migrationKey)) return;
+  if (!email && !password) return;
+  if (!email || !password) throw new Error("Set both ADMIN_EMAIL and ADMIN_PASSWORD for initial administrator setup.");
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) throw new Error("ADMIN_EMAIL must be a valid email address.");
+  if (password.length < 14 || password.length > 200) throw new Error("ADMIN_PASSWORD must be between 14 and 200 characters.");
+
+  const created = db.transaction(() => {
+    if (db.prepare("SELECT migration_key FROM applied_migrations WHERE migration_key = ?").get(migrationKey)) return false;
+    if (db.prepare("SELECT id FROM admins LIMIT 1").get()) {
+      db.prepare("INSERT INTO applied_migrations (migration_key, applied_at) VALUES (?, ?)").run(migrationKey, new Date().toISOString());
+      return false;
+    }
+
+    const salt = crypto.randomBytes(32).toString("hex");
+    const hash = crypto.scryptSync(password, salt, 64).toString("hex");
+    db.prepare("INSERT INTO admins (id, email, password_hash, password_salt, role, created_at) VALUES (?, ?, ?, ?, 'admin', ?)")
+      .run(crypto.randomUUID(), email, hash, salt, new Date().toISOString());
+    db.prepare("INSERT INTO applied_migrations (migration_key, applied_at) VALUES (?, ?)").run(migrationKey, new Date().toISOString());
+    return true;
+  })();
+
+  if (created) console.info(`Initial administrator ${email} created. Remove ADMIN_PASSWORD from the service environment after sign-in.`);
+}
+
+bootstrapInitialAdministrator();
 app.disable("x-powered-by");
 app.use(express.json({ limit: "25kb" }));
 app.use((request, response, next) => {
@@ -80,7 +115,9 @@ function validateProfile(input) {
   if (typeof input.is_vacant !== "boolean") return "Vacant status must be true or false.";
   if (!Number.isInteger(input.sort_order) || input.sort_order < 0 || input.sort_order > 100000) return "Order must be a whole number between 0 and 100000.";
   if (input.is_vacant && input.photo_url) return "Vacant positions cannot have a portrait.";
-  if (input.photo_url && !/^\/uploads\/[a-f0-9-]+\.(?:jpg|png|webp)$/i.test(input.photo_url)) return "Portraits must use a locally uploaded JPEG, PNG or WebP image.";
+  if (input.photo_url && !/^\/uploads\/[a-f0-9-]+\.(?:jpg|png|webp)$/i.test(input.photo_url) && !suppliedLeadershipPhotos.has(input.photo_url)) {
+    return "Portraits must use a supplied leadership portrait or locally uploaded JPEG, PNG or WebP image.";
+  }
   return null;
 }
 

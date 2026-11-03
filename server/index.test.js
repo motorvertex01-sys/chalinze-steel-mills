@@ -58,22 +58,26 @@ test("leadership roles, authenticated editing, image uploads and publishing", as
   let server;
 
   try {
-    execFileSync(process.execPath, ["server/create-admin.js"], {
+    server = spawn(process.execPath, ["server/index.js"], {
       cwd: root,
-      env: { ...env, ADMIN_EMAIL: adminEmail, ADMIN_PASSWORD: password, ADMIN_ROLE: "admin" },
-      stdio: "pipe",
+      env: { ...env, ADMIN_EMAIL: adminEmail, ADMIN_PASSWORD: password },
+      stdio: "ignore",
     });
+    await waitForServer(`${base}/api/admin/session`, server);
+    const initialSession = await (await fetch(`${base}/api/admin/session`)).json();
+    if (initialSession.configured !== true || initialSession.authenticated !== false) throw new Error("Initial administrator was not provisioned from private environment variables.");
     execFileSync(process.execPath, ["server/create-admin.js"], {
       cwd: root,
       env: { ...env, ADMIN_EMAIL: editorEmail, ADMIN_PASSWORD: password, ADMIN_ROLE: "editor" },
       stdio: "pipe",
     });
 
-    server = spawn(process.execPath, ["server/index.js"], { cwd: root, env, stdio: "ignore" });
-    await waitForServer(`${base}/api/admin/session`, server);
-
     const publicInitially = await (await fetch(`${base}/api/leadership`)).json();
-    if (publicInitially.length !== 0) throw new Error("Profiles pending approval must not appear publicly.");
+    const publicNames = new Set(publicInitially.map((profile) => profile.name));
+    const supportCategories = ["Chief Cashier", "Drivers", "Cleaners", "Machine Operators"];
+    if (publicInitially.length !== 6 || !publicNames.has("Dr. Humphrey Musyoka") || !publicNames.has("Nickson Kimbori") || supportCategories.some((name) => !publicNames.has(name))) {
+      throw new Error("Only approved source-backed profiles and the supplied support categories should appear publicly.");
+    }
     const manufacturingPublicInitially = await (await fetch(`${base}/api/manufacturing`)).json();
 
     const adminCookie = await login(base, adminEmail);
@@ -87,11 +91,29 @@ test("leadership roles, authenticated editing, image uploads and publishing", as
     if (crossSiteLogout.status !== 403) throw new Error("Cross-origin state-changing request was not rejected.");
     const suppliedProfiles = await (await fetch(`${base}/api/admin/profiles`, { headers: { Cookie: adminCookie } })).json();
     const amini = suppliedProfiles.find((profile) => profile.name === "Mr. Amini N. Kimaro");
+    const humphrey = suppliedProfiles.find((profile) => profile.name === "Dr. Humphrey Musyoka");
     const denis = suppliedProfiles.find((profile) => profile.name === "Mr. Denis Kimaro");
     const juliette = suppliedProfiles.find((profile) => profile.name === "Ms. Juliette A. Kimaro");
+    const nickson = suppliedProfiles.find((profile) => profile.name === "Nickson Kimbori");
+    const ridhiwani = suppliedProfiles.find((profile) => profile.name === "Mr. Ridhiwani M. Mbaruku");
     if (amini?.status !== "pending_approval" || !amini.biography.includes("mineral resources")) throw new Error("Amini's source profile was not seeded as pending approval.");
+    if (amini?.photo_url !== "/assets/leadership/amini-n-kimaro.webp") throw new Error("Amini's supplied portrait was not seeded.");
+    if (humphrey?.status !== "published" || !humphrey.biography.includes("infrastructure project preparation") || humphrey.photo_url || humphrey.responsibilities) throw new Error("Humphrey's source-backed text profile was not published without a portrait.");
     if (denis?.placement !== "governance" || /Director/i.test(denis.title)) throw new Error("Denis was incorrectly presented as a Director.");
+    if (denis?.photo_url !== "/assets/leadership/denis-a-kimaro.webp") throw new Error("Denis's supplied portrait was not seeded.");
     if (juliette?.placement !== "governance" || /Chief Legal Counsel/i.test(juliette.title)) throw new Error("Juliette's supplied legal profile was assigned an unconfirmed title.");
+    if (juliette?.photo_url !== "/assets/leadership/juliette-a-kimaro.webp") throw new Error("Juliette's supplied portrait was not seeded.");
+    if (nickson?.status !== "published" || nickson.title !== "Operations – Logistics" || nickson.photo_url) throw new Error("Nickson's source-backed text profile was not published with the supplied title and no portrait.");
+    if (ridhiwani?.status !== "pending_approval" || ridhiwani.photo_url !== "/assets/leadership/ridhiwani-m-mbaruku.webp") throw new Error("Ridhiwani's supplied portrait was not seeded for review.");
+    if (!amini) throw new Error("Amini's profile was not seeded.");
+    const publishAmini = await fetch(`${base}/api/admin/profiles/${amini.id}`, {
+      method: "PUT",
+      headers: adminHeaders,
+      body: JSON.stringify({ ...amini, status: "published" }),
+    });
+    if (!publishAmini.ok) throw new Error(`A supplied static portrait could not be published (${publishAmini.status}).`);
+    const publishedAmini = (await (await fetch(`${base}/api/leadership`)).json()).find((profile) => profile.id === amini.id);
+    if (publishedAmini?.photo_url !== "/assets/leadership/amini-n-kimaro.webp") throw new Error("The published leadership page did not return Amini's supplied portrait.");
 
     const newProfile = {
       section: "management",
@@ -273,19 +295,27 @@ test("legacy leadership database migration corrects unconfirmed governance recor
       stdio: "pipe",
     });
     const migrated = new Database(path.join(dataDirectory, "chalinze.sqlite"), { readonly: true });
-    const profiles = migrated.prepare("SELECT * FROM profiles ORDER BY id").all();
-    const denis = profiles.find((profile) => profile.name === "Mr. Denis Kimaro");
-    const juliette = profiles.find((profile) => profile.name === "Ms. Juliette A. Kimaro");
-    const amini = profiles.find((profile) => profile.name === "Mr. Amini N. Kimaro");
-    const roles = migrated.pragma("table_info(admins)").map((column) => column.name);
-    const migrations = migrated.prepare("SELECT COUNT(*) AS count FROM audit_log WHERE admin_email = 'system-migration'").get().count;
-    if (profiles.length !== 18) throw new Error(`Expected 18 migrated profiles, received ${profiles.length}.`);
-    if (!roles.includes("role")) throw new Error("Existing administrator schema did not gain role-based access.");
-    if (denis?.placement !== "governance" || /Director/i.test(denis.title) || denis.status !== "pending_approval") throw new Error("Existing Denis board/director record was not safely corrected.");
-    if (juliette?.placement !== "governance" || /Chief Legal Counsel/i.test(juliette.title) || juliette.status !== "pending_approval") throw new Error("Existing Juliette legal appointment was not safely corrected.");
-    if (amini?.title !== "Founder, CEO & Board Chairman" || amini.status !== "pending_approval") throw new Error("Amini's source title was not migrated for approval.");
-    if (migrations < 3) throw new Error("Leadership migration changes were not entered in the audit history.");
-    migrated.close();
+    try {
+      const profiles = migrated.prepare("SELECT * FROM profiles ORDER BY id").all();
+      const denis = profiles.find((profile) => profile.name === "Mr. Denis Kimaro");
+      const juliette = profiles.find((profile) => profile.name === "Ms. Juliette A. Kimaro");
+      const amini = profiles.find((profile) => profile.name === "Mr. Amini N. Kimaro");
+      const humphrey = profiles.find((profile) => profile.name === "Dr. Humphrey Musyoka");
+      const nickson = profiles.find((profile) => profile.name === "Nickson Kimbori");
+      const roles = migrated.pragma("table_info(admins)").map((column) => column.name);
+      const migrations = migrated.prepare("SELECT COUNT(*) AS count FROM audit_log WHERE admin_email = 'system-migration'").get().count;
+      if (profiles.length !== 18) throw new Error(`Expected 18 migrated profiles, received ${profiles.length}.`);
+      if (!roles.includes("role")) throw new Error("Existing administrator schema did not gain role-based access.");
+      if (denis?.placement !== "governance" || /Director/i.test(denis.title) || denis.status !== "pending_approval") throw new Error("Existing Denis board/director record was not safely corrected.");
+      if (juliette?.placement !== "governance" || /Chief Legal Counsel/i.test(juliette.title) || juliette.status !== "pending_approval") throw new Error("Existing Juliette legal appointment was not safely corrected.");
+      if (amini?.title !== "Chief Executive Officer / Board Chairman" || amini.status !== "pending_approval") throw new Error("Amini's source title was not migrated for approval.");
+      if (humphrey?.status !== "published" || !humphrey.biography.includes("infrastructure project preparation")) throw new Error("Humphrey's supplied profile was not published from the company source.");
+      if (nickson?.status !== "published" || nickson.title !== "Operations – Logistics") throw new Error("Nickson's supplied profile was not migrated for publication.");
+      if (amini?.photo_url !== "/assets/leadership/amini-n-kimaro.webp" || denis?.photo_url !== "/assets/leadership/denis-a-kimaro.webp" || juliette?.photo_url !== "/assets/leadership/juliette-a-kimaro.webp") throw new Error("Existing leadership profiles were not assigned the supplied portraits.");
+      if (migrations < 3) throw new Error("Leadership migration changes were not entered in the audit history.");
+    } finally {
+      migrated.close();
+    }
   } finally {
     await fs.rm(dataDirectory, { recursive: true, force: true });
   }

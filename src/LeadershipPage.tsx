@@ -13,13 +13,21 @@ async function loadPublishedProfiles(): Promise<LeadershipProfile[]> {
 
 function Portrait({ profile, large = false }: { profile: LeadershipProfile; large?: boolean }) {
   if (profile.is_vacant) return <div className={`leader-vacancy-art${large ? " is-large" : ""}`} aria-hidden="true"><span>POSITION<br />VACANT</span></div>;
+  if (profile.section === "support") {
+    return (
+      <div className={`leader-support-art${large ? " is-large" : ""}`} role="img" aria-label={`Illustrative artwork for ${profile.name}`}>
+        <span className="leader-support-symbol" aria-hidden="true"><i /><b /><i /></span>
+        <small>SUPPORT OPERATIONS</small>
+      </div>
+    );
+  }
   if (profile.photo_url) {
-    return <img className={`leader-portrait${large ? " is-large" : ""}`} src={profile.photo_url} alt={`Approved portrait of ${profile.name}`} loading="lazy" />;
+    return <img className={`leader-portrait${large ? " is-large" : ""}`} src={profile.photo_url} alt={`Portrait of ${profile.name}`} loading="lazy" />;
   }
   return (
     <div className={`leader-placeholder${large ? " is-large" : ""}`} role="img" aria-label={`Approved portrait of ${profile.name} has not been supplied`}>
       <span className="placeholder-bust" aria-hidden="true" />
-      <small>APPROVED PORTRAIT<br />PENDING</small>
+      <small>PORTRAIT<br />NOT PROVIDED</small>
     </div>
   );
 }
@@ -69,11 +77,11 @@ export function ProfileDetails({ profile, onClose, onPrevious, onNext, position 
           <p className="profile-pending-copy">This is a vacant position. No individual or portrait is associated with this role.</p>
         ) : (
           <>
-            <p className="profile-pending-copy">{profile.biography || "A professional biography has not yet been approved for publication."}</p>
+            {profile.biography && <p className="profile-pending-copy">{profile.biography}</p>}
             <dl className="profile-details-list">
-              <div><dt>Professional background</dt><dd>{profile.background || "Information pending company approval."}</dd></div>
-              <div><dt>Qualifications & experience</dt><dd>{profile.qualifications || "Information pending company approval."}</dd></div>
-              <div><dt>Areas of responsibility</dt><dd>{profile.responsibilities || "Information pending company approval."}</dd></div>
+              {profile.background && <div><dt>Professional background</dt><dd>{profile.background}</dd></div>}
+              {profile.qualifications && <div><dt>Qualifications & experience</dt><dd>{profile.qualifications}</dd></div>}
+              {profile.responsibilities && <div><dt>Areas of responsibility</dt><dd>{profile.responsibilities}</dd></div>}
             </dl>
           </>
         )}
@@ -87,14 +95,16 @@ export function ProfileDetails({ profile, onClose, onPrevious, onNext, position 
   );
 }
 
-function ProfileCard({ profile, onOpen, featured = false }: { profile: LeadershipProfile; onOpen: () => void; featured?: boolean }) {
+function ProfileCard({ profile, onOpen, featured = false, ordinal }: { profile: LeadershipProfile; onOpen: () => void; featured?: boolean; ordinal: number }) {
+  const action = profile.is_vacant ? "Explore vacancy" : profile.section === "support" ? "View staff category" : "View full profile";
+
   return (
-    <button className={`leader-card${featured ? " is-featured" : ""}${profile.is_vacant ? " is-vacant" : ""}`} type="button" onClick={onOpen} aria-label={`View full profile: ${profile.name}, ${profile.title}`}>
-      <span className="leader-card-media"><Portrait profile={profile} /><span className="leader-card-index">{String(profile.sort_order / 10).padStart(2, "0")}</span><span className="leader-card-open"><ArrowUpRight size={17} /></span></span>
+    <button className={`leader-card${featured ? " is-featured" : ""}${profile.is_vacant ? " is-vacant" : ""}`} type="button" onClick={onOpen} aria-label={`${action}: ${profile.name}, ${profile.title}`}>
+      <span className="leader-card-media"><Portrait profile={profile} /><span className="leader-card-index">{String(ordinal).padStart(2, "0")}</span><span className="leader-card-open"><ArrowUpRight size={17} /></span></span>
       <span className="leader-card-copy">
         <span className="leader-title">{profile.title}</span>
         <strong>{profile.name}</strong>
-        <span className="leader-profile-link">{profile.is_vacant ? "Explore vacancy" : "View Full Profile"} <ArrowUpRight size={14} /></span>
+        <span className="leader-profile-link">{action} <ArrowUpRight size={14} /></span>
       </span>
     </button>
   );
@@ -106,11 +116,11 @@ function ProfileGrid({ profiles, label, featured = false }: { profiles: Leadersh
 
   return (
     <>
-      {profiles.length ? (
+      {profiles.length > 0 && (
         <div className={`leadership-grid${featured ? " is-featured-grid" : ""}`} aria-label={label}>
-          {profiles.map((profile) => <ProfileCard key={profile.id} profile={profile} featured={featured} onOpen={() => setSelected(profile)} />)}
+          {profiles.map((profile, index) => <ProfileCard key={profile.id} profile={profile} featured={featured} ordinal={index + 1} onOpen={() => setSelected(profile)} />)}
         </div>
-      ) : <div className="leadership-review-note"><span>COMPANY REVIEW IN PROGRESS</span><p>Leadership names, positions and profiles will appear here after company approval for publication.</p></div>}
+      )}
       {selected && <ProfileDetails
         key={selected.id}
         profile={selected}
@@ -186,24 +196,24 @@ export function LeadershipPage() {
       {loading && <p className="leadership-load-state" role="status">Loading approved leadership profiles…</p>}
       <section id="board" className="leadership-section board-section">
         <div className="section-index">01 / GOVERNANCE LEADERSHIP</div>
-        <div className="leadership-section-heading"><div><span className="leadership-kicker">ACCOUNTABILITY & DIRECTION</span><h2>Board of<br /><em>Directors.</em></h2></div><p>The Board provides leadership and oversight. Individual profiles and responsibilities are shown only as approved by the company.</p></div>
+        <div className="leadership-section-heading"><div><span className="leadership-kicker">ACCOUNTABILITY & DIRECTION</span><h2>Board of<br /><em>Directors.</em></h2></div><p>Board leadership and governance for Chalinze Steel Mills Ltd.</p></div>
         {!loading && !error && <ProfileGrid profiles={board} label="Board of Directors profiles" featured />}
-        {governance.length > 0 && <div className="governance-profiles"><div className="section-index">SHAREHOLDERS & PROFESSIONAL ADVISORY</div><p>Shareholder affiliations, specialist profiles and formal governance appointments are shown only after company confirmation.</p><ProfileGrid profiles={governance} label="Shareholder and professional advisory profiles" /></div>}
+        {governance.length > 0 && <div className="governance-profiles"><div className="section-index">SHAREHOLDERS & PROFESSIONAL ADVISORY</div><ProfileGrid profiles={governance} label="Shareholder and professional advisory profiles" /></div>}
       </section>
       <section id="senior-management" className="leadership-section management-section">
         <div className="section-index">02 / EXECUTIVE OPERATIONS</div>
-        <div className="leadership-section-heading"><div><span className="leadership-kicker">OPERATIONS & DELIVERY</span><h2>Senior Management<br /><em>Team.</em></h2></div><p>Executive and operational roles are presented separately from the Board. Names and titles are subject to company review.</p></div>
+        <div className="leadership-section-heading"><div><span className="leadership-kicker">OPERATIONS & DELIVERY</span><h2>Senior Management<br /><em>Team.</em></h2></div><p>Executive and operational roles supporting project development and delivery.</p></div>
         {!loading && !error && <ProfileGrid profiles={management} label="Senior Management Team profiles" />}
       </section>
       <section id="supporting-staff" className="leadership-section supporting-section">
         <div className="section-index">03 / SUPPORTING OPERATIONS</div>
-        <div className="leadership-section-heading"><div><span className="leadership-kicker">THE PEOPLE BEHIND THE WORK</span><h2>Supporting<br /><em>Staff.</em></h2></div><p>Operational and support personnel are an essential part of the organization and are distinct from Board leadership.</p></div>
+        <div className="leadership-section-heading"><div><span className="leadership-kicker">THE PEOPLE BEHIND THE WORK</span><h2>Supporting<br /><em>Staff.</em></h2></div><p>Supporting roles across day-to-day operations and site services.</p></div>
         {!loading && !error && <ProfileGrid profiles={support} label="Supporting Staff categories" />}
       </section>
       <section className="governance-statement">
         <span className="leadership-kicker">CORPORATE GOVERNANCE</span>
         <h2>Leadership with<br /><em>accountability.</em></h2>
-        <p>Chalinze Steel Mills Ltd is committed to responsible governance, ethical conduct, risk awareness and accountability to stakeholders. This statement describes the company’s governance principles; it does not assert specific Board responsibilities or committee appointments.</p>
+        <p>Good governance supports responsible oversight, ethical conduct, risk awareness and accountability to stakeholders.</p>
         <Link className="button button-outline" to="/contact">Corporate enquiries <ArrowUpRight size={16} /></Link>
       </section>
     </main>
