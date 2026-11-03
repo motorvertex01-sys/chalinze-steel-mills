@@ -6,7 +6,7 @@ import fs from "node:fs";
 import path from "node:path";
 import sharp from "sharp";
 import { fileURLToPath } from "node:url";
-import { db, originalMediaDirectory, profileFromRow, uploadDirectory, writeAudit } from "./store.js";
+import { db, originalMediaDirectory, profileFromRow, ready, uploadDirectory, writeAudit } from "./store.js";
 
 const app = express();
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -26,35 +26,37 @@ const suppliedLeadershipPhotos = new Set([
   "/assets/leadership/ridhiwani-m-mbaruku.webp",
 ]);
 
-function bootstrapInitialAdministrator() {
+async function bootstrapInitialAdministrator() {
   const email = process.env.ADMIN_EMAIL?.trim().toLowerCase();
   const password = process.env.ADMIN_PASSWORD;
   const migrationKey = "initial-administrator-provisioned";
-  if (db.prepare("SELECT migration_key FROM applied_migrations WHERE migration_key = ?").get(migrationKey)) return;
+  await ready;
+  if (await db.get("SELECT migration_key FROM applied_migrations WHERE migration_key = ?", migrationKey)) return;
   if (!email && !password) return;
   if (!email || !password) throw new Error("Set both ADMIN_EMAIL and ADMIN_PASSWORD for initial administrator setup.");
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) throw new Error("ADMIN_EMAIL must be a valid email address.");
   if (password.length < 14 || password.length > 200) throw new Error("ADMIN_PASSWORD must be between 14 and 200 characters.");
 
-  const created = db.transaction(() => {
-    if (db.prepare("SELECT migration_key FROM applied_migrations WHERE migration_key = ?").get(migrationKey)) return false;
-    if (db.prepare("SELECT id FROM admins LIMIT 1").get()) {
-      db.prepare("INSERT INTO applied_migrations (migration_key, applied_at) VALUES (?, ?)").run(migrationKey, new Date().toISOString());
+  const created = await db.transaction(async (tx) => {
+    if (await tx.get("SELECT migration_key FROM applied_migrations WHERE migration_key = ?", migrationKey)) return false;
+    if (await tx.get("SELECT id FROM admins LIMIT 1")) {
+      await tx.run("INSERT INTO applied_migrations (migration_key, applied_at) VALUES (?, ?)", migrationKey, new Date().toISOString());
       return false;
     }
 
     const salt = crypto.randomBytes(32).toString("hex");
     const hash = crypto.scryptSync(password, salt, 64).toString("hex");
-    db.prepare("INSERT INTO admins (id, email, password_hash, password_salt, role, created_at) VALUES (?, ?, ?, ?, 'admin', ?)")
-      .run(crypto.randomUUID(), email, hash, salt, new Date().toISOString());
-    db.prepare("INSERT INTO applied_migrations (migration_key, applied_at) VALUES (?, ?)").run(migrationKey, new Date().toISOString());
+    await tx.run("INSERT INTO admins (id, email, password_hash, password_salt, role, created_at) VALUES (?, ?, ?, ?, 'admin', ?)",
+      crypto.randomUUID(), email, hash, salt, new Date().toISOString());
+    await tx.run("INSERT INTO applied_migrations (migration_key, applied_at) VALUES (?, ?)", migrationKey, new Date().toISOString());
     return true;
-  })();
+  });
 
   if (created) console.info(`Initial administrator ${email} created. Remove ADMIN_PASSWORD from the service environment after sign-in.`);
 }
 
-bootstrapInitialAdministrator();
+await ready;
+await bootstrapInitialAdministrator();
 app.disable("x-powered-by");
 app.use(express.json({ limit: "25kb" }));
 app.use((request, response, next) => {
@@ -74,24 +76,24 @@ function cookieToken(request) {
   }
 }
 
-function getAdmin(request) {
+async function getAdmin(request) {
   const token = cookieToken(request);
   if (!token) return null;
   const hash = crypto.createHash("sha256").update(token).digest("hex");
-  const session = db.prepare(`
+  const session = await db.get(`
     SELECT admins.id, admins.email, admins.role, sessions.expires_at
     FROM sessions JOIN admins ON admins.id = sessions.admin_id
     WHERE sessions.token_hash = ?
-  `).get(hash);
+  `, hash);
   if (!session || Date.parse(session.expires_at) <= Date.now()) {
-    db.prepare("DELETE FROM sessions WHERE token_hash = ?").run(hash);
+    await db.run("DELETE FROM sessions WHERE token_hash = ?", hash);
     return null;
   }
   return session;
 }
 
-function requireAdmin(request, response, next) {
-  const admin = getAdmin(request);
+async function requireAdmin(request, response, next) {
+  const admin = await getAdmin(request);
   if (!admin) return response.status(401).json({ error: "Administrator sign-in is required." });
   request.admin = admin;
   next();
@@ -216,26 +218,26 @@ function validateManufacturingContent(content) {
   return null;
 }
 
-app.get("/api/leadership", (_request, response) => {
-  const rows = db.prepare(`
+app.get("/api/leadership", async (_request, response) => {
+  const rows = await db.all(`
     SELECT * FROM profiles WHERE status = 'published'
     ORDER BY CASE section WHEN 'board' THEN 0 WHEN 'management' THEN 1 ELSE 2 END, sort_order, name
-  `).all();
+  `);
   response.json(rows.map(profileFromRow));
 });
 
-app.get("/api/manufacturing", (_request, response) => {
-  const row = db.prepare("SELECT published_json FROM site_content WHERE content_key = 'manufacturing'").get();
+app.get("/api/manufacturing", async (_request, response) => {
+  const row = await db.get("SELECT published_json FROM site_content WHERE content_key = 'manufacturing'");
   response.json(JSON.parse(row.published_json));
 });
 
-app.get("/api/admin/session", (request, response) => {
-  const admin = getAdmin(request);
+app.get("/api/admin/session", async (request, response) => {
+  const admin = await getAdmin(request);
   response.json({
     authenticated: Boolean(admin),
     email: admin?.email ?? null,
     role: admin?.role ?? null,
-    configured: db.prepare("SELECT COUNT(*) AS count FROM admins").get().count > 0,
+    configured: Number((await db.get("SELECT COUNT(*) AS count FROM admins")).count) > 0,
   });
 });
 
@@ -253,7 +255,7 @@ app.use("/api/admin", (request, response, next) => {
   next();
 });
 
-app.post("/api/admin/login", (request, response) => {
+app.post("/api/admin/login", async (request, response) => {
   const now = Date.now();
   const key = request.ip || request.socket.remoteAddress || "unknown";
   if (!loginAttempts.has(key) && loginAttempts.size >= 5000) {
@@ -269,7 +271,7 @@ app.post("/api/admin/login", (request, response) => {
     loginAttempts.set(key, recentAttempts);
     return response.status(401).json({ error: "Email or password is incorrect." });
   }
-  const admin = db.prepare("SELECT * FROM admins WHERE email = ?").get(email);
+  const admin = await db.get("SELECT * FROM admins WHERE email = ?", email);
   const supplied = crypto.scryptSync(password, admin?.password_salt ?? "chalinze-login-fallback", 64);
   const expected = admin ? Buffer.from(admin.password_hash, "hex") : Buffer.alloc(64);
   const valid = supplied.length === expected.length && crypto.timingSafeEqual(supplied, expected);
@@ -282,7 +284,7 @@ app.post("/api/admin/login", (request, response) => {
   loginAttempts.delete(key);
   const token = crypto.randomBytes(32).toString("base64url");
   const expiry = new Date(now + sessionLifetimeMs).toISOString();
-  db.prepare("INSERT INTO sessions (token_hash, admin_id, expires_at) VALUES (?, ?, ?)").run(
+  await db.run("INSERT INTO sessions (token_hash, admin_id, expires_at) VALUES (?, ?, ?)",
     crypto.createHash("sha256").update(token).digest("hex"),
     admin.id,
     expiry,
@@ -291,78 +293,78 @@ app.post("/api/admin/login", (request, response) => {
   response.json({ authenticated: true, email: admin.email, role: admin.role });
 });
 
-app.post("/api/admin/logout", requireAdmin, (request, response) => {
+app.post("/api/admin/logout", requireAdmin, async (request, response) => {
   const token = cookieToken(request);
-  db.prepare("DELETE FROM sessions WHERE token_hash = ?").run(crypto.createHash("sha256").update(token).digest("hex"));
+  await db.run("DELETE FROM sessions WHERE token_hash = ?", crypto.createHash("sha256").update(token).digest("hex"));
   response.setHeader("Set-Cookie", "csm_admin=; Path=/; HttpOnly; SameSite=Strict; Max-Age=0");
   response.json({ authenticated: false });
 });
 
-app.get("/api/admin/profiles", requireAdmin, (_request, response) => {
-  const profiles = db.prepare("SELECT * FROM profiles ORDER BY section, sort_order, name").all();
+app.get("/api/admin/profiles", requireAdmin, async (_request, response) => {
+  const profiles = await db.all("SELECT * FROM profiles ORDER BY section, sort_order, name");
   response.json(profiles.map(profileFromRow));
 });
 
-app.post("/api/admin/profiles", requireAdmin, (request, response) => {
+app.post("/api/admin/profiles", requireAdmin, async (request, response) => {
   const issue = validateProfile(request.body);
   if (issue) return response.status(400).json({ error: issue });
   if (request.admin.role !== "admin" && request.body.status === "published") return response.status(403).json({ error: "Content editors cannot publish profiles." });
   const profile = cleanProfile(request.body);
   const id = crypto.randomUUID();
   const now = new Date().toISOString();
-  const create = db.transaction(() => {
-    db.prepare(`
+  const created = await db.transaction(async (tx) => {
+    await tx.run(`
       INSERT INTO profiles (id, section, placement, name, title, biography, background, qualifications, responsibilities, photo_url, is_vacant, status, sort_order, updated_at)
-      VALUES (@id, @section, @placement, @name, @title, @biography, @background, @qualifications, @responsibilities, @photo_url, @is_vacant, @status, @sort_order, @updated_at)
-    `).run({ ...profile, id, updated_at: now });
-    const created = profileFromRow(db.prepare("SELECT * FROM profiles WHERE id = ?").get(id));
-    writeAudit({ profileId: id, email: request.admin.email, action: "created", before: null, after: created });
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `,
+      id, profile.section, profile.placement, profile.name, profile.title, profile.biography,
+      profile.background, profile.qualifications, profile.responsibilities, profile.photo_url,
+      profile.is_vacant, profile.status, profile.sort_order, now);
+    const created = profileFromRow(await tx.get("SELECT * FROM profiles WHERE id = ?", id));
+    await writeAudit({ tx, profileId: id, email: request.admin.email, action: "created", before: null, after: created });
     return created;
   });
-  const created = create();
   response.status(201).json(created);
 });
 
-app.put("/api/admin/profiles/:id", requireAdmin, (request, response) => {
+app.put("/api/admin/profiles/:id", requireAdmin, async (request, response) => {
   const issue = validateProfile(request.body);
   if (issue) return response.status(400).json({ error: issue });
-  const before = profileFromRow(db.prepare("SELECT * FROM profiles WHERE id = ?").get(request.params.id));
+  const before = profileFromRow(await db.get("SELECT * FROM profiles WHERE id = ?", request.params.id));
   if (!before) return response.status(404).json({ error: "Profile not found." });
   if (request.admin.role !== "admin" && (before.status === "published" || request.body.status === "published")) {
     return response.status(403).json({ error: "Content editors cannot edit published profiles or publish changes." });
   }
   const profile = cleanProfile(request.body);
-  const update = db.transaction(() => {
-    db.prepare(`
-      UPDATE profiles SET section=@section, placement=@placement, name=@name, title=@title,
-        biography=@biography, background=@background, qualifications=@qualifications,
-        responsibilities=@responsibilities, photo_url=@photo_url, is_vacant=@is_vacant,
-        status=@status, sort_order=@sort_order, updated_at=@updated_at WHERE id=@id
-    `).run({ ...profile, id: before.id, updated_at: new Date().toISOString() });
-    const after = profileFromRow(db.prepare("SELECT * FROM profiles WHERE id = ?").get(before.id));
-    writeAudit({ profileId: before.id, email: request.admin.email, action: "updated", before, after });
+  const after = await db.transaction(async (tx) => {
+    const updatedAt = new Date().toISOString();
+    await tx.run(`UPDATE profiles SET section=?, placement=?, name=?, title=?, biography=?, background=?,
+      qualifications=?, responsibilities=?, photo_url=?, is_vacant=?, status=?, sort_order=?, updated_at=? WHERE id=?`,
+    profile.section, profile.placement, profile.name, profile.title, profile.biography, profile.background,
+    profile.qualifications, profile.responsibilities, profile.photo_url, profile.is_vacant, profile.status,
+    profile.sort_order, updatedAt, before.id);
+    const after = profileFromRow(await tx.get("SELECT * FROM profiles WHERE id = ?", before.id));
+    await writeAudit({ tx, profileId: before.id, email: request.admin.email, action: "updated", before, after });
     return after;
   });
-  const after = update();
   response.json(after);
 });
 
-app.delete("/api/admin/profiles/:id", requireAdmin, requireAdministrator, (request, response) => {
-  const before = profileFromRow(db.prepare("SELECT * FROM profiles WHERE id = ?").get(request.params.id));
+app.delete("/api/admin/profiles/:id", requireAdmin, requireAdministrator, async (request, response) => {
+  const before = profileFromRow(await db.get("SELECT * FROM profiles WHERE id = ?", request.params.id));
   if (!before) return response.status(404).json({ error: "Profile not found." });
-  const remove = db.transaction(() => {
-    db.prepare("DELETE FROM profiles WHERE id = ?").run(before.id);
-    writeAudit({ profileId: before.id, email: request.admin.email, action: "deleted", before, after: null });
+  await db.transaction(async (tx) => {
+    await tx.run("DELETE FROM profiles WHERE id = ?", before.id);
+    await writeAudit({ tx, profileId: before.id, email: request.admin.email, action: "deleted", before, after: null });
   });
-  remove();
   response.json({ deleted: true });
 });
 
-app.get("/api/admin/audit", requireAdmin, (request, response) => {
+app.get("/api/admin/audit", requireAdmin, async (request, response) => {
   const profileId = typeof request.query.profileId === "string" ? request.query.profileId : "";
   const rows = profileId
-    ? db.prepare("SELECT * FROM audit_log WHERE profile_id = ? ORDER BY id DESC LIMIT 200").all(profileId)
-    : db.prepare("SELECT * FROM audit_log ORDER BY id DESC LIMIT 200").all();
+    ? await db.all("SELECT * FROM audit_log WHERE profile_id = ? ORDER BY id DESC LIMIT 200", profileId)
+    : await db.all("SELECT * FROM audit_log ORDER BY id DESC LIMIT 200");
   response.json(rows.map((row) => ({
     ...row,
     before: row.before_json ? JSON.parse(row.before_json) : null,
@@ -370,8 +372,8 @@ app.get("/api/admin/audit", requireAdmin, (request, response) => {
   })));
 });
 
-app.get("/api/admin/manufacturing", requireAdmin, (_request, response) => {
-  const row = db.prepare("SELECT published_json, draft_json, updated_by, updated_at FROM site_content WHERE content_key = 'manufacturing'").get();
+app.get("/api/admin/manufacturing", requireAdmin, async (_request, response) => {
+  const row = await db.get("SELECT published_json, draft_json, updated_by, updated_at FROM site_content WHERE content_key = 'manufacturing'");
   response.json({
     published: JSON.parse(row.published_json),
     draft: JSON.parse(row.draft_json),
@@ -380,33 +382,31 @@ app.get("/api/admin/manufacturing", requireAdmin, (_request, response) => {
   });
 });
 
-app.put("/api/admin/manufacturing", requireAdmin, (request, response) => {
+app.put("/api/admin/manufacturing", requireAdmin, async (request, response) => {
   const issue = validateManufacturingContent(request.body);
   if (issue) return response.status(400).json({ error: issue });
-  const before = db.prepare("SELECT draft_json FROM site_content WHERE content_key = 'manufacturing'").get();
+  const before = await db.get("SELECT draft_json FROM site_content WHERE content_key = 'manufacturing'");
   const draft = JSON.stringify(request.body);
   const updatedAt = new Date().toISOString();
-  const update = db.transaction(() => {
-    db.prepare("UPDATE site_content SET draft_json = ?, updated_by = ?, updated_at = ? WHERE content_key = 'manufacturing'")
-      .run(draft, request.admin.email, updatedAt);
-    writeAudit({ profileId: "manufacturing-content", email: request.admin.email, action: "manufacturing draft updated", before: JSON.parse(before.draft_json), after: request.body });
+  await db.transaction(async (tx) => {
+    await tx.run("UPDATE site_content SET draft_json = ?, updated_by = ?, updated_at = ? WHERE content_key = 'manufacturing'",
+      draft, request.admin.email, updatedAt);
+    await writeAudit({ tx, profileId: "manufacturing-content", email: request.admin.email, action: "manufacturing draft updated", before: JSON.parse(before.draft_json), after: request.body });
   });
-  update();
   response.json({ saved: true, updated_by: request.admin.email, updated_at: updatedAt });
 });
 
-app.post("/api/admin/manufacturing/publish", requireAdmin, requireAdministrator, (_request, response) => {
-  const current = db.prepare("SELECT published_json, draft_json FROM site_content WHERE content_key = 'manufacturing'").get();
+app.post("/api/admin/manufacturing/publish", requireAdmin, requireAdministrator, async (_request, response) => {
+  const current = await db.get("SELECT published_json, draft_json FROM site_content WHERE content_key = 'manufacturing'");
   const draft = JSON.parse(current.draft_json);
   const issue = validateManufacturingContent(draft);
   if (issue) return response.status(400).json({ error: issue });
   const updatedAt = new Date().toISOString();
-  const publish = db.transaction(() => {
-    db.prepare("UPDATE site_content SET published_json = ?, updated_by = ?, updated_at = ? WHERE content_key = 'manufacturing'")
-      .run(current.draft_json, _request.admin.email, updatedAt);
-    writeAudit({ profileId: "manufacturing-content", email: _request.admin.email, action: "manufacturing content published", before: JSON.parse(current.published_json), after: draft });
+  await db.transaction(async (tx) => {
+    await tx.run("UPDATE site_content SET published_json = ?, updated_by = ?, updated_at = ? WHERE content_key = 'manufacturing'",
+      current.draft_json, _request.admin.email, updatedAt);
+    await writeAudit({ tx, profileId: "manufacturing-content", email: _request.admin.email, action: "manufacturing content published", before: JSON.parse(current.published_json), after: draft });
   });
-  publish();
   response.json({ published: true, updated_by: _request.admin.email, updated_at: updatedAt });
 });
 

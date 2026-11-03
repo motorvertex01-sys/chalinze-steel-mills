@@ -4,7 +4,7 @@ Independent React, TypeScript, Vite and Three.js website project, kept separate 
 
 ## Start the project
 
-Requirements: Node.js 20.19+ and npm. The site includes a Node API, a persistent SQLite database and a protected leadership administration area.
+Requirements: Node.js 20.19+ and npm. The site includes a Node API, MySQL/MariaDB production persistence, and a protected leadership administration area. Local development and integration tests can use SQLite.
 
 For local development, start the API and Vite in separate PowerShell windows:
 
@@ -19,6 +19,15 @@ npm run dev
 
 Open the Vite URL shown in the terminal. The Vite development server proxies the leadership and manufacturing-content APIs and uploaded media to the local Node server.
 
+By default, non-production runs use `data/chalinze.sqlite`, which is convenient for local development and tests. To use MySQL/MariaDB locally, create an empty database named `chalinze_steel_mills` in XAMPP/phpMyAdmin, then set the private `MYSQL_URL` environment variable before starting the API:
+
+```powershell
+$env:MYSQL_URL = "mysql://<database-user>:<database-password>@127.0.0.1:3306/chalinze_steel_mills"
+npm run dev:server
+```
+
+Replace the placeholders with your local database account; do not put credentials in tracked files. The server creates the application tables and applies the roster migration on first start. If an existing SQLite `chalinze.sqlite` is present in `DATA_DIRECTORY`, its admins, profiles, manufacturing content and audit history are imported once into MySQL without replacing rows already present there. Back up the source database before switching. To use the SQLite integration-test backend, leave `MYSQL_URL` unset.
+
 To run the production-style site locally, build and start the integrated server:
 
 ```powershell
@@ -30,7 +39,7 @@ The server serves both the built website and its API on port `4173` by default. 
 
 ## Leadership administration
 
-The public leadership page is available at `/leadership`; the authenticated administration page is at `/admin`. The source-backed profiles for Dr. Humphrey Musyoka (Director) and Nickson Kimbori (Operations – Logistics) are published without portraits, using the supplied professional profiles and roster titles. Their profiles do not assert Chalinze-specific responsibilities that were not in the source documents. The four supplied supporting-staff categories are also public. Other named profiles remain **Pending Approval** until an authorized administrator reviews and publishes them. Harish Kumar and the CFO remain separate entries.
+The public leadership page is available at `/leadership`; the authenticated administration page is at `/admin`. Profiles are not made public until an authorized administrator approves them. Dr. Humphrey Musyoka remains **Pending Approval** with his appointment unconfirmed and is excluded from the public roster. The Board, Senior Management, and Supporting Staff are maintained as separate sections; Nickson Kimbori appears only in Senior Management. Harish Kumar and the CFO remain separate entries. Existing profiles are reclassified once by a migration that records changes in the audit history; subsequent restarts do not overwrite administrator edits.
 
 Create the first administrator on the server:
 
@@ -41,15 +50,15 @@ Create the first administrator on the server:
 
 Four supplied leadership portraits are optimized in `public/assets/leadership/` and associated with the matching profiles. The supplied mine-site photograph is used only as an illustrative image, not as evidence of the Chalinze project site. Public copies of the two supplied Tanzania Revenue Authority certificates are in `public/assets/corporate/`; taxpayer identifiers and signatures are redacted, and both are identified as documents issued to Gypsum Plus Mines Limited. Original source documents and unredacted tax certificates in the local `src/leadership/` folder are excluded from Git.
 
-Profile, manufacturing-content and audit records are stored under `data/` by default. Optimized WebP assets are served from `data/uploads/`; unmodified uploaded image originals are retained privately in `data/originals/`. Set `DATA_DIRECTORY` to a persistent server volume before deployment. Back up this directory. The supplied server is designed for a single Node.js instance using persistent storage; use HTTPS in production (`NODE_ENV=production`) so administrator cookies are Secure. Do not expose the database, private originals or `.env` file publicly.
+Profile, manufacturing-content, session and audit records are stored in the configured MySQL/MariaDB database in production. Optimized WebP assets are served from `data/uploads/`; unmodified uploaded image originals are retained privately in `data/originals/`. Set `DATA_DIRECTORY` to persistent storage for uploaded media. MySQL/MariaDB database persistence is independent of the media directory: use a persistent/managed database with backups and retain the media volume too. The server refuses to start in production without `MYSQL_URL`; it never silently uses ephemeral SQLite. Use HTTPS in production (`NODE_ENV=production`) so administrator cookies are Secure. Do not expose the database, private originals or `.env` file publicly.
 
 The manufacturing experience is available at `/manufacturing` (and `/technology`). In the authenticated `/admin` area, administrators can edit the manufacturing page's structured JSON draft, preview its headline and six stages, and publish it separately from the live version. The server validates required sections and stage data, rejects media URLs that were not uploaded through the protected endpoint, and records draft saves/publication in the audit history. The media controls support approved JPEG/PNG/WebP photos (5 MB maximum) and MP4/WebM hero video (30 MB maximum); uploaded images are orientation-corrected, resized to at most 1800 × 1800 and converted to WebP for delivery while the original is retained privately. Approved photos can be assigned to the hero or an individual stage, and hero video is muted and loops. Save and review the draft before publishing. Use company-approved assets only. Content should be checked against the engineering and publication caveats in [docs/CONTENT_AUDIT.md](./docs/CONTENT_AUDIT.md).
 
-Leadership biographies and portraits from supplied profile documents are entered for administrative review unless explicitly published above. Upload future approved portraits through the administrator panel. Denis Kimaro's and Juliette A. Kimaro's supplied profiles identify a NextGen Cement Co. Ltd shareholder context, not a confirmed Chalinze Board appointment or Chalinze shareholding. Their classification is therefore subject to company approval. Create content editors with `ADMIN_ROLE=editor` when bootstrapping their administrator account; the role is enforced on the API as well as in the interface.
+Leadership biographies and portraits from supplied profile documents are entered for administrative review unless explicitly published above. The supplied roster places Denis Kimaro as a Director and Juliette A. Kimaro as Chief Legal Counsel on the Board; their profiles remain unpublished until approved. Their supplied profiles identify a NextGen Cement Co. Ltd shareholder context, not a confirmed Chalinze shareholding. Upload future approved portraits through the administrator panel. Create content editors with `ADMIN_ROLE=editor` when bootstrapping their administrator account; the role is enforced on the API as well as in the interface.
 
-On Render, the administrator page uses the deployed site's `/admin` route. Set the first administrator email and a unique password of at least 14 characters in Render's private environment settings, deploy once to bootstrap the account, then remove `ADMIN_PASSWORD` from the environment and redeploy. Administrator credentials are not stored in Git or printed by the site; keep the password only in a private password manager. The hosted service must use persistent storage for profile edits, audit history and uploaded media to survive restarts and deployments.
+On Render, provision a hosted MySQL/MariaDB database (or another persistent MySQL-compatible provider) and set `MYSQL_URL` to its private internal connection URL in the Web Service's private environment settings. Do not commit the URL. The database, not the Web Service filesystem, persists profiles, manufacturing content, sessions and audit history. Configure database backups/retention with the database provider. Also attach a persistent disk for uploaded media and private originals, mount it at `/var/data`, and set `DATA_DIRECTORY=/var/data`; a Render Free Web Service filesystem is ephemeral and cannot retain uploads across restarts or deployments.
 
-For Render, attach a persistent disk mounted at `/var/data` and set `DATA_DIRECTORY=/var/data` before enabling the administrator bootstrap. A Free Web Service has an ephemeral filesystem; do not use it for production profile, audit or upload storage because those records can be lost on restart or deployment.
+Set `ADMIN_EMAIL` and a unique `ADMIN_PASSWORD` of at least 14 characters in Render's private environment settings, deploy once to bootstrap the first account, then remove `ADMIN_PASSWORD` and redeploy. Administrator credentials are not stored in Git; keep the password in a private password manager. Run `npm run admin:create` with the same `MYSQL_URL` to add later accounts.
 
 Contact links open the visitor's email, phone, messaging app or map; this site does not collect enquiries, process payments, publish live news or provide a protected investor portal.
 
