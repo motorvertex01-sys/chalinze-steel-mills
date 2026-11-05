@@ -5,6 +5,7 @@
 | Source | Use |
 |---|---|
 | `WEBSITE _DOCS_ Chalinze Steel Mills Ltd.docx` | Primary source for the company and project copy, contact information, product dimensions, proposed process, markets, infrastructure, quality, HSEC/ESG, partnerships, development and people topics. The site paraphrases this material and identifies unverified plans as plans. |
+| `WEBSITE _FINAL Reviews.pdf/.docx` | Final website review brief covering corporate identity, the proposed 1.0 MTPA Phase 1 basis, Vigwaza location, infrastructure, investment, ESG and gender inclusion. Conflicting source figures and unverified connections remain qualified. |
 | `LOGO _ Chalinze Steel Mills Ltd -approved.pdf` | Approved logo artwork. The source PDF is retained in `public/assets/brand/`; the site uses optimized WebP derivatives and a Three.js 3D presentation of the mark. |
 | Supplied Chalinze Steel Mills HTML design reference and saved rendered resource | Reviewed only as design/source-reference material. Its enquiry form was disabled; unsupported claims from it are not treated as verified company facts. |
 
@@ -68,7 +69,7 @@ The office and planned manufacturing project location are separate places and ar
 
 ## Conflicts and unsupported claims withheld
 
-1. **Capacity:** The project narrative describes Phase 1 as 1,000,000 tonnes per annum, followed by another 1,000,000 tonnes per annum in a later expansion. An earlier process diagram gives 1.2 million tonnes per annum. No single capacity is asserted.
+1. **Capacity:** Current planning material and the final website review identify a proposed Phase 1 basis of 1,000,000 tonnes per annum (1.0 MTPA), with a possible later expansion. An earlier project diagram gives 1.2 million tonnes per annum. Public copy presents 1.0 MTPA as proposed and retains the discrepancy caveat; the approved basis remains unresolved.
 2. **Ironmaking:** The main narrative describes natural-gas direct reduced iron (DRI); another process diagram says electric ironmaking. No selected route is asserted.
 3. **Address:** The two headquarters descriptions differ. Both the conflict and requested verification are disclosed on Contact.
 4. **Location:** Vigwaza Dry Port/area is a planned project location and not the Dar es Salaam office. Confirm the exact site boundary and pin.
@@ -113,4 +114,4 @@ The saved design-reference package also includes third-party pictures whose sour
 - Added route-specific canonical/Open Graph metadata, `noindex` for administration, a sitemap and robots directives.
 - Responsive browser testing found that the leadership 3D-scene controls could be clipped at narrow mobile widths because the scene is offset beyond the viewport. The mobile controls are now anchored to the viewport's left content edge.
 - Automated integration tests cover the exact public roster, SQLite production startup, source-record migration, role authorization, profile create/edit/publish/unpublish, image upload/replacement and optimization, malformed image rejection, manufacturing draft/public separation, publication, audit history, malformed cookies and cross-origin state-changing requests.
-- No production deployment or external-host verification has been performed. The hosting platform, persistent storage, HTTPS termination, final DNS and production Node.js image-processing runtime still require deployment-side verification.
+- Earlier production checks confirmed the public leadership and site-configuration APIs. The final website-review changes have not yet been deployed or verified against the live host. Persistent storage, current hosting availability, HTTPS/DNS and the production image-processing runtime remain deployment-side checks.

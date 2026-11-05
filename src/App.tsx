@@ -10,6 +10,7 @@ import { ManufacturingExperience } from "./ManufacturingExperience";
 import { useSiteConfig } from "./siteConfig";
 
 const IndustrialScene = lazy(() => import("./IndustrialScene").then((module) => ({ default: module.IndustrialScene })));
+const homeGallery = manufacturingGallery.filter((item) => item.category !== "Quality assurance");
 
 function Scene({ kind, size }: { kind?: "billet" | "ore" | "process" | "logo"; size?: "130" | "150" }) {
   return <div className={`scene-holder scene-holder-${kind ?? "billet"}`}><Suspense fallback={<div className="scene-loading" role="status">Loading 3D preview…</div>}><IndustrialScene kind={kind} size={size} /></Suspense></div>;
@@ -185,12 +186,14 @@ function Home() {
   const [stage, setStage] = useState(0);
   const { home } = useSiteConfig();
   const process = [
-    { name: "Mineral resources", kind: "ore" as const, label: "01 / SOURCE", detail: "ROM iron ore is identified in the project concept as the starting material." },
-    { name: "Integrated processing", kind: "process" as const, label: "02 / TRANSFORM", detail: "Processing and ironmaking route details remain subject to authorized technical confirmation." },
-    { name: "Steel billets", kind: "billet" as const, label: "03 / FORM", detail: "Steel billets are identified as the planned principal product of the project." },
+    { name: "Iron ore mining", kind: "ore" as const, label: "01 / MINE", detail: "Tanzanian run-of-mine iron ore is identified as the planned feedstock; mine rights, reserves and supply are not confirmed." },
+    { name: "Beneficiation", kind: "process" as const, label: "02 / PREPARE", detail: "Ore processing and feed preparation are planned; equipment, recovery and concentrate grade are not specified." },
+    { name: "Ironmaking", kind: "process" as const, label: "03 / PRODUCE IRON", detail: "Ironmaking is part of the project concept, but the source material describes conflicting technology routes." },
+    { name: "Steelmaking", kind: "process" as const, label: "04 / MAKE STEEL", detail: "Electric Arc Furnace steelmaking is described as a planned stage; final design and operating status are unconfirmed." },
+    { name: "Billet casting", kind: "billet" as const, label: "05 / CAST", detail: "Continuous casting is planned to produce steel billets, the project's principal identified product." },
   ];
 
-  return <main>
+  return <main className="home-page">
     <section className="hero">
       <div className="hero-image-grid" aria-hidden="true" />
       <div className="hero-copy">
@@ -198,7 +201,7 @@ function Home() {
         <h1>{home.heroHeadline.split("\n").map((line, index, lines) => <span key={`${line}-${index}`}>{index === lines.length - 1 ? <em>{line}</em> : line}{index < lines.length - 1 && <br />}</span>)}</h1>
         <p className="hero-lede">{home.heroDescription}</p>
         <div className="hero-actions"><ConfigLink className="button button-orange" path={home.primaryPath}>{home.primaryAction} <ArrowRight size={17} /></ConfigLink><ConfigLink className="text-link" path={home.secondaryPath}>{home.secondaryAction} <ArrowUpRight size={15} /></ConfigLink></div>
-        <div className="hero-meta"><span><b>01</b> TANZANIA</span><span><b>02</b> INTEGRATED STEEL</span><span><b>03</b> FUTURE-FOCUSED</span></div>
+        <div className="hero-meta"><span><b>01</b> TANZANIA</span><span><b>02</b> VIGWAZA</span><span><b>03</b> STEEL BILLETS</span></div>
       </div>
       <div className="hero-object"><Scene kind="ore" /><div className="scene-caption"><span>RAW MATERIAL / CONCEPT</span><span>ROTATE TO EXPLORE ↗</span></div></div>
       <a className="scroll-cue" href="#journey"><span>Scroll to discover</span><ArrowDown size={16} /></a>
@@ -211,7 +214,7 @@ function Home() {
         <h2 className="multiline-heading">{home.introHeadline.split("\n").map((line, index, lines) => <span key={`${line}-${index}`}>{index === lines.length - 1 ? <em>{line}</em> : line}{index < lines.length - 1 && <br />}</span>)}</h2>
         <div><p className="large-copy">{home.introPrimary}</p><p className="muted-copy">{home.introSecondary}</p><ConfigLink className="text-link" path={home.introPath}>{home.introAction} <ArrowUpRight size={15} /></ConfigLink></div>
       </div>
-      <div className="facts-strip"><div><span>PROJECT</span><strong>Integrated steel</strong><small>Planned development</small></div><div><span>ORIGIN</span><strong>Tanzania</strong><small>Company project</small></div><div><span>PRODUCT</span><strong>Steel billets</strong><small>Principal planned product</small></div><div><span>STATUS</span><strong>In development</strong><small>Confirm approved progress</small></div></div>
+      <div className="facts-strip"><div><span>PROPOSED CAPACITY</span><strong>1.0 MTPA</strong><small>Phase 1 · earlier source figure differs</small></div><div><span>PROJECT LOCATION</span><strong>Vigwaza</strong><small>Chalinze District, Pwani</small></div><div><span>VALUE CHAIN</span><strong>Ore → billets</strong><small>Five planned stages</small></div><div><span>PROJECT STATUS</span><strong>In development</strong><small>Not yet operational</small></div></div>
     </section>
 
     <section className="brand-story">
@@ -231,7 +234,7 @@ function Home() {
 
     <section className="journey-section section-pad" id="journey">
       <div className="section-index">03 — MATERIAL JOURNEY</div>
-      <div className="journey-heading"><div><Pill>From resource to material</Pill><h2>One connected<br /><em>transformation.</em></h2></div><p>Explore the proposed journey. Technical route details remain subject to review against approved engineering documentation.</p></div>
+      <div className="journey-heading"><div><Pill>From resource to material</Pill><h2>One connected<br /><em>transformation.</em></h2></div><p>Five planned stages connect mineral extraction to steel billets. The ironmaking route and final plant design remain unconfirmed.</p></div>
       <div className="journey-layout">
         <div className="stage-list" role="tablist" aria-label="Material journey stages">
           {process.map((item, index) => <button key={item.name} role="tab" aria-selected={stage === index} className={`stage-item ${stage === index ? "selected" : ""}`} onClick={() => setStage(index)}><span>{item.label}</span><strong>{item.name}</strong><ArrowUpRight size={16} /></button>)}
@@ -246,8 +249,14 @@ function Home() {
       <div className="product-model"><Scene kind="billet" /><div className="model-dimension dimension-width">130 / 150 mm</div><div className="model-dimension dimension-length">BILLET / CONCEPT</div></div>
     </section>
 
+    <section className="home-gallery-section section-pad">
+      <div className="section-index">05 — MATERIALS & PRODUCTS</div>
+      <div className="gallery-heading"><div><Pill>Project imagery</Pill><h2>From ore to<br /><em>billet.</em></h2></div><p>Explore raw-material, proposed process and billet visuals. Concept artwork and supplied example photographs are illustrative, not evidence of current Chalinze production.</p></div>
+      <ProcessGallery items={homeGallery} title="Illustrative raw materials, manufacturing stages and steel billet gallery" />
+    </section>
+
     <section className="principles-section section-pad">
-      <div className="section-index">05 — BUILT FOR THE LONG VIEW</div><div className="principles-heading"><h2>Progress with<br /><em>purpose.</em></h2><p>Growth that lasts is built on considered engineering, responsible development and open communication.</p></div>
+      <div className="section-index">06 — BUILT FOR THE LONG VIEW</div><div className="principles-heading"><h2>Progress with<br /><em>purpose.</em></h2><p>Growth that lasts is built on considered engineering, responsible development and open communication.</p></div>
       <div className="principle-grid"><article><span>01</span><h3>Engineering ambition</h3><p>Integrated project thinking across materials, process and infrastructure.</p><Link to="/technology" aria-label="Explore engineering ambition">Explore technology <ArrowUpRight size={14} /></Link></article><article><span>02</span><h3>Responsible development</h3><p>Plans and measured performance should be clearly distinguished.</p><Link to="/sustainability" aria-label="Explore responsible development">Our approach <ArrowUpRight size={14} /></Link></article><article><span>03</span><h3>Regional connection</h3><p>Intended markets and partnerships, presented without overstating commitments.</p><Link to="/markets" aria-label="Explore regional connection">Explore markets <ArrowUpRight size={14} /></Link></article></div>
     </section>
     <section className="closing-cta"><div><Pill>Begin a conversation</Pill><h2>Let’s build<br /><em>what’s next.</em></h2></div><Link className="button button-orange" to="/contact">Business enquiries <ArrowUpRight size={16} /></Link><small>Contact details are transcribed from the supplied company document; verify before relying on them.</small></section>
@@ -305,10 +314,10 @@ function ContactDirectory() {
         <h3>Vigwaza project site</h3>
         <p>{contactDetails.siteAddress}</p>
         <a className="text-link" href={contactDetails.siteMap} target="_blank" rel="noreferrer">Open project map pin <ArrowUpRight size={15} /></a>
-        <p className="contact-warning">This is a planned project location. Confirm its exact address, pin and regional naming before publication or travel.</p>
+        <p className="contact-warning">This is a planned project location, not the corporate office. The exact site address was not supplied.</p>
       </article>
     </div>
-    <div className="contact-verification-note"><strong>Contact information</strong><span>Contact details and locations are based on supplied company information. Please confirm current contact channels and the correct location before arranging a visit.</span></div>
+    <div className="contact-verification-note"><strong>Contact information</strong><span>Contact details are transcribed from company material. The source lists two office-address variants; the planned project site is shown separately from the Dar es Salaam contact office.</span></div>
     <section className="corporate-documents" aria-labelledby="corporate-documents-title">
       <div className="corporate-documents-heading">
         <div><span className="card-tag">PARENT COMPANY REGISTRATION</span><h2 id="corporate-documents-title">Group credentials.</h2></div>

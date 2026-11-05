@@ -101,16 +101,16 @@ export const contactDetails = {
     "P.O. Box 5497",
     "Dar es Salaam, Tanzania",
   ],
-  addressVariant: "A separate headquarters paragraph in the same supplied document says “8th Floor, Morocco Squire, Mwaki Road, Kinondoni District.” Confirm the spelling, floor, street name and district before final publication.",
+  addressVariant: "A separate headquarters paragraph in the source gives another variant: “8th Floor, Morocco Squire, Mwaki Road, Kinondoni District.” The two address descriptions differ.",
   phones: ["+255 735 283 711", "+255 735 283 712", "+255 713 283 711"],
   whatsapp: "+255 752 283 711",
   email: "ceo@chalinzesteelmills.co.tz",
   website: "https://chalinzesteelmills.co.tz",
   officeMap: "https://maps.app.goo.gl/3wb3PRXCqLbRXgo3A",
-  siteAddress: "Vigwaza area / Vigwaza Dry Port, Chalinze District, Pwani Region, Tanzania (planned manufacturing project location; verify the exact site address).",
+  siteAddress: "Vigwaza area / Vigwaza Dry Port, Chalinze District, Pwani Region, Tanzania (planned manufacturing project location; exact site address not supplied).",
   siteMap: "https://maps.app.goo.gl/mUPLZc5SQGWxgd46A?g_st=aw",
   officeHours: "Monday–Friday, 8:00 a.m.–5:00 p.m. East Africa Time. Weekends and public holidays: closed. Meetings by prior appointment.",
-  sourceNote: "Transcribed from Sections 24.1–24.10 of the supplied Chalinze website document. Verify current details with the company before publication.",
+  sourceNote: "Corporate contact details transcribed from Sections 24.1–24.10 of the supplied Chalinze company document.",
 } as const;
 
 export const enquiryTypes = [
@@ -163,11 +163,11 @@ export const faqs = [
   },
   {
     question: "Where is the planned manufacturing project?",
-    answer: "The company document identifies the planned project in the Vigwaza area / Vigwaza Dry Port, Chalinze District, Pwani Region. This is separate from the Dar es Salaam corporate contact office, and the exact site address and map pin need confirmation.",
+    answer: "The planned manufacturing project is identified in the Vigwaza area near Vigwaza Dry Port, Chalinze District, Pwani Region. It is separate from the Dar es Salaam corporate contact office; an exact site address was not supplied.",
   },
   {
     question: "What is the approved production capacity?",
-    answer: "The document describes Phase 1 at 1,000,000 tonnes per annum and a future expansion by an additional 1,000,000 tonnes per annum, but an earlier process diagram says 1.2 million TPA. The company must confirm the approved capacity basis; this website does not present one definitive capacity.",
+    answer: "Current planning material lists a proposed Phase 1 capacity of 1,000,000 tonnes per annum (1.0 MTPA), while an earlier project diagram states 1.2 million TPA. The approved capacity basis remains unresolved.",
   },
   {
     question: "Which ironmaking technology will the project use?",
@@ -183,7 +183,7 @@ export const pages: SitePage[] = [
     summary: "Chalinze Steel Mills Ltd is a wholly owned subsidiary of GYPSUM Plus Mines Ltd, established in the company document as a proposed Tanzanian mineral-to-steel billet project.",
     sections: [
       { title: "Company overview", body: "The supplied company document presents Chalinze Steel Mills Ltd as a Tanzanian steel manufacturing company being developed to beneficiate local iron ore into steel billets and contribute to industrial capacity. The facility is described as planned, not operational.", tag: "Company document · Sections 1–2" },
-      { title: "Ownership & group relationship", body: "The company document states that Chalinze Steel Mills Ltd is a wholly owned subsidiary of GYPSUM Plus Mines Ltd and describes an integrated mineral supply relationship. Confirm the current legal entity name and ownership statement against corporate records.", tag: "Source statement · legal review advised" },
+      { title: "Ownership & group relationship", body: "The supplied company document states that Chalinze Steel Mills Ltd is a wholly owned subsidiary of GYPSUM Plus Mines Ltd and describes an integrated mineral supply relationship.", tag: "Ownership statement · source-reported" },
       { title: "Establishment context", body: "The document links the project concept to demand associated with infrastructure, construction, energy projects, manufacturing expansion, urbanisation and regional trade, and to local mineral value addition.", tag: "Strategic rationale" },
       { title: "Vision & mission", body: "The stated vision is to establish a competitive, efficient and sustainable steel manufacturing facility serving Tanzania and regional markets. The mission described in the document is to develop a modern ROM iron ore-to-billet manufacturing platform through technology, skills, partnership and responsible practices.", tag: "Company document · Section 4.2" },
       { title: "Strategic objectives", body: "The document identifies mineral value addition, low-carbon steel manufacturing ambition, regional market development, technology transfer, employment and skills development, and sustainable industrial growth.", tag: "Company document · Sections 2 and 7" },
@@ -197,8 +197,8 @@ export const pages: SitePage[] = [
     summary: "A proposed phased integrated manufacturing complex connecting Tanzanian ROM iron ore, processing, ironmaking, steelmaking and billet casting.",
     sections: [
       { title: "Project scope", body: "The company document describes raw-material handling, iron ore beneficiation, iron production, steelmaking, continuous casting, billet storage and dispatch, utilities, automation and environmental management as elements of the proposed platform.", tag: "Planned development" },
-      { title: "Planned site", body: "The document identifies the project in Vigwaza, Chalinze District, Pwani Region, near the Vigwaza Dry Port, and discusses road and MGR/SGR corridor connectivity. Confirm the precise site boundaries, official region wording and map marker.", tag: "Site details require confirmation" },
-      { title: "Phase 1 & expansion", body: "The project overview states Phase 1 at 1,000,000 tonnes per annum and describes a future expansion of an additional 1,000,000 tonnes per annum after successful operation and market development. An earlier diagram elsewhere in the same document says 1.2 million TPA.", tag: "Capacity conflict — company decision required" },
+      { title: "Planned site", body: "The project is identified in Vigwaza, Chalinze District, Pwani Region, near the Vigwaza Dry Port. Road and MGR/SGR rail corridors are discussed as connectivity context; exact site boundaries and a confirmed rail connection are not supplied.", tag: "Planned location · Vigwaza" },
+      { title: "Phase 1 & expansion", body: "Current planning material lists Phase 1 at a proposed 1,000,000 tonnes per annum (1.0 MTPA), with a possible later expansion. An earlier project diagram states 1.2 million TPA, so the approved capacity basis remains unresolved.", tag: "Proposed capacity · source discrepancy" },
       { title: "Raw materials", body: "Tanzanian ROM iron ore is identified as the planned primary input. The company narrative associates the ore resource with GYPSUM Plus Mines Ltd. Specific mine permits, assay data, reserves, supply quantities and commercial agreements are not included.", tag: "Supply evidence not supplied" },
       { title: "Utilities & services", body: "The document’s design-basis table lists national-grid hydropower as primary electricity, natural-gas captive generation as backup/support, recycled process water with make-up supply, an on-site oxygen plant and compressor station, limestone and dolomite fluxes, closed-loop cooling, and heat recovery where feasible. These are planned design-basis items, not verified installed services.", tag: "Proposed utility basis" },
       { title: "Roadmap & readiness", body: "Development areas include engineering, environmental/regulatory approvals, financing, EPC, installation, testing, commissioning and operational readiness. The document does not provide independently verified dates or completed milestones.", tag: "No approved progress dates" },
@@ -257,12 +257,12 @@ export const pages: SitePage[] = [
     path: "/infrastructure",
     title: "Systems that move industry.",
     eyebrow: "Plant & infrastructure",
-    summary: "The proposed plant concept covers material handling, process facilities, utilities, control systems, logistics and supporting infrastructure.",
+    summary: "The proposed plant concept references Vigwaza Dry Port, rail and national road corridors, national-grid electricity, natural gas and water systems; connections and utilities are not confirmed.",
     sections: [
       { title: "Plant configuration", body: "The proposed configuration includes raw-material handling, beneficiation, iron production, steelmaking, continuous casting and billet storage/dispatch. No approved general arrangement or as-built drawing is supplied.", tag: "Proposed configuration" },
-      { title: "Utility design basis", body: "The document lists national-grid hydropower as primary electricity; natural-gas captive generation as backup/support; recycled process water with make-up supply; on-site oxygen and compressed-air systems; fluxes; closed-loop cooling; and heat recovery where technically feasible.", tag: "Document design basis — not commissioned" },
+      { title: "Utility design basis", body: "The project material cites national-grid electricity and the Julius Nyerere Hydropower Project as power context, with natural-gas generation as backup/support. Recycled process water, make-up supply, oxygen and compressed-air systems, fluxes, closed-loop cooling and heat recovery are also design-basis items; no utility connection or supply agreement is evidenced.", tag: "Planned utility basis · not commissioned" },
       { title: "Automation & digital control", body: "Automation, process monitoring, smart manufacturing, predictive maintenance, digital quality management and information security are identified as proposed development themes.", tag: "Planned digital systems" },
-      { title: "Transport & logistics", body: "The document cites road transport, the MGR and SGR railway corridors, port access strategy, internal handling, warehousing and dispatch as planning topics. No customer logistics contract or secured rail connection is claimed.", tag: "Connectivity to verify" },
+      { title: "Transport & logistics", body: "The planned site is described near Vigwaza Dry Port, with the National Trunk Road Network and MGR/SGR railway corridors discussed as connectivity context. No secured rail connection, port access arrangement or logistics contract is confirmed.", tag: "Connectivity context · not secured" },
       { title: "Environmental management", body: "Environmental management systems, water and resource management, waste, climate and carbon considerations are included in the proposed plant and HSEC planning scope.", tag: "Plans and permits not supplied" },
     ],
   },
