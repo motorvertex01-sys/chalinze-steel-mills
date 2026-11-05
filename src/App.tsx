@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useState } from "react";
+import { lazy, Suspense, useEffect, useRef, useState } from "react";
 import { ArrowDown, ArrowRight, ArrowUpRight, MapPin, Menu, X } from "lucide-react";
 import { Link, NavLink, Navigate, Route, Routes, useLocation } from "react-router-dom";
 import { contactDetails, enquiryTypes, faqs, pages, processStages, type SitePage } from "./content";
@@ -425,6 +425,83 @@ function NotFound() {
   return <main className="not-found"><Pill>404 / Not found</Pill><h1>This page is<br /><em>not here.</em></h1><Link className="button button-orange" to="/">Return to overview <ArrowRight size={16} /></Link></main>;
 }
 
+function ScrollMotion() {
+  const { pathname } = useLocation();
+  const progressRef = useRef<HTMLSpanElement>(null);
+
+  useEffect(() => {
+    let frame = 0;
+    const updateProgress = () => {
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(() => {
+        const scrollable = document.documentElement.scrollHeight - window.innerHeight;
+        const progress = scrollable > 0 ? window.scrollY / scrollable : 0;
+        progressRef.current?.style.setProperty("--scroll-progress", String(Math.min(1, Math.max(0, progress))));
+      });
+    };
+
+    updateProgress();
+    window.addEventListener("scroll", updateProgress, { passive: true });
+    window.addEventListener("resize", updateProgress);
+
+    return () => {
+      cancelAnimationFrame(frame);
+      window.removeEventListener("scroll", updateProgress);
+      window.removeEventListener("resize", updateProgress);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (pathname.startsWith("/admin") || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    if (!("IntersectionObserver" in window)) return;
+
+    const main = document.querySelector("main");
+    if (!main) return;
+
+    const selector = [
+      "main > section:not(.hero):not(.inner-hero):not(.leadership-hero):not(.manufacturing-hero)",
+      "main .section-pad",
+      ".leader-card",
+      ".gallery-card",
+      ".content-card",
+      ".principle-card",
+      ".contact-card",
+      ".corporate-document-card",
+      ".location-map-card",
+      ".faq-item",
+      ".page-end-cta",
+    ].join(",");
+    const observed = new WeakSet<Element>();
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach((entry) => {
+        if (!entry.isIntersecting) return;
+        entry.target.classList.add("is-scroll-visible");
+        observer.unobserve(entry.target);
+      });
+    }, { threshold: 0.12, rootMargin: "0px 0px -7% 0px" });
+
+    const observeTargets = () => {
+      main.querySelectorAll<HTMLElement>(selector).forEach((target, index) => {
+        if (observed.has(target)) return;
+        observed.add(target);
+        target.style.setProperty("--scroll-reveal-delay", `${(index % 4) * 70}ms`);
+        target.classList.add("scroll-reveal");
+        observer.observe(target);
+      });
+    };
+
+    observeTargets();
+    const mutations = new MutationObserver(observeTargets);
+    mutations.observe(main, { childList: true, subtree: true });
+    return () => {
+      observer.disconnect();
+      mutations.disconnect();
+    };
+  }, [pathname]);
+
+  return <div className="scroll-progress" aria-hidden="true"><span ref={progressRef} /></div>;
+}
+
 export default function App() {
-  return <><PageMetadata /><ScrollToTop /><Header /><Routes><Route path="/" element={<Home />} /><Route path="/leadership" element={<LeadershipPage />} /><Route path="/admin/*" element={<AdminPage />} /><Route path="/manufacturing" element={<ManufacturingExperience />} /><Route path="/technology" element={<ManufacturingExperience />} /><Route path="/quality" element={<Navigate to="/manufacturing#quality" replace />} />{pages.filter((page) => !["/manufacturing", "/technology", "/quality"].includes(page.path)).map((page) => <Route key={page.path} path={page.path} element={<ContentPage key={page.path} page={page} />} />)}<Route path="*" element={<NotFound />} /></Routes><Footer /></>;
+  return <><PageMetadata /><ScrollToTop /><ScrollMotion /><Header /><Routes><Route path="/" element={<Home />} /><Route path="/leadership" element={<LeadershipPage />} /><Route path="/admin/*" element={<AdminPage />} /><Route path="/manufacturing" element={<ManufacturingExperience />} /><Route path="/technology" element={<ManufacturingExperience />} /><Route path="/quality" element={<Navigate to="/manufacturing#quality" replace />} />{pages.filter((page) => !["/manufacturing", "/technology", "/quality"].includes(page.path)).map((page) => <Route key={page.path} path={page.path} element={<ContentPage key={page.path} page={page} />} />)}<Route path="*" element={<NotFound />} /></Routes><Footer /></>;
 }

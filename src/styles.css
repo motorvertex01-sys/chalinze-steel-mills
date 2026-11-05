@@ -357,6 +357,12 @@ body.dialog-open { overflow: hidden; }
 
 :focus-visible { outline: 2px solid #f47721; outline-offset: 4px; }
 
+.scroll-progress { position: fixed; z-index: 50; inset: 0 0 auto; height: 2px; pointer-events: none; background: rgba(209,216,222,.08); }
+.scroll-progress span { display: block; width: 100%; height: 100%; transform: scaleX(var(--scroll-progress, 0)); transform-origin: left center; background: linear-gradient(90deg, #aeb8bf, var(--orange) 72%, #f6bd78); box-shadow: 0 0 12px rgba(244,119,33,.52); }
+.scroll-reveal { opacity: 0; transform: translate3d(0, 30px, 0); filter: blur(5px); transition: opacity .72s cubic-bezier(.2,.7,.2,1) var(--scroll-reveal-delay, 0ms), transform .72s cubic-bezier(.2,.7,.2,1) var(--scroll-reveal-delay, 0ms), filter .72s ease var(--scroll-reveal-delay, 0ms); }
+.scroll-reveal.is-scroll-visible { opacity: 1; transform: translate3d(0, 0, 0); filter: blur(0); }
+.leader-card.scroll-reveal, .gallery-card.scroll-reveal, .content-card.scroll-reveal, .principle-card.scroll-reveal, .contact-card.scroll-reveal, .corporate-document-card.scroll-reveal, .location-map-card.scroll-reveal, .faq-item.scroll-reveal { transition-duration: .62s; }
+
 @media (max-width: 1100px) {
   .header-inner { gap: 15px; }
   .brand { min-width: 180px; }
@@ -385,6 +391,8 @@ body.dialog-open { overflow: hidden; }
   .faq-heading h2 { flex-basis: auto; }
 }
 @media (max-width: 680px) {
+  .scroll-reveal { transform: translate3d(0, 18px, 0); filter: blur(3px); transition-duration: .52s; }
+  .scroll-reveal.is-scroll-visible { transform: translate3d(0, 0, 0); filter: blur(0); }
   .site-header { position: absolute; }
   .header-inner { height: 70px; }
   .brand { min-width: unset; }
