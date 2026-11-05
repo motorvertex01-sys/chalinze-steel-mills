@@ -2,11 +2,21 @@
 
 Independent React, TypeScript, Vite and Three.js website project, kept separate from the UCC chatbot repository. The protected `/admin` area manages leadership, manufacturing drafts and the public site's page content, navigation and visual settings.
 
-## Start the project
+## Deploy and run on Render
 
-Requirements: Node.js 20.19+ and npm. The site includes a Node API, a local SQLite database, and a protected leadership administration area.
+Render is the production host; visitors and administrators should use the public URL shown for the `chalinze-steel-mills` service in the Render Dashboard, not a localhost address. The site and API are served together from that URL, so production API and uploaded-media requests use same-origin paths automatically.
 
-For local development, start the API and Vite in separate PowerShell windows:
+Create or connect a Blueprint in Render using `render.yaml`. The Blueprint provisions the Node web service in Singapore on the paid Starter plan, builds with `npm ci && npm run build`, starts with `npm start`, checks `/healthz`, and deploys pushed commits automatically. It mounts a persistent disk at `/var/data` for the SQLite database and uploaded media.
+
+Set a unique `ADMIN_PASSWORD` of at least 14 characters in Render's private environment settings when creating the Blueprint. The first successful start creates the initial administrator; remove the bootstrap password variable after signing in. The database, portraits, and admin session store are held on the persistent disk. Render availability and charges depend on the service plan, billing status, and provider operations.
+
+The configured default Render hostname may differ from the service name. Use the actual service URL displayed in the Render Dashboard. If the service URL returns 404, confirm the Blueprint was created, the latest deployment succeeded, and the domain belongs to this web service.
+
+## Optional local development
+
+Requirements for local development: Node.js 22.x and npm. The site includes a Node API, a local SQLite database, and a protected leadership administration area.
+
+For local development only, start the API and Vite in separate PowerShell windows:
 
 ```powershell
 npm install
@@ -51,7 +61,7 @@ The manufacturing experience is available at `/manufacturing` (and `/technology`
 
 The public leadership page follows the supplied roster and does not display biographies, qualifications, or responsibilities that have not been approved. The supplied profiles for Denis A. Kimaro and Mrs. Juliette Kimaro include a NextGen Cement Co. Ltd shareholder context, not a confirmed Chalinze shareholding. Upload future approved portraits through the administrator panel. Create content editors with `ADMIN_ROLE=editor` when bootstrapping their administrator account; the role is enforced on the API as well as in the interface.
 
-The repository includes a Render Blueprint in `render.yaml`. Create or connect a Blueprint in the Render Dashboard to provision the Node Web Service in Singapore on the paid Starter plan, run a health check at `/healthz`, and deploy each pushed commit automatically. The configured persistent disk is mounted at `/var/data`, with `DATA_DIRECTORY=/var/data`; SQLite data and uploaded media/private originals therefore survive normal restarts and redeploys. The paid service and disk incur charges, and uninterrupted availability still depends on the Render account, billing status and provider operations.
+The repository includes a Render Blueprint in `render.yaml`. The configured persistent disk is mounted at `/var/data`, with `DATA_DIRECTORY=/var/data`; SQLite data and uploaded media/private originals therefore survive normal restarts and redeploys. The paid service and disk incur charges, and uninterrupted availability still depends on the Render account, billing status and provider operations.
 
 During initial Blueprint creation, Render prompts for the `ADMIN_PASSWORD` marked `sync: false`; use a new unique password of at least 14 characters and keep it only in Render's private environment settings. The server hashes that password and creates the first administrator only when the persistent database has no administrator. Remove the bootstrap variable from the Render service after the first successful deployment. For an already-created service, manage the variable directly in Render because Blueprint `sync: false` values are only prompted on initial creation. Do not put credentials in the Blueprint, Git, chat, or logs. Back up the persistent disk regularly and verify the service's `/healthz` status after deployment.
 
