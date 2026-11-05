@@ -64,6 +64,8 @@ test("leadership roles, authenticated editing, image uploads and publishing", as
       stdio: "ignore",
     });
     await waitForServer(`${base}/api/admin/session`, server);
+    const health = await fetch(`${base}/healthz`);
+    if (!health.ok || (await health.json()).status !== "ok") throw new Error("The deployment health check did not report a healthy server.");
     const initialSession = await (await fetch(`${base}/api/admin/session`)).json();
     if (initialSession.configured !== true || initialSession.authenticated !== false) throw new Error("Initial administrator was not provisioned from private environment variables.");
     execFileSync(process.execPath, ["server/create-admin.js"], {

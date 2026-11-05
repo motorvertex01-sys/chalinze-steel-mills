@@ -171,6 +171,10 @@ app.use((request, response, next) => {
   next();
 });
 
+app.get("/healthz", (_request, response) => {
+  response.status(200).json({ status: "ok" });
+});
+
 function cookieToken(request) {
   const entry = request.headers.cookie?.split(";").map((part) => part.trim()).find((part) => part.startsWith("csm_admin="));
   if (!entry) return "";

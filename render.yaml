@@ -3,17 +3,18 @@ services:
     name: chalinze-steel-mills
     env: node
     plan: starter
+    region: singapore
+    autoDeployTrigger: commit
+    healthCheckPath: /healthz
     buildCommand: npm install && npm run build
     startCommand: npm start
     envVars:
       - key: NODE_ENV
         value: production
-      - key: PORT
-        value: 4173
       - key: ADMIN_EMAIL
         value: admin@chalinze.co.tz
       - key: ADMIN_PASSWORD
-        value: Chalinzesteelmill
+        sync: false
       - key: DATA_DIRECTORY
         value: /var/data
     disk:
