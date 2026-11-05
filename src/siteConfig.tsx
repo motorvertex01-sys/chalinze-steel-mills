@@ -57,13 +57,13 @@ export function createDefaultSiteConfig(): SiteConfig {
       { label: "Contact", links: [{ label: "Contact", path: "/contact" }] },
     ],
     footer: {
-      tagline: "Developing an integrated mineral-to-steel project in Tanzania.",
+      tagline: "A Tanzanian steel manufacturing company wholly owned by GYPSUM Plus Mines Ltd.",
       groups: [
         { label: "Explore", links: [{ label: "Company", path: "/company" }, { label: "Project", path: "/project" }, { label: "Technology", path: "/technology" }, { label: "Leadership & Governance", path: "/leadership" }, { label: "Administration", path: "/admin" }] },
         { label: "Discover", links: [{ label: "Products", path: "/products" }, { label: "Sustainability", path: "/sustainability" }, { label: "Markets", path: "/markets" }] },
         { label: "Connect", links: [{ label: "Partnerships", path: "/investment" }, { label: "Careers", path: "/careers" }, { label: "Contact", path: "/contact" }] },
       ],
-      email: contactDetails.email, phone: contactDetails.phones[0], copyrightNote: "Planned steel manufacturing · Tanzania",
+      email: contactDetails.email, phone: contactDetails.phones[0], copyrightNote: "Tanzanian steel manufacturing company",
     },
     pages: Object.fromEntries(pages.filter((page) => !["/manufacturing", "/technology", "/quality"].includes(page.path)).map((page) => [page.path, pageFromStatic(page)])),
   };
@@ -78,7 +78,14 @@ export function mergeSiteConfig(value: Partial<SiteConfig> | null | undefined): 
     home: { ...defaults.home, ...value.home },
     headerAction: { ...defaults.headerAction, ...value.headerAction },
     navigation: Array.isArray(value.navigation) && value.navigation.length ? value.navigation : defaults.navigation,
-    footer: { ...defaults.footer, ...value.footer, groups: value.footer?.groups?.length ? value.footer.groups : defaults.footer.groups },
+    footer: {
+      ...defaults.footer, ...value.footer,
+      tagline: value.footer?.tagline?.trim() ? value.footer.tagline : defaults.footer.tagline,
+      groups: value.footer?.groups?.length ? value.footer.groups : defaults.footer.groups,
+      email: value.footer?.email?.trim() ? value.footer.email : defaults.footer.email,
+      phone: value.footer?.phone?.trim() ? value.footer.phone : defaults.footer.phone,
+      copyrightNote: value.footer?.copyrightNote?.trim() ? value.footer.copyrightNote : defaults.footer.copyrightNote,
+    },
     pages: Object.fromEntries(Object.entries(defaults.pages).map(([path, page]) => {
       const override = value.pages?.[path];
       return [path, override ? { ...page, ...override, sections: Array.isArray(override.sections) ? override.sections : page.sections } : page];

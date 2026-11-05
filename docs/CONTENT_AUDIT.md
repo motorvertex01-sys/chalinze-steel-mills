@@ -13,6 +13,8 @@
 
 The site organizes and summarizes the supplied 24-section company document across the Company, Project, Manufacturing, Manufacturing Process, Products, Quality, Infrastructure, Sustainability & HSEC, Investment & Partnerships, Markets, Development Roadmap, News, Careers, FAQs and Contact routes.
 
+The Company page is limited to the company’s identity, ownership, stated vision and mission, corporate objectives, and governance. Project scope, location, capacity, materials, utilities and development status are kept on the Project and related technical pages.
+
 | Source topics | Website coverage |
 |---|---|
 | Company overview, group relationship, vision, mission and objectives | Company |
