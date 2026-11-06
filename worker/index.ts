@@ -11,7 +11,6 @@ import manufacturingDefault from "../manufacturing-content.json";
 type Bindings = {
   ASSETS: { fetch(request: Request): Promise<Response> };
   DB: D1Database;
-  MEDIA: R2Bucket;
   ADMIN_EMAIL: string;
   ADMIN_PASSWORD?: string;
 };
@@ -39,6 +38,8 @@ type ChangeEntry = {
 
 const app = new Hono<AppEnv>();
 const sessionLifetimeSeconds = 12 * 60 * 60;
+const d1MediaMaxBytes = 1_800_000;
+const d1MediaPartBytes = 64 * 1024;
 const allowedSections = new Set(["board", "management", "support"]);
 const allowedStatuses = new Set(["draft", "pending_approval", "published", "archived"]);
 const allowedPlacements = new Set(["board", "governance"]);
@@ -692,44 +693,38 @@ function signatureMatches(bytes: Uint8Array, mime: string) {
   return false;
 }
 
-async function uploadMedia(context: WorkerContext, field: string, maxSize: number) {
+async function uploadMedia(context: WorkerContext, field: string) {
   const form = await context.req.formData();
   const file = form.get(field);
   if (!(file instanceof File) || !file.size) return { error: "Choose an approved image or video to upload.", status: 400 as const };
-  if (file.size > maxSize) return { error: maxSize <= 5 * 1024 * 1024 ? "Portrait images must be 5 MB or smaller." : "Manufacturing media files must be 30 MB or smaller.", status: 413 as const };
+  if (file.size > d1MediaMaxBytes) return { error: "Media files must be 1.8 MB or smaller because uploads are stored in the free D1 database.", status: 413 as const };
   const mime = file.type.toLowerCase();
   const extension = fileExtension(mime);
   const bytes = new Uint8Array(await file.arrayBuffer());
   if (!extension || !signatureMatches(bytes, mime)) return { error: "Only valid JPEG, PNG, WebP, MP4, or WebM assets are accepted.", status: 400 as const };
   const key = `${crypto.randomUUID()}${extension}`;
   const uploadedBy = context.get("admin").email;
-  await context.env.MEDIA.put(key, bytes, {
-    httpMetadata: { contentType: mime, cacheControl: "public, max-age=31536000, immutable" },
-    customMetadata: { originalName: file.name.slice(0, 200) },
-  });
-  try {
-    await statement(context.get("db"),
-      "INSERT INTO uploads (object_key, content_type, size_bytes, original_name, uploaded_by, created_at) VALUES (?, ?, ?, ?, ?, ?)",
-      key, mime, bytes.byteLength, file.name.slice(0, 255), uploadedBy, new Date().toISOString()).run();
-  } catch (error) {
-    try {
-      await context.env.MEDIA.delete(key);
-    } catch (deleteError) {
-      throw new AggregateError([error, deleteError], "Upload metadata could not be saved and the R2 object could not be removed.");
-    }
-    throw error;
+  const db = context.get("db");
+  const parts = [statement(db,
+    "INSERT INTO uploads (object_key, content_type, size_bytes, original_name, uploaded_by, created_at) VALUES (?, ?, ?, ?, ?, ?)",
+    key, mime, bytes.byteLength, file.name.slice(0, 255), uploadedBy, new Date().toISOString())];
+  for (let offset = 0, partNumber = 0; offset < bytes.byteLength; offset += d1MediaPartBytes, partNumber += 1) {
+    parts.push(statement(db,
+      "INSERT INTO upload_parts (object_key, part_number, data) VALUES (?, ?, ?)",
+      key, partNumber, bytes.subarray(offset, Math.min(offset + d1MediaPartBytes, bytes.byteLength))));
   }
+  await db.batch(parts);
   return { key, mime, type: mime.startsWith("video/") ? "video" as const : "image" as const };
 }
 
 app.post("/api/admin/upload", async (context) => {
-  const uploaded = await uploadMedia(context, "photo", 5 * 1024 * 1024);
+  const uploaded = await uploadMedia(context, "photo");
   if ("error" in uploaded) return context.json({ error: uploaded.error }, uploaded.status);
   return context.json({ photo_url: `/uploads/${uploaded.key}` }, 201);
 });
 
 app.post("/api/admin/manufacturing/media", async (context) => {
-  const uploaded = await uploadMedia(context, "media", 30 * 1024 * 1024);
+  const uploaded = await uploadMedia(context, "media");
   if ("error" in uploaded) return context.json({ error: uploaded.error }, uploaded.status);
   return context.json({ media_url: `/uploads/${uploaded.key}`, media_type: uploaded.type }, 201);
 });
@@ -749,22 +744,47 @@ app.delete("/api/admin/media/:key", async (context) => {
     (SELECT COUNT(*) FROM change_history WHERE before_json LIKE ? OR after_json LIKE ?) AS count`,
   url, `%${url}%`, `%${url}%`, `%${url}%`, `%${url}%`, `%${url}%`, `%${url}%`);
   if ((references?.count ?? 0) > 0) return context.json({ error: "Media is still referenced by application content or history." }, 409);
-  await context.env.MEDIA.delete(key);
-  await statement(context.get("db"), "DELETE FROM uploads WHERE object_key = ?", key).run();
+  await context.get("db").batch([
+    statement(context.get("db"), "DELETE FROM upload_parts WHERE object_key = ?", key),
+    statement(context.get("db"), "DELETE FROM uploads WHERE object_key = ?", key),
+  ]);
   return context.json({ deleted: true });
 });
 
 app.get("/uploads/*", async (context) => {
   const key = decodeURIComponent(context.req.path.slice("/uploads/".length));
   if (!/^[a-f0-9-]+\.(?:jpg|png|webp|mp4|webm)$/i.test(key)) return context.notFound();
-  const object = await context.env.MEDIA.get(key);
-  if (!object) return context.notFound();
+  const db = context.get("db");
+  const metadata = await one<{ content_type: string; size_bytes: number }>(
+    db, "SELECT content_type, size_bytes FROM uploads WHERE object_key = ?", key);
+  if (!metadata) return context.notFound();
+  const parts = await many<{ part_number: number; data: ArrayBuffer | ArrayBufferView }>(
+    db, "SELECT part_number, data FROM upload_parts WHERE object_key = ? ORDER BY part_number", key);
+  const bytes = new Uint8Array(metadata.size_bytes);
+  let offset = 0;
+  for (let index = 0; index < parts.length; index += 1) {
+    const part = parts[index];
+    if (part.part_number !== index || !ArrayBuffer.isView(part.data) && !(part.data instanceof ArrayBuffer)) {
+      return new Response("Stored media is incomplete.", { status: 500, headers: { "Cache-Control": "no-store" } });
+    }
+    const data = part.data instanceof ArrayBuffer
+      ? new Uint8Array(part.data)
+      : new Uint8Array(part.data.buffer, part.data.byteOffset, part.data.byteLength);
+    if (offset + data.byteLength > bytes.byteLength) {
+      return new Response("Stored media is incomplete.", { status: 500, headers: { "Cache-Control": "no-store" } });
+    }
+    bytes.set(data, offset);
+    offset += data.byteLength;
+  }
+  if (offset !== metadata.size_bytes) {
+    return new Response("Stored media is incomplete.", { status: 500, headers: { "Cache-Control": "no-store" } });
+  }
   const headers = new Headers();
-  object.writeHttpMetadata(headers);
+  headers.set("Content-Type", metadata.content_type);
   headers.set("Cache-Control", "public, max-age=31536000, immutable");
   headers.set("X-Content-Type-Options", "nosniff");
-  headers.set("Content-Length", String(object.size));
-  return new Response(object.body, { headers });
+  headers.set("Content-Length", String(metadata.size_bytes));
+  return new Response(bytes, { headers });
 });
 
 app.all("/api/*", (context) => responseError("API endpoint not found.", 404));

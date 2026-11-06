@@ -14,6 +14,8 @@ const help = args.includes("--help");
 const sourceUrl = (process.env.RENDER_BASE_URL || "https://chalinze-steel-mills-web.onrender.com").replace(/\/+$/, "");
 const timestamp = new Date().toISOString().replaceAll(":", "-").replaceAll(".", "-");
 const backupDirectory = path.join(root, "backups", `render-to-d1-${timestamp}`);
+const maxUploadBytes = 1_800_000;
+const uploadPartBytes = 32 * 1024;
 
 function usage() {
   console.log("Usage: node scripts/import-render-to-d1.mjs --export <admin-export.json> [--apply]");
@@ -97,7 +99,8 @@ function validateExport(data) {
     uploadKeys.add(upload.key);
     assert(upload.url === `/uploads/${upload.key}`, `Upload ${upload.key} has an unexpected source URL.`);
     text(upload.content_type, "upload.content_type", false);
-    integer(upload.size_bytes, "upload.size_bytes");
+    const size = integer(upload.size_bytes, "upload.size_bytes", 1);
+    assert(size <= maxUploadBytes, `Upload ${upload.key} exceeds the 1.8 MB D1 media limit and must be compressed before migration.`);
     text(upload.original_name, "upload.original_name", false);
     text(upload.uploaded_by, "upload.uploaded_by", false);
     text(upload.created_at, "upload.created_at", false);
@@ -111,7 +114,7 @@ function insert(table, columns, values, conflict, updateColumns) {
     `ON CONFLICT(${conflict}) DO UPDATE SET ${assignments};`;
 }
 
-function makeSql(data) {
+function makeSql(data, uploadPartStatements = []) {
   const statements = [];
   for (const row of data.profiles) {
     const columns = ["id", "section", "placement", "name", "title", "biography", "background", "qualifications", "responsibilities", "photo_url", "is_vacant", "status", "sort_order", "updated_at"];
@@ -134,7 +137,19 @@ function makeSql(data) {
     const columns = ["object_key", "content_type", "size_bytes", "original_name", "uploaded_by", "created_at"];
     statements.push(insert("uploads", columns, columns.map((column) => row[column]), "object_key", columns.slice(1)));
   }
-  return `${statements.join("\n")}\n`;
+  return `${statements.join("\n")}\n${uploadPartStatements.join("\n")}\n`;
+}
+
+function makeUploadPartStatements(key, bytes) {
+  const statements = [`DELETE FROM upload_parts WHERE object_key = ${sql(key)};`];
+  for (let offset = 0, partNumber = 0; offset < bytes.byteLength; offset += uploadPartBytes, partNumber += 1) {
+    const chunk = Buffer.from(bytes.subarray(offset, Math.min(offset + uploadPartBytes, bytes.byteLength)));
+    statements.push(
+      `INSERT INTO upload_parts (object_key, part_number, data) VALUES (${sql(key)}, ${partNumber}, X'${chunk.toString("hex")}') ` +
+      "ON CONFLICT(object_key, part_number) DO UPDATE SET data=excluded.data;",
+    );
+  }
+  return statements;
 }
 
 function runWrangler(wranglerArgs) {
@@ -168,6 +183,7 @@ async function main() {
   const importSql = path.join(backupDirectory, "render-import.sql");
   runWrangler(["d1", "export", "chalinze-steel-mills", "--remote", "--output", databaseBackup]);
 
+  const uploadPartStatements = [];
   for (const upload of data.uploads) {
     const url = new URL(upload.url, sourceUrl);
     assert(url.origin === sourceUrl, `Upload ${upload.key} points outside the configured Render source.`);
@@ -175,19 +191,15 @@ async function main() {
     assert(response.ok, `Could not download Render upload ${upload.key} (HTTP ${response.status}).`);
     const bytes = new Uint8Array(await response.arrayBuffer());
     assert(bytes.byteLength === upload.size_bytes, `Render upload ${upload.key} changed size during transfer.`);
-    assert(bytes.byteLength <= 30 * 1024 * 1024, `Render upload ${upload.key} exceeds the site's upload limit.`);
+    assert(bytes.byteLength <= maxUploadBytes, `Render upload ${upload.key} exceeds the 1.8 MB D1 media limit and must be compressed before migration.`);
+    uploadPartStatements.push(...makeUploadPartStatements(upload.key, bytes));
     const localFile = path.join(backupDirectory, upload.key);
     await writeFile(localFile, bytes, { flag: "wx" });
-    runWrangler([
-      "r2", "object", "put", `chalinze-steel-mills-media/${upload.key}`,
-      "--remote", "--file", localFile, "--content-type", upload.content_type,
-      "--cache-control", "public, max-age=31536000, immutable",
-    ]);
   }
 
-  await writeFile(importSql, makeSql(data), { flag: "wx", mode: 0o600 });
+  await writeFile(importSql, makeSql(data, uploadPartStatements), { flag: "wx", mode: 0o600 });
   runWrangler(["d1", "execute", "chalinze-steel-mills", "--remote", "--file", importSql]);
-  console.log(`D1 data and referenced R2 uploads imported. Pre-import backup and private transfer files are in ${backupDirectory}.`);
+  console.log(`D1 data and media parts imported. Pre-import backup and private transfer files are in ${backupDirectory}.`);
 }
 
 main().catch((error) => {

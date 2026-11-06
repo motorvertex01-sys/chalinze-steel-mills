@@ -1,6 +1,6 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "chalinze-steel-mills-web",
+  "name": "chalinze-steel-mills",
   "main": "worker/index.ts",
   "compatibility_date": "2026-11-05",
   "compatibility_flags": ["nodejs_compat"],
@@ -16,12 +16,6 @@
       "database_name": "chalinze-steel-mills",
       "database_id": "df36e9ae-dad2-4606-aceb-9e7d7408d9d6",
       "migrations_dir": "migrations"
-    }
-  ],
-  "r2_buckets": [
-    {
-      "binding": "MEDIA",
-      "bucket_name": "chalinze-steel-mills-media"
     }
   ],
   "vars": {

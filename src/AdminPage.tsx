@@ -534,7 +534,7 @@ export function AdminPage() {
               <label className="admin-upload-button"><Upload size={15} /> Upload approved image or video
                 <input type="file" accept={manufacturingMediaTarget === "heroVideo" ? "video/mp4,video/webm" : "image/jpeg,image/png,image/webp"} disabled={busy} onChange={(event) => { void uploadManufacturingMedia(event.target.files?.[0]); event.currentTarget.value = ""; }} />
               </label>
-              <small>Images: JPEG, PNG or WebP up to 5 MB. Hero video: MP4 or WebM up to 30 MB. Upload only company-approved media.</small>
+              <small>JPEG, PNG, WebP, MP4 or WebM up to 1.8 MB. Upload only company-approved media.</small>
             </div>
             <div className="admin-form-actions">
               <button className="button button-outline" type="button" onClick={previewManufacturing} disabled={busy}><Eye size={15} /> Preview draft</button>
@@ -584,7 +584,7 @@ export function AdminPage() {
               <label className="admin-upload-button"><Upload size={15} /> Upload approved portrait<input type="file" accept="image/jpeg,image/png,image/webp" disabled={busy || form.is_vacant} onChange={(event) => { void uploadPortrait(event.target.files?.[0]); event.currentTarget.value = ""; }} /></label>
               {form.photo_url && <button className="admin-quiet-button" type="button" onClick={() => setField("photo_url", "")}>Remove portrait</button>}
               <label className="admin-checkbox"><input type="checkbox" checked={form.is_vacant} onChange={(event) => setForm((current) => ({ ...current, is_vacant: event.target.checked, photo_url: event.target.checked ? "" : current.photo_url }))} /> Mark position as vacant</label>
-              <small>JPEG, PNG or WebP · 5 MB maximum. Do not upload a portrait without company approval.</small>
+              <small>JPEG, PNG or WebP · 1.8 MB maximum. Do not upload a portrait without company approval.</small>
             </div>
             <div className="admin-form-actions"><button className="button button-orange" type="submit" disabled={busy}><Save size={15} /> {busy ? "Saving…" : "Save profile"}</button>{editingId && <button className="button button-outline" type="button" onClick={() => { const profile = profiles.find((item) => item.id === editingId); if (profile) setPreview({ ...profile, ...form }); }}><Eye size={15} /> Preview</button>}</div>
           </form>

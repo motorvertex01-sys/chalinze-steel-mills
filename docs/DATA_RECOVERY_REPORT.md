@@ -2,17 +2,17 @@
 
 ## Scope and safety
 
-The initial repository inspection was read-only. The Cloudflare production check below was also read-only except for creating a private pre-import D1 SQL backup and applying the additive uploads-metadata migration. No source Render rows or files have been modified or deleted. Credential values and personal record contents are intentionally omitted.
+The initial repository inspection was read-only. Cloudflare changes are additive: a private D1 backup was created, the upload metadata and media-parts migrations were applied, and the Worker/static assets were deployed. No source Render rows or files have been modified or deleted. Credential values and personal record contents are intentionally omitted.
 
 The report covers the repository, the local SQLite database, the local Wrangler/Miniflare state, and the configured Cloudflare account. The hosted Render disk's private originals and records still require an authenticated export.
 
 ## Current Cloudflare cutover check (2026-11-06)
 
 - Cloudflare D1 database `chalinze-steel-mills` exists. Before the Render import it held the seeded 18 leadership profiles, but zero administrators, audit entries, change-history rows, sessions, login-attempt rows or site-content rows.
-- A private pre-import SQL export was created outside the repository. The additive `0002_add_uploads.sql` migration has been applied to add the upload metadata table. No Render records have yet been copied into D1.
-- The configured Worker does not exist in the authorized Cloudflare account. The supplied Workers URL currently returns the SPA HTML for `/api/leadership`, `/healthz` and admin API paths; the page's JSON parse error is therefore reproducible.
-- R2 is not enabled for the Cloudflare account. Bucket creation and the live Worker deploy are blocked until R2 is enabled in the Cloudflare dashboard and the configured bucket is created.
-- Render's public API currently returns 18 leadership profiles plus published manufacturing and site configuration data. An authenticated admin export endpoint is being added for profile drafts, all site-content states, audit/change history, administrator email/role metadata and uploaded-file manifests. Password hashes, active sessions and login-attempt state are deliberately excluded; Cloudflare admin access must be re-provisioned with a new secret.
+- Private pre-import D1 SQL exports are stored outside the repository. Migrations `0002_add_uploads.sql` and `0003_add_d1_upload_parts.sql` are applied; the latter adds media-part storage without deleting existing rows. No Render records have yet been copied into D1.
+- Worker `chalinze-steel-mills` is deployed at `https://chalinze-steel-mills.motorvertex01.workers.dev`. `/healthz` returns HTTP 200 JSON, `/api/leadership` returns HTTP 200 JSON with 18 profiles, and the public leadership page renders those profiles. This fixes the prior HTML-for-JSON error at the supplied URL.
+- R2 remains unavailable, so production media uses D1 BLOB parts instead, capped at 1.8 MB per file. The Worker has no `ADMIN_PASSWORD` secret yet; `/api/admin/session` reports `configured: false`, so the admin account must be provisioned before sign-in or upload tests.
+- Render's public API has 18 leadership profiles plus published manufacturing and site configuration data. The pushed, protected admin export route covers profile drafts, all site-content states, audit/change history, administrator email/role metadata and uploaded-file manifests. The export has not yet been downloaded; password hashes, active sessions and login-attempt state are deliberately excluded.
 
 ## Recoverable sources found
 
@@ -20,7 +20,7 @@ The report covers the repository, the local SQLite database, the local Wrangler/
 | --- | --- | --- |
 | `data/chalinze.sqlite` | SQLite integrity check passed. 18 profiles, 1 administrator, 3 sessions, 36 audit entries, 0 change-history entries, 2 site-content records, and 3 applied migration records. | Readable local source; preserve an untouched copy before any import. |
 | `.wrangler/state/v3/d1/...` | Local D1 emulator contains 18 profiles, 1 administrator, 3 sessions, 4 audit entries, 2 change-history entries, 1 site-content record, and 1 D1 migration record. | Readable local development state, not evidence of the remote Cloudflare D1 contents. It is separate from the SQLite source. |
-| `.wrangler/state/v3/r2/...` | Local R2 emulator contains `d9f2aadf-7431-4e0a-8e15-cad60ccf84bc.webp` (161,618 bytes). | Local development state only; it is not evidence of the remote R2 bucket contents. Export it before cleaning or regenerating Wrangler state. |
+| `.wrangler/state/v3/r2/...` | Local R2 emulator contains `d9f2aadf-7431-4e0a-8e15-cad60ccf84bc.webp` (161,618 bytes). | Local development state only; it is not evidence of remote storage. Preserve the emulator state until the object is separately copied and verified. |
 | `data/uploads/`, `data/originals/` | Both directories exist and are empty in this checkout. | No local Express upload payloads were found at inspection time. This does not rule out files on a hosted disk. |
 | `public/assets/` | Tracked public site assets are present, including leadership portraits, brand assets, illustrations, and public corporate PDFs. | Version-controlled static assets; these are not user-upload records. |
 | SQL/backup files | At inspection time, the existing application schema was `migrations/0001_initial_schema.sql`. The MySQL schema at `migrations/mysql/0001_initial_schema.sql` was added afterward. No SQL export, database backup, or hosting snapshot was found outside dependency/build/runtime directories. | No pre-existing independent backup was found in the repository. |
@@ -42,14 +42,14 @@ Do not automatically merge either source over the other. Compare the two origina
 
 - The Express server's SQLite path defaults to `data/chalinze.sqlite`; `DATA_DIRECTORY` can redirect it. Render's blueprint sets that directory to `/var/data` and provisions a persistent disk. A disk-backed database persists only while the disk remains attached and its files are copied or migrated during a provider change.
 - Portrait uploads are written to `DATA_DIRECTORY/uploads/`; original image files are written to `DATA_DIRECTORY/originals/`. Manufacturing videos are also written to the local uploads directory. These files are not durable when a host's filesystem is ephemeral or when the data directory is not moved.
-- The Worker now uses Cloudflare D1 for parameterized SQL and R2 for file objects. The Cloudflare account check above confirms the D1 database exists; it also confirms the Worker is not deployed and R2 is not enabled yet.
+- The Worker uses Cloudflare D1 for parameterized SQL, upload metadata and bounded media BLOB parts. D1 exists and the Worker is deployed; R2 remains unavailable.
 - `.env` is ignored by Git. Its variable names include `ADMIN_EMAIL`, `ADMIN_PASSWORD`, and `PORT`; values are not recorded here. The checked-in example also documents `ADMIN_ROLE` and `DATA_DIRECTORY`. Render supplies `NODE_ENV` and has a non-synchronized `ADMIN_PASSWORD` setting.
 - The browser application has no repository references to `localStorage`, `sessionStorage`, or IndexedDB. The admin interface uses an HTTP-only session cookie; browser-side unsaved form state was not recoverable through repository inspection.
 - The application has no JWT configuration. Cloudflare sessions use random opaque tokens stored as SHA-256 hashes, 12-hour expiration, `HttpOnly`, `Secure`, and `SameSite=Strict` cookies, PBKDF2 password hashes with unique salts, and database-backed login-attempt limits. The legacy Express server uses scrypt password hashes and an in-memory login limiter; these two hash formats must not be silently treated as equivalent during a migration.
-- The SQLite schema has `admins`, `applied_migrations`, `audit_log`, `change_history`, `profiles`, `sessions`, and `site_content`; the main local file did not have a `login_attempts` table. D1 has the equivalent account/content/history tables and now also has an `uploads` metadata table.
-- Public API routes are `GET /healthz`, `GET /api/leadership`, `GET /api/manufacturing`, and `GET /api/site-config`. Admin routes include profile, site-content, manufacturing, audit/history, upload, export, and undo/redo operations. Uploaded objects are served through `GET /uploads/*`; authenticated `DELETE /api/admin/media/:key` refuses to remove referenced objects. Unknown API paths return JSON 404 responses; other requests are delegated to static assets.
-- Upload request bodies use in-memory multipart buffering with 5 MB portrait and 30 MB manufacturing-media limits. This buffer is temporary request processing, not persistent storage. The legacy Express server writes uploads to local files; the Cloudflare Worker writes accepted media to R2 and records metadata in D1.
-- Environment variables documented by the project include `ADMIN_EMAIL`, `ADMIN_PASSWORD`, `ADMIN_ROLE`, `PORT`, `DATA_DIRECTORY`, and `APP_URL`, plus Cloudflare D1, R2, and static-assets bindings. `.env.example` contains placeholders only. No JWT secret or browser storage configuration was found.
+- The SQLite schema has `admins`, `applied_migrations`, `audit_log`, `change_history`, `profiles`, `sessions`, and `site_content`; the main local file did not have a `login_attempts` table. D1 has the equivalent account/content/history tables plus `uploads` metadata and `upload_parts` BLOB storage.
+- Public API routes are `GET /healthz`, `GET /api/leadership`, `GET /api/manufacturing`, and `GET /api/site-config`. Admin routes include profile, site-content, manufacturing, audit/history, upload, export, and undo/redo operations. Uploaded files are served through `GET /uploads/*`; authenticated `DELETE /api/admin/media/:key` refuses to remove referenced files.
+- Upload request bodies use in-memory multipart buffering with a 1.8 MB per-file maximum so D1 can persist media in 64 KiB BLOB parts within its row-size limits. This buffer is temporary request processing, not persistent storage. The legacy Express server writes uploads to local files; the Cloudflare Worker stores media parts and metadata in D1.
+- Environment variables documented by the project include `ADMIN_EMAIL`, `ADMIN_PASSWORD`, `ADMIN_ROLE`, `PORT`, `DATA_DIRECTORY`, and `APP_URL`, plus Cloudflare D1 and static-assets bindings. `.env.example` contains placeholders only. No JWT secret or browser storage configuration was found.
 
 ## Why data can appear to disappear after a move
 
@@ -59,8 +59,8 @@ The existing `scripts/migrate-render-data.mjs` copies profiles, site configurati
 
 ## Unavailable evidence and next recovery steps
 
-- Remote Render snapshots, deployed Cloudflare D1/R2 contents, external SQL backups, and other hosting providers' snapshots were not accessible. Their existence and contents remain unverified, not confirmed absent.
-- To make a separate local copy of the discovered emulator object (without deleting its source), use `npx wrangler r2 object get "chalinze-steel-mills-media/d9f2aadf-7431-4e0a-8e15-cad60ccf84bc.webp" --local --file "data/recovered/d9f2aadf-7431-4e0a-8e15-cad60ccf84bc.webp"`. This export was not run and does not migrate the object to a remote bucket.
-- Before cutover, export the mounted Render database plus `uploads/` and `originals/`, and separately export the remote Cloudflare database and bucket if they have been used.
-- Keep original exports immutable. Restore into a separate MySQL database and R2 bucket first, compare row/object counts and hashes, resolve the conflicts above, and only then schedule a production cutover.
-- No production database write, Worker restart/redeploy, remote upload, or cross-database restore test was performed during this audit.
+- Remote Render snapshots, external SQL backups, and other hosting providers' snapshots were not accessible. Their existence and contents remain unverified, not confirmed absent.
+- The discovered `.wrangler/state/v3/r2/` emulator object remains separate from remote resources and has not been imported. Preserve the local emulator state until that object has been separately copied and verified.
+- Before cutover, export the mounted Render database plus `uploads/` and `originals/`, and retain independent copies of the Cloudflare D1 export.
+- Keep original exports immutable. Restore into a separate D1 database first, compare row counts and media checksums, resolve the conflicts above, and only then schedule a production cutover.
+- The Worker deployment, health endpoint, API JSON response, rendered leadership roster and supplied static portrait assets were verified. The admin-session endpoint reports unconfigured, and no private media upload round-trip, Render import or cross-database restore has been executed.
