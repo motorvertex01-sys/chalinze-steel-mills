@@ -12,7 +12,7 @@ The report covers the repository, the local SQLite database, the local Wrangler/
 - Private pre-import D1 SQL exports are stored outside the repository. Migrations `0002_add_uploads.sql` and `0003_add_d1_upload_parts.sql` are applied; the latter adds media-part storage without deleting existing rows. No Render records have yet been copied into D1.
 - Worker `chalinze-steel-mills` is deployed at `https://chalinze-steel-mills.motorvertex01.workers.dev`. `/healthz` returns HTTP 200 JSON, `/api/leadership` returns HTTP 200 JSON with 18 profiles, and the public leadership page renders those profiles. This fixes the prior HTML-for-JSON error at the supplied URL.
 - R2 remains unavailable, so production media uses D1 BLOB parts instead, capped at 1.8 MB per file. The Worker has no `ADMIN_PASSWORD` secret yet; `/api/admin/session` reports `configured: false`, so the admin account must be provisioned before sign-in or upload tests.
-- Render's public API has 18 leadership profiles plus published manufacturing and site configuration data. The pushed, protected admin export route covers profile drafts, all site-content states, audit/change history, administrator email/role metadata and uploaded-file manifests. The export has not yet been downloaded; password hashes, active sessions and login-attempt state are deliberately excluded.
+- An earlier Render public API check returned 18 leadership profiles plus published manufacturing and site configuration data. Render's health and protected export endpoints currently return HTTP 503. The export route was added and pushed, but is not currently reachable; no export has been downloaded. It excludes password hashes, active sessions and login-attempt state.
 
 ## Recoverable sources found
 
