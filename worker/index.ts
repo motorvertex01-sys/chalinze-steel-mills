@@ -7,20 +7,19 @@ import { Readable } from "node:stream";
 import { Hono } from "hono";
 import { httpServerHandler } from "cloudflare:node";
 import manufacturingDefault from "../manufacturing-content.json";
-import { connectHyperdrive, MysqlDatabase } from "./mysql";
 
 type Bindings = {
   ASSETS: { fetch(request: Request): Promise<Response> };
-  HYPERDRIVE: Hyperdrive;
+  DB: D1Database;
   MEDIA: R2Bucket;
   ADMIN_EMAIL: string;
-  ADMIN_PASSWORD: string;
+  ADMIN_PASSWORD?: string;
 };
 
 type AdminSession = { id: string; email: string; role: "admin" | "editor"; expires_at: string };
-type Variables = { admin: AdminSession; db: MysqlDatabase };
+type Variables = { admin: AdminSession; db: D1Database };
 type AppEnv = { Bindings: Bindings; Variables: Variables };
-type SqlValue = string | number | boolean | null | Uint8Array;
+type SqlValue = string | number | null | ArrayBuffer | ArrayBufferView;
 type WorkerContext = import("hono").Context<AppEnv>;
 type ProfileRow = {
   id: string; section: string; placement: string; name: string; title: string; biography: string;
@@ -64,24 +63,19 @@ const defaultSiteConfig = {
 };
 
 app.use("*", async (context, next) => {
-  const connection = await connectHyperdrive(context.env.HYPERDRIVE);
-  context.set("db", new MysqlDatabase(connection));
-  try {
-    await next();
-  } finally {
-    await connection.end();
-  }
+  context.set("db", context.env.DB);
+  await next();
 });
 
-function statement(db: MysqlDatabase, sql: string, ...values: SqlValue[]) {
+function statement(db: D1Database, sql: string, ...values: SqlValue[]) {
   return db.prepare(sql).bind(...values);
 }
 
-async function one<T>(db: MysqlDatabase, sql: string, ...values: SqlValue[]) {
+async function one<T>(db: D1Database, sql: string, ...values: SqlValue[]) {
   return statement(db, sql, ...values).first<T>();
 }
 
-async function many<T>(db: MysqlDatabase, sql: string, ...values: SqlValue[]) {
+async function many<T>(db: D1Database, sql: string, ...values: SqlValue[]) {
   const result = await statement(db, sql, ...values).all<T>();
   return result.results;
 }
@@ -278,7 +272,7 @@ async function passwordHash(password: string, salt: string) {
   return [...new Uint8Array(bits)].map((item) => item.toString(16).padStart(2, "0")).join("");
 }
 
-async function bootstrapAdmin(db: MysqlDatabase, env: Bindings) {
+async function bootstrapAdmin(db: D1Database, env: Bindings) {
   const count = await one<{ count: number }>(db, "SELECT COUNT(*) AS count FROM admins");
   if (count?.count) return;
   const email = env.ADMIN_EMAIL?.trim().toLowerCase();
@@ -287,11 +281,11 @@ async function bootstrapAdmin(db: MysqlDatabase, env: Bindings) {
   const salt = crypto.randomUUID();
   const hash = await passwordHash(password, salt);
   await statement(db,
-    "INSERT IGNORE INTO admins (id, email, password_hash, password_salt, role, created_at) VALUES (?, ?, ?, ?, 'admin', ?)",
+    "INSERT OR IGNORE INTO admins (id, email, password_hash, password_salt, role, created_at) VALUES (?, ?, ?, ?, 'admin', ?)",
     crypto.randomUUID(), email, hash, salt, new Date().toISOString()).run();
 }
 
-async function getAdmin(request: Request, db: MysqlDatabase) {
+async function getAdmin(request: Request, db: D1Database) {
   const token = cookieToken(request);
   if (!token) return null;
   const tokenHash = await sha256(token);
@@ -314,13 +308,13 @@ function validateSameOrigin(request: Request) {
   }
 }
 
-async function logAudit(db: MysqlDatabase, profileId: string, email: string, action: string, before: unknown | null, after: unknown | null) {
+async function logAudit(db: D1Database, profileId: string, email: string, action: string, before: unknown | null, after: unknown | null) {
   await statement(db,
     "INSERT INTO audit_log (profile_id, admin_email, action, before_json, after_json, created_at) VALUES (?, ?, ?, ?, ?, ?)",
     profileId, email, action, before === null ? null : JSON.stringify(before), after === null ? null : JSON.stringify(after), new Date().toISOString()).run();
 }
 
-function historyStatements(db: MysqlDatabase, change: ChangeEntry) {
+function historyStatements(db: D1Database, change: ChangeEntry) {
   return [
     statement(db, "UPDATE change_history SET state = 'superseded' WHERE state = 'undone'"),
     statement(db,
@@ -332,12 +326,12 @@ function historyStatements(db: MysqlDatabase, change: ChangeEntry) {
   ];
 }
 
-async function saveContent(db: MysqlDatabase, key: "site-config" | "manufacturing", state: SiteConfigState, email: string, action: string) {
+async function saveContent(db: D1Database, key: "site-config" | "manufacturing", state: SiteConfigState, email: string, action: string) {
   const now = new Date().toISOString();
   const after = { ...state, updated_by: email, updated_at: now };
-  const saveSql = key === "site-config"
-    ? "INSERT INTO site_content (content_key, published_json, draft_json, updated_by, updated_at) VALUES (?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE draft_json=VALUES(draft_json), updated_by=VALUES(updated_by), updated_at=VALUES(updated_at)"
-    : "INSERT INTO site_content (content_key, published_json, draft_json, updated_by, updated_at) VALUES (?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE draft_json=VALUES(draft_json), updated_by=VALUES(updated_by), updated_at=VALUES(updated_at)";
+  const saveSql = `INSERT INTO site_content (content_key, published_json, draft_json, updated_by, updated_at)
+    VALUES (?, ?, ?, ?, ?) ON CONFLICT(content_key) DO UPDATE SET
+    draft_json=excluded.draft_json, updated_by=excluded.updated_by, updated_at=excluded.updated_at`;
   await db.batch([
     statement(db, saveSql, key, JSON.stringify(state.published), JSON.stringify(state.draft), email, now),
     statement(db, "INSERT INTO audit_log (profile_id, admin_email, action, before_json, after_json, created_at) VALUES (?, ?, ?, ?, ?, ?)",
@@ -347,11 +341,13 @@ async function saveContent(db: MysqlDatabase, key: "site-config" | "manufacturin
   return after;
 }
 
-async function publishContent(db: MysqlDatabase, key: "site-config" | "manufacturing", state: SiteConfigState, email: string, action: string) {
+async function publishContent(db: D1Database, key: "site-config" | "manufacturing", state: SiteConfigState, email: string, action: string) {
   const now = new Date().toISOString();
   const after = { ...state, published: state.draft, updated_by: email, updated_at: now };
   await db.batch([
-    statement(db, "INSERT INTO site_content (content_key, published_json, draft_json, updated_by, updated_at) VALUES (?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE published_json=VALUES(published_json), updated_by=VALUES(updated_by), updated_at=VALUES(updated_at)",
+    statement(db, `INSERT INTO site_content (content_key, published_json, draft_json, updated_by, updated_at)
+      VALUES (?, ?, ?, ?, ?) ON CONFLICT(content_key) DO UPDATE SET
+      published_json=excluded.published_json, updated_by=excluded.updated_by, updated_at=excluded.updated_at`,
       key, JSON.stringify(state.draft), JSON.stringify(state.draft), email, now),
     statement(db, "INSERT INTO audit_log (profile_id, admin_email, action, before_json, after_json, created_at) VALUES (?, ?, ?, ?, ?, ?)",
       key, email, action, JSON.stringify(state), JSON.stringify(after), now),
@@ -379,9 +375,9 @@ app.use("/api/admin/*", async (context, next) => {
 });
 
 app.get("/healthz", async (context) => {
-  const migration = await one<{ migration_key: string }>(context.get("db"),
-    "SELECT migration_key FROM schema_migrations WHERE migration_key = ?", "mysql-0001-initial-schema");
-  return migration ? context.json({ status: "ok" }) : context.json({ status: "unhealthy" }, 503);
+  const database = await one<{ healthy: number }>(context.get("db"),
+    "SELECT 1 AS healthy FROM sqlite_master WHERE type = 'table' AND name = 'profiles'");
+  return database ? context.json({ status: "ok" }) : context.json({ status: "unhealthy" }, 503);
 });
 
 app.get("/api/leadership", async (context) => {
@@ -557,8 +553,38 @@ app.get("/api/admin/history", async (context) => {
   return context.json({ canUndo: Boolean(undo), canRedo: Boolean(redo), undoLabel: undo?.action ?? null, redoLabel: redo?.action ?? null });
 });
 
+app.get("/api/admin/export", async (context) => {
+  if (context.get("admin").role !== "admin") {
+    return context.json({ error: "Administrator privileges are required to export application data." }, 403);
+  }
+  const db = context.get("db");
+  const [profiles, siteContent, auditLog, changeHistory, administrators, uploads] = await Promise.all([
+    many<ProfileRow>(db, "SELECT * FROM profiles ORDER BY id"),
+    many<Record<string, unknown>>(db, "SELECT * FROM site_content ORDER BY content_key"),
+    many<Record<string, unknown>>(db, "SELECT * FROM audit_log ORDER BY id"),
+    many<Record<string, unknown>>(db, "SELECT * FROM change_history ORDER BY id"),
+    many<{ id: string; email: string; role: string; created_at: string }>(db,
+      "SELECT id, email, role, created_at FROM admins ORDER BY email"),
+    many<Record<string, unknown>>(db, "SELECT object_key AS key, content_type, size_bytes FROM uploads ORDER BY object_key"),
+  ]);
+  context.header("Cache-Control", "no-store");
+  context.header("Content-Disposition", `attachment; filename="chalinze-cloudflare-export-${new Date().toISOString().slice(0, 10)}.json"`);
+  return context.json({
+    format_version: 1,
+    exported_at: new Date().toISOString(),
+    profiles,
+    site_content: siteContent,
+    audit_log: auditLog,
+    change_history: changeHistory,
+    administrators,
+    uploads: uploads.map((upload) => ({ ...upload, url: `/uploads/${upload.key}` })),
+    sessions_exported: false,
+    login_attempts_exported: false,
+  });
+});
+
 async function restoreHistory(
-  db: MysqlDatabase,
+  db: D1Database,
   contentType: string,
   entityId: string,
   value: unknown,
@@ -578,10 +604,12 @@ async function restoreHistory(
       statements.push(statement(db, `INSERT INTO profiles
         (id, section, placement, name, title, biography, background, qualifications, responsibilities, photo_url, is_vacant, status, sort_order, updated_at)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        ON DUPLICATE KEY UPDATE section=VALUES(section), placement=VALUES(placement), name=VALUES(name), title=VALUES(title),
-        biography=VALUES(biography), background=VALUES(background), qualifications=VALUES(qualifications),
-        responsibilities=VALUES(responsibilities), photo_url=VALUES(photo_url), is_vacant=VALUES(is_vacant),
-        status=VALUES(status), sort_order=VALUES(sort_order), updated_at=VALUES(updated_at)`,
+        ON CONFLICT(id) DO UPDATE SET section=excluded.section, placement=excluded.placement,
+        name=excluded.name, title=excluded.title, biography=excluded.biography,
+        background=excluded.background, qualifications=excluded.qualifications,
+        responsibilities=excluded.responsibilities, photo_url=excluded.photo_url,
+        is_vacant=excluded.is_vacant, status=excluded.status,
+        sort_order=excluded.sort_order, updated_at=excluded.updated_at`,
       profile.id, profile.section, profile.placement, profile.name, profile.title, profile.biography, profile.background,
       profile.qualifications, profile.responsibilities, profile.photo_url, profile.is_vacant ? 1 : 0,
       profile.status, profile.sort_order, profile.updated_at));
@@ -589,8 +617,9 @@ async function restoreHistory(
   } else {
     const content = value as SiteConfigState;
     statements.push(statement(db, `INSERT INTO site_content (content_key, published_json, draft_json, updated_by, updated_at)
-      VALUES (?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE
-      published_json=VALUES(published_json), draft_json=VALUES(draft_json), updated_by=VALUES(updated_by), updated_at=VALUES(updated_at)`,
+      VALUES (?, ?, ?, ?, ?) ON CONFLICT(content_key) DO UPDATE SET
+      published_json=excluded.published_json, draft_json=excluded.draft_json,
+      updated_by=excluded.updated_by, updated_at=excluded.updated_at`,
     contentType === "site-config" ? "site-config" : "manufacturing",
     JSON.stringify(content.published), JSON.stringify(content.draft), content.updated_by, content.updated_at));
   }

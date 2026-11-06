@@ -530,6 +530,45 @@ app.get("/api/admin/history", requireAdmin, async (_request, response) => {
   response.json({ canUndo: Boolean(undo), canRedo: Boolean(redo), undoLabel: undo?.action ?? null, redoLabel: redo?.action ?? null });
 });
 
+app.get("/api/admin/export", requireAdmin, requireAdministrator, async (_request, response) => {
+  const [profiles, siteContent, auditLog, changeHistory, administrators] = await Promise.all([
+    db.all("SELECT * FROM profiles ORDER BY id"),
+    db.all("SELECT * FROM site_content ORDER BY content_key"),
+    db.all("SELECT * FROM audit_log ORDER BY id"),
+    db.all("SELECT * FROM change_history ORDER BY id"),
+    db.all("SELECT id, email, role, created_at FROM admins ORDER BY email"),
+  ]);
+  const uploads = fs.readdirSync(uploadDirectory, { withFileTypes: true })
+    .filter((entry) => entry.isFile() && /^[a-f0-9-]+\.(?:jpg|png|webp|mp4|webm)$/i.test(entry.name))
+    .map((entry) => {
+      const extension = path.extname(entry.name).slice(1).toLowerCase();
+      const contentType = ({ jpg: "image/jpeg", png: "image/png", webp: "image/webp", mp4: "video/mp4", webm: "video/webm" })[extension];
+      return {
+        key: entry.name,
+        url: `/uploads/${entry.name}`,
+        content_type: contentType,
+        size_bytes: fs.statSync(path.join(uploadDirectory, entry.name)).size,
+        original_name: entry.name,
+        uploaded_by: "render-migration",
+        created_at: fs.statSync(path.join(uploadDirectory, entry.name)).mtime.toISOString(),
+      };
+    });
+  response.setHeader("Cache-Control", "no-store");
+  response.setHeader("Content-Disposition", `attachment; filename="chalinze-render-export-${new Date().toISOString().slice(0, 10)}.json"`);
+  response.json({
+    format_version: 1,
+    exported_at: new Date().toISOString(),
+    profiles,
+    site_content: siteContent,
+    audit_log: auditLog,
+    change_history: changeHistory,
+    administrators,
+    uploads,
+    sessions_exported: false,
+    login_attempts_exported: false,
+  });
+});
+
 async function applyHistory(request, response, direction) {
   if (request.admin.role !== "admin") return response.status(403).json({ error: "Administrator privileges are required to undo or redo published changes." });
   const expectedState = direction === "undo" ? "applied" : "undone";

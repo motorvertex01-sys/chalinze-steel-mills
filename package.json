@@ -12,6 +12,7 @@
     "start": "node server/index.js",
     "admin:create": "node server/create-admin.js",
     "db:migrate:mysql": "node scripts/migrate-mysql.mjs",
+    "db:import:render:d1": "node scripts/import-render-to-d1.mjs",
     "db:backup:mysql": "node scripts/backup-mysql.mjs",
     "db:restore:mysql": "node scripts/restore-mysql.mjs",
     "db:verify:mysql": "node scripts/verify-sqlite-mysql.mjs",

@@ -4,60 +4,37 @@ Independent React, TypeScript, Vite and Three.js website project, kept separate 
 
 ## Deploy and run on Cloudflare
 
-Cloudflare Workers is the intended production host. The Worker API uses MySQL through Hyperdrive and stores uploaded media in R2; the Worker opens and closes a mysql2 connection for each request and performs parameterized queries. Hyperdrive connects to an existing MySQL-compatible database, so its database provider and plan are separate from Cloudflare. Choose a provider with an available free tier if possible, and verify its limits, inactivity policy, network access, and TLS support before relying on it. Check current [Hyperdrive support](https://developers.cloudflare.com/hyperdrive/), [Workers limits](https://developers.cloudflare.com/workers/platform/limits/), and [R2 pricing](https://developers.cloudflare.com/r2/pricing/).
+Cloudflare Workers is the production host. The Worker API uses Cloudflare D1 for relational data and R2 for uploaded media. This avoids an external database connection and keeps application data on Cloudflare. D1's current Workers Free allowance is 500 MB per database and 5 GB storage per account; R2's current Standard free allowance is 10 GB-month, 1 million Class A requests and 10 million Class B requests monthly. Check current [D1 pricing and limits](https://developers.cloudflare.com/d1/platform/pricing/), [R2 pricing](https://developers.cloudflare.com/r2/pricing/) and [Workers limits](https://developers.cloudflare.com/workers/platform/limits/); usage beyond the free allowances may incur charges.
 
-The Worker serves the Vite SPA and implements the existing public and admin API paths through an Express Node HTTP entrypoint using Cloudflare's `httpServerHandler`. Content, accounts, sessions, and audit history use MySQL; uploaded photos and manufacturing media use R2. Upload records include object key, type, size, original name, uploader, and timestamp. The existing D1 binding and Render disk are retained as recovery sources until a verified migration and backup are complete. Read [the data recovery report](./docs/DATA_RECOVERY_REPORT.md) before choosing an import source: the local SQLite and D1 emulator contain conflicting versions of the same records.
+The Worker serves the Vite SPA and implements the existing public and admin API paths through an Express Node HTTP entrypoint using Cloudflare's `httpServerHandler`. Profiles, content, accounts, sessions, audit history, change history and upload metadata are held in D1; uploaded photos and manufacturing media are held in R2. The existing Render disk remains an export source until migration and verification complete. Read [the data recovery report](./docs/DATA_RECOVERY_REPORT.md) before choosing an import source: local snapshots can differ from production.
 
-### Configure MySQL, Hyperdrive, and R2
-
-Create a MySQL database with a provider of your choice. Hyperdrive requires a publicly reachable MySQL endpoint or a supported private-network route. Configure Hyperdrive from the Cloudflare dashboard with query caching **disabled**; authentication, sessions, permissions, and admin updates require fresh reads, and Hyperdrive does not invalidate cached reads after writes. Then replace the placeholder `HYPERDRIVE` ID in `wrangler.jsonc`. Do not put the database connection string in Wrangler variables or frontend code.
+### Configure D1 and R2
 
 ```powershell
 npm ci
 npx wrangler login
+npx wrangler d1 migrations apply chalinze-steel-mills --remote
 npx wrangler r2 bucket create chalinze-steel-mills-media
 ```
 
-For local database administration, put a private `MYSQL_URL` in the ignored `.env` file and apply the idempotent schema:
-
-```powershell
-npm run db:migrate:mysql
-```
-
-The schema migration creates tables and indexes but does not choose between conflicting data sources or import records. The SQLite import is read-only on the source, only inserts absent rows, skips identical rows, and aborts on conflicts:
-
-```powershell
-node scripts/import-sqlite-mysql.mjs "C:\path\to\source.sqlite"
-npm run db:verify:mysql -- "C:\path\to\source.sqlite"
-```
-
-Import each candidate source into a separate empty staging database first. Do not run imports against production until you have selected and reconciled the authoritative records. The project does not have access to your hosted snapshots or Cloudflare account data.
-
-The legacy Express server uses scrypt hashes, while the Worker uses PBKDF2. If the imported administrator has a legacy scrypt hash, set a new password interactively before cutover; the command revokes existing sessions and never prints or stores the password in the repository:
-
-```powershell
-npm run admin:reset:mysql
-```
-
-Set the initial administrator password as a Worker secret, then deploy only after the staging database, account access, object migration, and restore procedure have been verified:
+Enable R2 for the Cloudflare account in the dashboard before creating the bucket. Set the initial administrator password as a Worker secret (never as a Wrangler variable or frontend value), then deploy:
 
 ```powershell
 npx wrangler secret put ADMIN_PASSWORD
 npm run cf:deploy
 ```
 
-`ADMIN_PASSWORD` is used only to bootstrap an administrator when the MySQL `admins` table is empty. It is hashed before storage; remove the bootstrap secret after the account is created if it is not needed. `ADMIN_EMAIL` is a non-secret Worker variable.
+`ADMIN_PASSWORD` is used only to bootstrap an administrator when the D1 `admins` table is empty. It is hashed before storage; remove the bootstrap secret after the account is created if it is not needed. `ADMIN_EMAIL` is a non-secret Worker variable.
 
-### Back up and restore MySQL
+### Back up and restore
 
-Backups are portable JSON exports with SHA-256 integrity verification. The backup file contains administrator password hashes and sessions, so encrypt it and restrict access. Backup creation uses exclusive file creation and will not replace an existing export. Restore into a separate database after applying its schema.
+Export D1 before a data migration and retain the export separately. D1 exports contain application content and may contain administrator hashes and session tokens; encrypt the export and restrict access. Restore into a separate D1 database and verify it before any production recovery.
 
 ```powershell
-npm run db:backup:mysql -- "C:\secure-backups\chalinze-mysql-2026-11-06.json"
-npm run db:restore:mysql -- "C:\secure-backups\chalinze-mysql-2026-11-06.json"
+npx wrangler d1 export chalinze-steel-mills --remote --output "C:\secure-backups\chalinze-d1-2026-11-06.sql"
 ```
 
-Restore refuses to overwrite non-empty application tables. Restore to a separate database, run the verifier against its SQLite source, and only then promote it. Back up R2 independently to an account/provider outside Cloudflare using its S3-compatible endpoint, with object versioning and retention enabled at the destination. Do not treat Wrangler's local emulator directory as a backup.
+Back up R2 independently to another account/provider using its S3-compatible endpoint, with object versioning and retention enabled at the destination. Do not treat Wrangler's local emulator directory as a backup.
 
 Default retention policy: retain daily database and object backups for 30 days and month-end copies for 12 months. Apply lifecycle rules only to the independent backup copies, preserve the current production and source files, and perform a restore test at least quarterly before expiring older copies.
 
@@ -70,16 +47,27 @@ The R2 scripts use the AWS CLI and require scoped S3 credentials in the private 
 
 ### Migrate from Render
 
-Keep the Render service, mounted disk, and original SQLite file unchanged until cutover and disaster-recovery checks pass. The local SQLite importer does not migrate files; upload files separately and verify every URL before switching traffic. The legacy `scripts/migrate-render-data.mjs` now requires `--apply`, updates matching destination profiles, leaves destination-only profiles intact, and omits accounts, audit entries, and undo/redo history. It is not a complete database migration; use it only after verified backups.
+Keep the Render service, mounted disk, and original SQLite file unchanged until the Cloudflare copy and disaster-recovery checks pass. Use the authenticated admin APIs for private drafts, profiles, audit/history data and any referenced uploads; public API data alone is not a complete export. Import must be backed up, repeatable, and must not delete destination-only records. Revoke old sessions and provision a new Cloudflare admin password rather than copying live sessions.
+
+For the one-time transfer, sign in to Render's `/admin` page as an administrator and download `/api/admin/export`. The export includes all profile and site-content drafts, audit/change-history rows, administrator email/role metadata, and the upload manifest; it excludes password hashes, sessions and login-attempt state. Keep the export private. Create the R2 bucket, apply D1 migrations, then validate the export and run the importer:
+
+```powershell
+npx wrangler d1 migrations apply chalinze-steel-mills --remote
+npx wrangler r2 bucket create chalinze-steel-mills-media
+npm run db:import:render:d1 -- --export "C:\secure-backups\chalinze-render-export.json"
+npm run db:import:render:d1 -- --export "C:\secure-backups\chalinze-render-export.json" --apply
+```
+
+The importer first exports a D1 backup into the ignored `backups/` directory, copies listed public uploads to R2, and upserts records without deleting destination-only rows. Existing Cloudflare admin password hashes and sessions are deliberately not imported; provision a new admin using `ADMIN_EMAIL` and `wrangler secret put ADMIN_PASSWORD`. Private originals in Render's `originals/` directory are not publicly served or included in this migration; retain their source backup separately and review them before moving to private object storage.
 
 ## Optional local development
 
-Requirements for the legacy local Node server: Node.js 22.x and npm. Cloudflare development uses Wrangler; local Hyperdrive requires a reachable MySQL development database, and local R2 emulation is separate from the remote bucket.
+Requirements for the legacy local Node server: Node.js 22.x and npm. Cloudflare development uses Wrangler; local D1 and R2 emulation are separate from their remote resources.
 
-To run the Worker locally, configure Hyperdrive in Wrangler with a local connection string for a non-production MySQL database. The retained D1 binding is for recovery only and is not used by the Worker API.
+To run the Worker locally, apply migrations to Wrangler's local D1 database and use the local R2 emulator.
 
 ```powershell
-npm run db:migrate:mysql
+npx wrangler d1 migrations apply chalinze-steel-mills --local
 npm run cf:dev
 ```
 
@@ -113,11 +101,11 @@ The server serves both the built website and its API on port `4173` by default. 
 
 The public leadership page is available at `/leadership`; the authenticated administration page is at `/admin`. The published roster follows the supplied Board, Senior Management and Supporting Staff structure exactly. Dr. Humphrey Musyoka is listed as a Board Director; Nickson Kimbori appears only in Senior Management. Harish Kumar and the Chief Finance Officer (CFO) are separate entries. Public entries contain only the supplied names and titles, without unsupported biographies or qualifications. A one-time migration updates the roster, removes unsupported public profile details, archives unrelated published profiles and records changes in the audit history; later restarts do not overwrite administrator edits.
 
-On Cloudflare, the Worker creates `admin@chalinze.co.tz` in MySQL when the admin session endpoint is first accessed and no administrator exists. The bootstrap password uses a salted PBKDF2 hash. The initial account has the administrator role.
+On Cloudflare, the Worker creates `admin@chalinze.co.tz` in D1 when the admin session endpoint is first accessed and no administrator exists. The bootstrap password uses a salted PBKDF2 hash. The initial account has the administrator role.
 
 Sign in at `/admin` to review profiles, upload company-approved portraits, edit profile content and ordering, manage website copy/navigation/footer/design, preview changes, and inspect the audit history. The site editor provides controls for the home-page introduction, each content page's title/summary/sections/layout, navigation and footer links, brand colors and typography. Text is rendered as plain text; links are limited to safe internal paths or HTTPS URLs. Content editors can prepare unpublished site and manufacturing drafts but cannot publish, delete profiles, edit a published profile or undo/redo published changes. Administrators can publish reviewed drafts and use the cross-content Undo/Redo controls; reversals and reapplications are recorded in the audit history.
 
-On Cloudflare, published and draft records, admin accounts, sessions, audit entries, change history, and upload metadata are stored in MySQL. Uploaded media is stored in the bound R2 bucket. The Vite SPA, public brand assets, and supplied leadership portraits are served as static assets. The legacy Node fallback stores data in SQLite and files on disk and must not be used as the Cloudflare production runtime.
+On Cloudflare, published and draft records, admin accounts, sessions, audit entries, change history, and upload metadata are stored in D1. Uploaded media is stored in the bound R2 bucket. The Vite SPA, public brand assets, and supplied leadership portraits are served as static assets. The legacy Node fallback stores data in SQLite and files on disk and must not be used as the Cloudflare production runtime.
 
 Four supplied leadership portraits are optimized in `public/assets/leadership/` and associated with the matching profiles. The supplied mine-site photograph is used only as an illustrative image, not as evidence of the Chalinze project site. Public copies of the two supplied Tanzania Revenue Authority certificates are in `public/assets/corporate/`; taxpayer identifiers and signatures are redacted, and both are identified as documents issued to Gypsum Plus Mines Limited. Original source documents and unredacted tax certificates in the local `src/leadership/` folder are excluded from Git.
 

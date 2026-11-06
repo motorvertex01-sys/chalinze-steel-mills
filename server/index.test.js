@@ -116,6 +116,19 @@ test("leadership roles, authenticated editing, image uploads and publishing", as
     const adminHeaders = { Cookie: adminCookie, Origin: base, "Content-Type": "application/json" };
     const protectedProfiles = await fetch(`${base}/api/admin/profiles`);
     if (protectedProfiles.status !== 401) throw new Error("Administrator profile endpoint is not protected.");
+    const protectedExport = await fetch(`${base}/api/admin/export`);
+    if (protectedExport.status !== 401) throw new Error("Render migration export was not protected.");
+    const migrationExportResponse = await fetch(`${base}/api/admin/export`, { headers: { Cookie: adminCookie } });
+    const migrationExport = await migrationExportResponse.json();
+    if (!migrationExportResponse.ok || migrationExport.format_version !== 1 || !Array.isArray(migrationExport.profiles) ||
+        !Array.isArray(migrationExport.site_content) || !Array.isArray(migrationExport.audit_log) ||
+        !Array.isArray(migrationExport.change_history) || !Array.isArray(migrationExport.uploads)) {
+      throw new Error("Authenticated migration export did not include the expected application data.");
+    }
+    if (migrationExport.sessions_exported !== false || migrationExport.login_attempts_exported !== false ||
+        migrationExport.administrators.some((admin) => "password_hash" in admin || "password_salt" in admin)) {
+      throw new Error("Migration export included credentials or active authentication state.");
+    }
     const crossSiteLogout = await fetch(`${base}/api/admin/logout`, {
       method: "POST",
       headers: { Cookie: adminCookie, Origin: "https://untrusted.example.invalid" },
