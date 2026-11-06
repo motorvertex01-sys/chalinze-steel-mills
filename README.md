@@ -25,6 +25,14 @@ npm run cf:deploy
 
 `ADMIN_PASSWORD` is used only to bootstrap an administrator when the D1 `admins` table is empty. It is hashed before storage; remove the bootstrap secret after the account is created if it is not needed. `ADMIN_EMAIL` is a non-secret Worker variable.
 
+If sign-in fails after the administrator has been created, changing `ADMIN_PASSWORD` does not update the existing account; the secret is only used during first-account bootstrap. Reset an existing Cloudflare admin locally with:
+
+```powershell
+npm run admin:reset:cloudflare
+```
+
+The command verifies the existing admin email, prompts for a new password without echoing it, updates its PBKDF2 hash in remote D1 and revokes existing sessions. Never pass the password as a command-line argument or share it in chat. After resetting, delete `ADMIN_PASSWORD` with `npx wrangler secret delete ADMIN_PASSWORD` if it may have been exposed; it is no longer needed for an existing admin account.
+
 ### Back up and restore
 
 Export D1 before a data migration and retain the export separately. D1 exports contain application content and may contain administrator hashes and session tokens; encrypt the export and restrict access. Restore into a separate D1 database and verify it before any production recovery.

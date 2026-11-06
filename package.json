@@ -11,6 +11,7 @@
     "dev:server": "node --watch server/index.js",
     "start": "node server/index.js",
     "admin:create": "node server/create-admin.js",
+    "admin:reset:cloudflare": "node scripts/reset-cloudflare-admin.mjs",
     "db:migrate:mysql": "node scripts/migrate-mysql.mjs",
     "db:import:render:d1": "node scripts/import-render-to-d1.mjs",
     "db:backup:mysql": "node scripts/backup-mysql.mjs",
