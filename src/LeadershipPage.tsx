@@ -103,6 +103,7 @@ function ProfileCard({ profile, onOpen, featured = false, ordinal }: { profile: 
       <span className="leader-card-copy">
         <strong>{profile.name}</strong>
         {profile.title !== profile.name && <span className="leader-title">{profile.title}</span>}
+        {!profile.is_vacant && profile.biography && <span className="leader-card-biography">{profile.biography}</span>}
         <span className="leader-profile-link">{action} <ArrowUpRight size={14} /></span>
       </span>
     </button>

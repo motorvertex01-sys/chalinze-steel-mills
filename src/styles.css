@@ -566,6 +566,7 @@ body.dialog-open { overflow: hidden; }
 .leader-title { color: #aeb3b3; font: 10px var(--mono); letter-spacing: .035em; line-height: 1.65; }
 .leader-card-copy > strong { margin-top: 9px; color: #f0efea; font: 500 18px/1.32 var(--display); }
 .is-featured-grid .leader-card-copy > strong { font-size: 21px; }
+.leader-card-biography { display: -webkit-box; margin-top: 10px; overflow: hidden; color: #aeb4b1; font-size: 11px; line-height: 1.65; -webkit-box-orient: vertical; -webkit-line-clamp: 3; }
 .leader-profile-link { display: flex; align-items: center; gap: 7px; margin-top: auto; padding-top: 18px; color: var(--orange); font: 10px var(--mono); }
 .leader-card.is-vacant .leader-card-copy { background: linear-gradient(110deg, rgba(244,119,33,.045), transparent); }
 .governance-profiles { margin-top: 58px; padding-top: 33px; border-top: 1px solid var(--line); }

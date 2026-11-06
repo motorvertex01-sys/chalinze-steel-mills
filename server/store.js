@@ -46,6 +46,29 @@ export const db = {
   },
 };
 
+const sourceProfileDetails = {
+  "leadership-2": {
+    biography: "Dr. Humphrey Musyoka is a business-development and infrastructure-project professional with experience in operations, project preparation, stakeholder engagement and resource mobilization. His career also includes earlier medical and humanitarian service.",
+    background: "His experience spans business development and operations, infrastructure finance and project preparation, regional health management, and medical services.",
+    qualifications: "Professional experience includes project preparation, demand assessment, stakeholder engagement, research, data analysis and resource mobilization.",
+  },
+  "leadership-5": {
+    biography: "Denis A. Kimaro is an ICT and telecommunications specialist with experience in networking, structured cabling, fibre-optic installation and splicing, PABX, computer systems and related infrastructure. His experience includes work with Tanzania Ports Authority and C-NET Technologies (T) Ltd.",
+    background: "Experience includes ICT infrastructure deployment and support, networking, fibre-optic systems, PABX, CCTV and security systems.",
+    qualifications: "ICT qualification from Dar es Salaam Institute of Technology (DIT), with additional training in CCTV, security systems, PABX, networking, structured cabling and fibre optics.",
+  },
+  "leadership-6": {
+    biography: "Juliette Kimaro is a legal professional with a Bachelor of Laws from Tumaini University Makumira, Dar es Salaam College. Her experience includes independent legal practice, private-sector corporate and commercial work, legal advisory, contracts and documentation.",
+    background: "Her experience includes legal research and analysis, corporate and commercial advisory, contracts, documentation, regulatory compliance and an internship with the National Social Security Fund (NSSF).",
+    qualifications: "Bachelor of Laws (LL.B.), Tumaini University Makumira, Dar es Salaam College.",
+  },
+  "leadership-9": {
+    biography: "Nickson Kimbori is a mining-operations professional with more than 20 years of experience in mine operations, logistics planning and community engagement.",
+    background: "His experience spans mining operations, logistics planning, site coordination, contractor engagement and community relations.",
+    responsibilities: "Operations and logistics coordination.",
+  },
+};
+
 const profiles = [
   {
     id: "leadership-1", section: "board", placement: "board", name: "Mr. Amini N. Kimaro",
@@ -54,23 +77,23 @@ const profiles = [
   },
   {
     id: "leadership-2", section: "board", placement: "board", name: "Dr. Humphrey Musyoka",
-    title: "Director", sort_order: 20,
+    title: "Director", sort_order: 20, ...sourceProfileDetails["leadership-2"],
   },
   { id: "leadership-3", section: "board", placement: "board", name: "Dr. Alfred C. Msemo", title: "Director", sort_order: 30 },
   { id: "leadership-4", section: "board", placement: "board", name: "Technical Advisor", title: "Position Vacant", is_vacant: true, sort_order: 60 },
   {
     id: "leadership-5", section: "board", placement: "board", name: "Denis A. Kimaro",
-    title: "Director", sort_order: 40, photo_url: "/assets/leadership/denis-a-kimaro.webp",
+    title: "Director", sort_order: 40, photo_url: "/assets/leadership/denis-a-kimaro.webp", ...sourceProfileDetails["leadership-5"],
   },
   {
     id: "leadership-6", section: "board", placement: "board", name: "Mrs. Juliette Kimaro",
-    title: "Chief Legal Counsel", sort_order: 50, photo_url: "/assets/leadership/juliette-a-kimaro.webp",
+    title: "Chief Legal Counsel", sort_order: 50, photo_url: "/assets/leadership/juliette-a-kimaro.webp", ...sourceProfileDetails["leadership-6"],
   },
   { id: "leadership-7", section: "management", placement: "governance", name: "Harish Kumar", title: "position/title to be confirmed", sort_order: 10 },
   { id: "leadership-8", section: "management", placement: "governance", name: "Chief Finance Officer (CFO)", title: "name to be confirmed", sort_order: 20 },
   {
     id: "leadership-9", section: "management", placement: "governance", name: "Nickson Kimbori",
-    title: "Operations - Logistics", sort_order: 30,
+    title: "Operations - Logistics", sort_order: 30, ...sourceProfileDetails["leadership-9"],
   },
   { id: "leadership-10", section: "management", placement: "governance", name: "Ridhiwani M. Mbaruku", title: "Mining Operations", sort_order: 40, photo_url: "/assets/leadership/ridhiwani-m-mbaruku.webp" },
   { id: "leadership-11", section: "management", placement: "governance", name: "Mr. Sospeter Urassa", title: "Chief Accountant", sort_order: 50 },
@@ -233,64 +256,98 @@ async function initialize() {
   }
 
   const publicRosterMigrationKey = "exact-public-leadership-roster-2026-11-v1";
-  if (await db.get("SELECT migration_key FROM applied_migrations WHERE migration_key = ?", publicRosterMigrationKey)) return;
-  await db.transaction(async (tx) => {
-    const rosterIds = new Set();
-    for (const source of profiles) {
-      const aliases = legacyAliases[source.id];
-      let row = await tx.get("SELECT * FROM profiles WHERE id = ?", source.id);
-      if (!row && aliases) {
-        row = await tx.get("SELECT * FROM profiles WHERE name = ? OR name = ? LIMIT 1", ...aliases);
+  if (!await db.get("SELECT migration_key FROM applied_migrations WHERE migration_key = ?", publicRosterMigrationKey)) {
+    await db.transaction(async (tx) => {
+      const rosterIds = new Set();
+      for (const source of profiles) {
+        const aliases = legacyAliases[source.id];
+        let row = await tx.get("SELECT * FROM profiles WHERE id = ?", source.id);
+        if (!row && aliases) {
+          row = await tx.get("SELECT * FROM profiles WHERE name = ? OR name = ? LIMIT 1", ...aliases);
+        }
+        if (!row) continue;
+        rosterIds.add(row.id);
+        const before = profileFromRow(row);
+        const after = {
+          ...before,
+          section: source.section,
+          placement: source.placement,
+          name: source.name,
+          title: source.title,
+          biography: "",
+          background: "",
+          qualifications: "",
+          responsibilities: "",
+          photo_url: source.photo_url || "",
+          is_vacant: Boolean(source.is_vacant),
+          status: "published",
+          sort_order: source.sort_order,
+          updated_at: now,
+        };
+        if (JSON.stringify(before) === JSON.stringify(after)) continue;
+        await tx.run(`UPDATE profiles SET section=?, placement=?, name=?, title=?, biography=?, background=?,
+          qualifications=?, responsibilities=?, photo_url=?, is_vacant=?, status=?, sort_order=?, updated_at=? WHERE id=?`,
+        after.section, after.placement, after.name, after.title, after.biography, after.background,
+        after.qualifications, after.responsibilities, after.photo_url, after.is_vacant ? 1 : 0,
+        after.status, after.sort_order, after.updated_at, before.id);
+        await writeAuditWith(tx, {
+          profileId: before.id,
+          email: "system-migration",
+          action: "published supplied leadership roster and removed unsupported profile details",
+          before,
+          after,
+        });
       }
+
+      const publishedProfiles = await tx.all("SELECT * FROM profiles WHERE status = 'published'");
+      for (const row of publishedProfiles) {
+        if (rosterIds.has(row.id)) continue;
+        const before = profileFromRow(row);
+        const after = { ...before, status: "archived", updated_at: now };
+        await tx.run("UPDATE profiles SET status = ?, updated_at = ? WHERE id = ?", after.status, after.updated_at, before.id);
+        await writeAuditWith(tx, {
+          profileId: before.id,
+          email: "system-migration",
+          action: "archived profile outside supplied public leadership roster",
+          before,
+          after,
+        });
+      }
+      await tx.run("INSERT INTO applied_migrations (migration_key, applied_at) VALUES (?, ?)", publicRosterMigrationKey, now);
+    });
+  }
+
+  const sourceDetailsMigrationKey = "verified-leadership-source-details-2026-11-v1";
+  if (await db.get("SELECT migration_key FROM applied_migrations WHERE migration_key = ?", sourceDetailsMigrationKey)) return;
+  await db.transaction(async (tx) => {
+    for (const source of profiles) {
+      const details = sourceProfileDetails[source.id] || {};
+      if (!Object.keys(details).length && !source.photo_url) continue;
+      let row = await tx.get("SELECT * FROM profiles WHERE id = ?", source.id);
+      const aliases = legacyAliases[source.id];
+      if (!row && aliases) row = await tx.get("SELECT * FROM profiles WHERE name = ? OR name = ? LIMIT 1", ...aliases);
       if (!row) continue;
-      rosterIds.add(row.id);
       const before = profileFromRow(row);
       const after = {
         ...before,
-        section: source.section,
-        placement: source.placement,
-        name: source.name,
-        title: source.title,
-        biography: "",
-        background: "",
-        qualifications: "",
-        responsibilities: "",
-        photo_url: source.photo_url || "",
-        is_vacant: Boolean(source.is_vacant),
-        status: "published",
-        sort_order: source.sort_order,
+        ...Object.fromEntries(Object.entries(details).map(([field, value]) => [field, before[field] || value])),
+        photo_url: source.photo_url || before.photo_url,
         updated_at: now,
       };
       if (JSON.stringify(before) === JSON.stringify(after)) continue;
-      await tx.run(`UPDATE profiles SET section=?, placement=?, name=?, title=?, biography=?, background=?,
-        qualifications=?, responsibilities=?, photo_url=?, is_vacant=?, status=?, sort_order=?, updated_at=? WHERE id=?`,
-      after.section, after.placement, after.name, after.title, after.biography, after.background,
-      after.qualifications, after.responsibilities, after.photo_url, after.is_vacant ? 1 : 0,
-      after.status, after.sort_order, after.updated_at, before.id);
+      await tx.run(`UPDATE profiles SET biography=?, background=?, qualifications=?, responsibilities=?,
+        photo_url=?, updated_at=? WHERE id=?`,
+      after.biography, after.background, after.qualifications, after.responsibilities,
+      after.photo_url, after.updated_at, before.id);
       await writeAuditWith(tx, {
         profileId: before.id,
         email: "system-migration",
-        action: "published supplied leadership roster and removed unsupported profile details",
+        action: "added verified leadership source details and portraits",
         before,
         after,
       });
     }
-
-    const publishedProfiles = await tx.all("SELECT * FROM profiles WHERE status = 'published'");
-    for (const row of publishedProfiles) {
-      if (rosterIds.has(row.id)) continue;
-      const before = profileFromRow(row);
-      const after = { ...before, status: "archived", updated_at: now };
-      await tx.run("UPDATE profiles SET status = ?, updated_at = ? WHERE id = ?", after.status, after.updated_at, before.id);
-      await writeAuditWith(tx, {
-        profileId: before.id,
-        email: "system-migration",
-        action: "archived profile outside supplied public leadership roster",
-        before,
-        after,
-      });
-    }
-    await tx.run("INSERT INTO applied_migrations (migration_key, applied_at) VALUES (?, ?)", publicRosterMigrationKey, now);
+    await tx.run("INSERT INTO applied_migrations (migration_key, applied_at) VALUES (?, ?)", sourceDetailsMigrationKey, now);
   });
 }
 

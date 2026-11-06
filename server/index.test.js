@@ -96,10 +96,16 @@ test("leadership roles, authenticated editing, image uploads and publishing", as
       ["support", "Machine Operators", "Machine Operators"],
     ];
     if (publicInitially.length !== expectedRoster.length) throw new Error(`Expected ${expectedRoster.length} public roster entries, received ${publicInitially.length}.`);
+    const sourcedProfileIds = new Set(["leadership-2", "leadership-5", "leadership-6", "leadership-9"]);
     for (const [section, name, title] of expectedRoster) {
       const profile = publicInitially.find((item) => item.name === name);
       if (profile?.section !== section || profile.title !== title) throw new Error(`${name} is missing from the correct public section or has an incorrect title.`);
-      if (profile.biography || profile.background || profile.qualifications || profile.responsibilities) throw new Error(`${name} includes unsupported public profile details.`);
+      if (!sourcedProfileIds.has(profile.id) && (profile.biography || profile.background || profile.qualifications || profile.responsibilities)) {
+        throw new Error(`${name} includes unsupported public profile details.`);
+      }
+    }
+    if (sourcedProfileIds.size !== publicInitially.filter((profile) => sourcedProfileIds.has(profile.id) && profile.biography).length) {
+      throw new Error("Profiles supported by source documents are missing their professional biographies.");
     }
     const manufacturingPublicInitially = await (await fetch(`${base}/api/manufacturing`)).json();
 
@@ -125,12 +131,12 @@ test("leadership roles, authenticated editing, image uploads and publishing", as
     const supportingRoles = ["Chief Cashier", "Drivers", "Cleaners", "Machine Operators"];
     if (amini?.status !== "published" || amini.biography || amini.background || amini.qualifications || amini.responsibilities) throw new Error("Amini's supplied roster entry was not published without unsupported details.");
     if (amini?.photo_url !== "/assets/leadership/amini-n-kimaro.webp") throw new Error("Amini's supplied portrait was not seeded.");
-    if (humphrey?.status !== "published" || humphrey.title !== "Director") throw new Error("Humphrey was not published as a Board Director.");
+    if (humphrey?.status !== "published" || humphrey.title !== "Director" || !humphrey.biography) throw new Error("Humphrey's sourced profile was not published as a Board Director.");
     if (denis?.section !== "board" || denis.placement !== "board" || denis.title !== "Director" || denis.status !== "published") throw new Error("Denis was not published as a Board Director.");
-    if (denis?.photo_url !== "/assets/leadership/denis-a-kimaro.webp") throw new Error("Denis's supplied portrait was not seeded.");
+    if (denis?.photo_url !== "/assets/leadership/denis-a-kimaro.webp" || !denis.biography || !denis.qualifications) throw new Error("Denis's sourced profile and portrait were not seeded.");
     if (juliette?.section !== "board" || juliette.placement !== "board" || juliette.title !== "Chief Legal Counsel" || juliette.status !== "published") throw new Error("Juliette was not published as Board Chief Legal Counsel.");
-    if (juliette?.photo_url !== "/assets/leadership/juliette-a-kimaro.webp") throw new Error("Juliette's supplied portrait was not seeded.");
-    if (nickson?.status !== "published" || nickson.section !== "management" || nickson.title !== "Operations - Logistics" || nickson.photo_url) throw new Error("Nickson was not published only in Senior Management.");
+    if (juliette?.photo_url !== "/assets/leadership/juliette-a-kimaro.webp" || !juliette.biography || !juliette.qualifications) throw new Error("Juliette's sourced profile and portrait were not seeded.");
+    if (nickson?.status !== "published" || nickson.section !== "management" || nickson.title !== "Operations - Logistics" || nickson.photo_url || !nickson.biography) throw new Error("Nickson was not published only in Senior Management with sourced details.");
     if (ridhiwani?.name !== "Ridhiwani M. Mbaruku" || ridhiwani?.status !== "published" || ridhiwani.photo_url !== "/assets/leadership/ridhiwani-m-mbaruku.webp") throw new Error("Ridhiwani's supplied roster entry or portrait was not seeded.");
     if (alfred?.section !== "board" || alfred?.placement !== "board" || alfred?.title !== "Director") throw new Error("Alfred was not classified as a Board Director.");
     if (advisor?.section !== "board" || advisor?.placement !== "board" || !advisor.is_vacant || advisor.status !== "published") throw new Error("Technical Advisor vacancy was not published on the Board.");
@@ -404,6 +410,7 @@ test("legacy leadership database migration corrects unconfirmed governance recor
       const amini = profiles.find((profile) => profile.name === "Mr. Amini N. Kimaro");
       const humphrey = profiles.find((profile) => profile.name === "Dr. Humphrey Musyoka");
       const nickson = profiles.find((profile) => profile.name === "Nickson Kimbori");
+      const ridhiwani = profiles.find((profile) => profile.name === "Ridhiwani M. Mbaruku");
       const unconfirmed = profiles.find((profile) => profile.name === "Unconfirmed legacy profile");
       const roles = migrated.pragma("table_info(admins)").map((column) => column.name);
       const migrations = migrated.prepare("SELECT COUNT(*) AS count FROM audit_log WHERE admin_email = 'system-migration'").get().count;
@@ -416,16 +423,18 @@ test("legacy leadership database migration corrects unconfirmed governance recor
       if (nickson?.section !== "management" || nickson.title !== "Operations - Logistics" || nickson.status !== "published") throw new Error("Nickson was not migrated into Senior Management.");
       if (unconfirmed?.status === "published") throw new Error("An unconfirmed legacy profile remained in the supplied public roster.");
       if (profiles.filter((profile) => profile.status === "published").length !== 18) throw new Error("Legacy migration did not expose exactly the supplied roster.");
-      if (profiles.filter((profile) => profile.status === "published").some((profile) => profile.biography || profile.background || profile.qualifications || profile.responsibilities)) {
-        throw new Error("Legacy migration retained unsupported public profile details.");
+      if (!humphrey?.biography || !denis?.biography || !juliette?.biography || !nickson?.biography) throw new Error("Verified source biographies were not added to existing leadership profiles.");
+      if (profiles.filter((profile) => profile.status === "published" && !["leadership-2", "leadership-5", "leadership-6", "leadership-9"].includes(profile.id)).some((profile) => profile.biography || profile.background || profile.qualifications || profile.responsibilities)) {
+        throw new Error("Legacy migration added unsupported details to profiles without source material.");
       }
-      if (amini?.photo_url !== "/assets/leadership/amini-n-kimaro.webp" || denis?.photo_url !== "/assets/leadership/denis-a-kimaro.webp" || juliette?.photo_url !== "/assets/leadership/juliette-a-kimaro.webp") throw new Error("Existing leadership profiles were not assigned the supplied portraits.");
-      if (migrations < 19) throw new Error("Existing roster migration changes were not entered in the audit history.");
+      if (amini?.photo_url !== "/assets/leadership/amini-n-kimaro.webp" || denis?.photo_url !== "/assets/leadership/denis-a-kimaro.webp" || juliette?.photo_url !== "/assets/leadership/juliette-a-kimaro.webp" || ridhiwani?.photo_url !== "/assets/leadership/ridhiwani-m-mbaruku.webp") throw new Error("Existing leadership profiles were not assigned the supplied portraits.");
+      if (migrations < 23) throw new Error("Existing roster and sourced-detail updates were not entered in the audit history.");
     } finally {
       migrated.close();
     }
     const editable = new Database(path.join(dataDirectory, "chalinze.sqlite"));
     editable.prepare("UPDATE profiles SET title = 'Admin-edited title', status = 'published' WHERE id = 'leadership-3'").run();
+    editable.prepare("UPDATE profiles SET biography = 'Admin-edited sourced biography' WHERE name = 'Denis A. Kimaro'").run();
     editable.close();
     execFileSync(process.execPath, ["--input-type=module", "-e", "await import('./server/store.js')"], {
       cwd: root,
@@ -436,6 +445,8 @@ test("legacy leadership database migration corrects unconfirmed governance recor
     try {
       const edited = rerun.prepare("SELECT title, status FROM profiles WHERE id = 'leadership-3'").get();
       if (edited?.title !== "Admin-edited title" || edited.status !== "published") throw new Error("Re-running roster migration overwrote administrator edits.");
+      const sourcedEdit = rerun.prepare("SELECT biography FROM profiles WHERE name = 'Denis A. Kimaro'").get();
+      if (sourcedEdit?.biography !== "Admin-edited sourced biography") throw new Error("Re-running source migration overwrote an administrator-edited biography.");
     } finally {
       rerun.close();
     }

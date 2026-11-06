@@ -36,15 +36,17 @@ This is a public-facing synthesis, not a verbatim reproduction of every paragrap
 
 ## Leadership source review
 
-The public leadership page follows the latest supplied list exactly and exposes only its names and titles, with no unsupported biographies or qualifications:
+The public leadership page follows the latest supplied list exactly. Source profile documents support additional professional details for four people; the remaining entries retain only their supplied names, titles and vacancy status until verified biographies are available:
 
 - **Board:** Mr. Amini N. Kimaro — Chief Executive Officer/ Board Chairman; Dr. Humphrey Musyoka — Director; Dr. Alfred C. Msemo — Director; Denis A. Kimaro — Director; Mrs. Juliette Kimaro — Chief Legal Counsel; Technical Advisor — Position Vacant.
 - **Senior Management:** Harish Kumar — position/title to be confirmed; Chief Finance Officer (CFO) — name to be confirmed; Nickson Kimbori — Operations - Logistics; Ridhiwani M. Mbaruku — Mining Operations; Mr. Sospeter Urassa — Chief Accountant; Godluck E. Urassa — IT / Electrician Specialist; Mining Engineer — Position Vacant; Geologist — Position Vacant.
 - **Supporting Staff:** Chief Cashier, Drivers, Cleaners and Machine Operators.
 
-Nickson Kimbori appears only in Senior Management. The former supplied professional histories remain unsupported for public display and are cleared from these roster entries. The one-time migration records roster changes in the audit history and does not overwrite administrator edits on later restarts.
+Nickson Kimbori appears only in Senior Management. Details not supported by the reviewed profile documents remain excluded.
 
-Four name-matched images in the supplied `src/leadership/` folder are optimized into public-site assets and assigned to Amini N. Kimaro, Denis A. Kimaro, Juliette Kimaro and Ridhiwani M. Mbaruku. The supplied mine-site photograph is used as an illustrative image and clearly marked as not verified as the Chalinze site. Public copies of the taxpayer and VAT certificates issued to Gypsum Plus Mines Limited redact taxpayer/VRN identifiers and signatures; the originals are excluded from Git. The public roster contains only the supplied titles and no unapproved biographies or qualifications.
+The source documents support summaries of Humphrey Musyoka's business-development, infrastructure-project and earlier medical-sector experience; Denis Kimaro's ICT and telecommunications experience and DIT qualification; Juliette Kimaro's legal education and practice; and Nickson Kimbori's more than 20 years in mining operations, logistics and community engagement. No private contact details or unverified shareholding claims are published. The separate organization-chart document is labelled as a proposed staffing plan and is not treated as a verified company roster.
+
+Four portraits from the supplied `src/leadership/` folder are optimized into public-site assets and assigned to Amini N. Kimaro, Denis A. Kimaro, Juliette Kimaro and Ridhiwani M. Mbaruku. A one-time, audited migration adds the verified profile details and sets those supplied portrait paths in existing databases, preserving any already populated administrator-edited biography, background, qualification and responsibility fields. The Amini portrait filename is generic, so confirm that attribution before publication. The supplied mine-site photograph is used as an illustrative image and clearly marked as not verified as the Chalinze site. Public copies of the taxpayer and VAT certificates issued to Gypsum Plus Mines Limited redact taxpayer/VRN identifiers and signatures; the originals are excluded from Git. Tax-registration documents from the leadership source folder are not used on the public page.
 
 ## Manufacturing experience and administration
 
