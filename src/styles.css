@@ -610,7 +610,11 @@ body.dialog-open { overflow: hidden; }
 .admin-editor select option { background: #111518; }
 .admin-editor textarea { resize: vertical; line-height: 1.7; }
 .admin-login .button { justify-self: start; }
-.admin-login > p { color: #b7ada0; font-size: 11px; line-height: 1.8; }
+.admin-login > p, .admin-setup-guide p { color: #b7ada0; font-size: 11px; line-height: 1.8; }
+.admin-setup-guide { display: grid; justify-items: start; gap: 12px; }
+.admin-setup-guide p { margin: 0; }
+.admin-setup-guide pre { max-width: 100%; margin: 0; padding: 12px 14px; overflow-x: auto; color: #f1f0eb; border: 1px solid rgba(214,221,225,.19); background: #0c0f11; font: 11px var(--mono); }
+.admin-setup-guide .button { margin-top: 6px; }
 .admin-feedback { margin: 20px 0; padding: 13px 15px; color: #a8c8a9; border: 1px solid rgba(121,175,123,.32); background: rgba(75,132,78,.08); font-size: 11px; line-height: 1.65; }
 .admin-feedback.is-error { color: #e5a89a; border-color: rgba(212,113,88,.42); background: rgba(126,46,30,.12); }
 .admin-manufacturing { margin: 52px 0 64px; padding: 28px; border: 1px solid var(--line); background: rgba(255,255,255,.018); }

@@ -154,6 +154,22 @@ export function AdminPage() {
     }
   };
 
+  const checkAdminSetup = async () => {
+    clearFeedback();
+    setBusy(true);
+    try {
+      const current = await apiRequest<AdminSession>("/api/admin/session");
+      setSession(current);
+      setNotice(current.configured
+        ? "Administrator setup is complete. Sign in with the configured administrator email and password."
+        : "The password secret is not configured yet. Add it with Wrangler, then check again.");
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Could not check administrator setup.");
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const signOut = async () => {
     clearFeedback();
     try {
@@ -439,7 +455,15 @@ export function AdminPage() {
               <label>Password<input type="password" autoComplete="current-password" value={password} onChange={(event) => setPassword(event.target.value)} required /></label>
               <button className="button button-orange" type="submit" disabled={busy}>Sign in <ArrowUpRight size={15} /></button>
             </form>
-          ) : <p>The administrator account has not been configured. Follow the secure setup instructions in the project README to create the first authorized account.</p>}
+          ) : <div className="admin-setup-guide">
+            <p>The first administrator is created automatically after you add a password secret. This secure setup prevents visitors from claiming the admin account.</p>
+            <p>From the project folder, run this command in PowerShell and enter a strong password of at least 14 characters at Wrangler's prompt:</p>
+            <pre><code>npx wrangler secret put ADMIN_PASSWORD</code></pre>
+            <p>The administrator email is <strong>admin@chalinze.co.tz</strong>. The password is stored as a Cloudflare secret, not in this page or the website code.</p>
+            <button className="button button-outline" type="button" onClick={() => void checkAdminSetup()} disabled={busy}>
+              {busy ? "Checking…" : "Check setup"}
+            </button>
+          </div>}
         </section>
       )}
       {session?.authenticated && <>
