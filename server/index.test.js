@@ -96,7 +96,7 @@ test("leadership roles, authenticated editing, image uploads and publishing", as
       ["support", "Machine Operators", "Machine Operators"],
     ];
     if (publicInitially.length !== expectedRoster.length) throw new Error(`Expected ${expectedRoster.length} public roster entries, received ${publicInitially.length}.`);
-    const sourcedProfileIds = new Set(["leadership-2", "leadership-5", "leadership-6", "leadership-9"]);
+    const sourcedProfileIds = new Set(["leadership-1", "leadership-2", "leadership-5", "leadership-6", "leadership-9"]);
     for (const [section, name, title] of expectedRoster) {
       const profile = publicInitially.find((item) => item.name === name);
       if (profile?.section !== section || profile.title !== title) throw new Error(`${name} is missing from the correct public section or has an incorrect title.`);
@@ -106,6 +106,9 @@ test("leadership roles, authenticated editing, image uploads and publishing", as
     }
     if (sourcedProfileIds.size !== publicInitially.filter((profile) => sourcedProfileIds.has(profile.id) && profile.biography).length) {
       throw new Error("Profiles supported by source documents are missing their professional biographies.");
+    }
+    if (publicInitially.some((profile) => /shareholder|NextGen Cement/i.test(`${profile.biography} ${profile.background} ${profile.qualifications} ${profile.responsibilities}`))) {
+      throw new Error("Unverified shareholder information from the supplied profiles was published.");
     }
     const manufacturingPublicInitially = await (await fetch(`${base}/api/manufacturing`)).json();
 
@@ -129,7 +132,7 @@ test("leadership roles, authenticated editing, image uploads and publishing", as
     const advisor = suppliedProfiles.find((profile) => profile.name === "Technical Advisor");
     const managementRoles = expectedRoster.filter(([section]) => section === "management").map(([, name, title]) => [name, title]);
     const supportingRoles = ["Chief Cashier", "Drivers", "Cleaners", "Machine Operators"];
-    if (amini?.status !== "published" || amini.biography || amini.background || amini.qualifications || amini.responsibilities) throw new Error("Amini's supplied roster entry was not published without unsupported details.");
+    if (amini?.status !== "published" || !amini.biography || !amini.responsibilities) throw new Error("Amini's supplied profile document details were not published.");
     if (amini?.photo_url !== "/assets/leadership/amini-n-kimaro.webp") throw new Error("Amini's supplied portrait was not seeded.");
     if (humphrey?.status !== "published" || humphrey.title !== "Director" || !humphrey.biography) throw new Error("Humphrey's sourced profile was not published as a Board Director.");
     if (denis?.section !== "board" || denis.placement !== "board" || denis.title !== "Director" || denis.status !== "published") throw new Error("Denis was not published as a Board Director.");
@@ -423,18 +426,23 @@ test("legacy leadership database migration corrects unconfirmed governance recor
       if (nickson?.section !== "management" || nickson.title !== "Operations - Logistics" || nickson.status !== "published") throw new Error("Nickson was not migrated into Senior Management.");
       if (unconfirmed?.status === "published") throw new Error("An unconfirmed legacy profile remained in the supplied public roster.");
       if (profiles.filter((profile) => profile.status === "published").length !== 18) throw new Error("Legacy migration did not expose exactly the supplied roster.");
+      if (!amini?.biography || !amini.responsibilities) throw new Error("Amini's supplied professional profile was not added to the existing database.");
+      if (/shareholder|NextGen Cement/i.test(`${amini.biography} ${amini.background} ${amini.qualifications} ${amini.responsibilities}`)) {
+        throw new Error("Unverified shareholder information was copied from Amini's profile.");
+      }
       if (!humphrey?.biography || !denis?.biography || !juliette?.biography || !nickson?.biography) throw new Error("Verified source biographies were not added to existing leadership profiles.");
-      if (profiles.filter((profile) => profile.status === "published" && !["leadership-2", "leadership-5", "leadership-6", "leadership-9"].includes(profile.id)).some((profile) => profile.biography || profile.background || profile.qualifications || profile.responsibilities)) {
+      if (profiles.filter((profile) => profile.status === "published" && !["leadership-1", "leadership-2", "leadership-5", "leadership-6", "leadership-9"].includes(profile.id)).some((profile) => profile.biography || profile.background || profile.qualifications || profile.responsibilities)) {
         throw new Error("Legacy migration added unsupported details to profiles without source material.");
       }
       if (amini?.photo_url !== "/assets/leadership/amini-n-kimaro.webp" || denis?.photo_url !== "/assets/leadership/denis-a-kimaro.webp" || juliette?.photo_url !== "/assets/leadership/juliette-a-kimaro.webp" || ridhiwani?.photo_url !== "/assets/leadership/ridhiwani-m-mbaruku.webp") throw new Error("Existing leadership profiles were not assigned the supplied portraits.");
-      if (migrations < 23) throw new Error("Existing roster and sourced-detail updates were not entered in the audit history.");
+      if (migrations < 24) throw new Error("Existing roster and sourced-detail updates were not entered in the audit history.");
     } finally {
       migrated.close();
     }
     const editable = new Database(path.join(dataDirectory, "chalinze.sqlite"));
     editable.prepare("UPDATE profiles SET title = 'Admin-edited title', status = 'published' WHERE id = 'leadership-3'").run();
     editable.prepare("UPDATE profiles SET biography = 'Admin-edited sourced biography' WHERE name = 'Denis A. Kimaro'").run();
+    editable.prepare("UPDATE profiles SET responsibilities = 'Admin-edited responsibility' WHERE name = 'Mr. Amini N. Kimaro'").run();
     editable.close();
     execFileSync(process.execPath, ["--input-type=module", "-e", "await import('./server/store.js')"], {
       cwd: root,
@@ -447,6 +455,8 @@ test("legacy leadership database migration corrects unconfirmed governance recor
       if (edited?.title !== "Admin-edited title" || edited.status !== "published") throw new Error("Re-running roster migration overwrote administrator edits.");
       const sourcedEdit = rerun.prepare("SELECT biography FROM profiles WHERE name = 'Denis A. Kimaro'").get();
       if (sourcedEdit?.biography !== "Admin-edited sourced biography") throw new Error("Re-running source migration overwrote an administrator-edited biography.");
+      const aminiEdit = rerun.prepare("SELECT responsibilities FROM profiles WHERE name = 'Mr. Amini N. Kimaro'").get();
+      if (aminiEdit?.responsibilities !== "Admin-edited responsibility") throw new Error("Re-running source migration overwrote an administrator-edited responsibility.");
     } finally {
       rerun.close();
     }

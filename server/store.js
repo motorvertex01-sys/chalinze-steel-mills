@@ -47,11 +47,34 @@ export const db = {
 };
 
 const sourceProfileDetails = {
+  "leadership-1": {
+    biography: "Mr. Amini N. Kimaro is a Tanzanian entrepreneur and business leader with experience in mining, mineral resources, industrial development and building-materials manufacturing. As Chief Executive Officer and Board Chairman of Chalinze Steel Mills Ltd, he provides strategic leadership for the company's planned industrial development.",
+    background: "His professional focus includes mining and mineral resources, industrial development, and building-materials manufacturing.",
+    responsibilities: "Strategic direction, corporate leadership, investment oversight and stakeholder engagement.",
+  },
   "leadership-2": {
     biography: "Dr. Humphrey Musyoka is a business-development and infrastructure-project professional with experience in operations, project preparation, stakeholder engagement and resource mobilization. His career also includes earlier medical and humanitarian service.",
     background: "His experience spans business development and operations, infrastructure finance and project preparation, regional health management, and medical services.",
     qualifications: "Professional experience includes project preparation, demand assessment, stakeholder engagement, research, data analysis and resource mobilization.",
   },
+  "leadership-5": {
+    biography: "Denis A. Kimaro is an ICT and telecommunications professional with experience in networking, structured cabling, fibre-optic installation and splicing, PABX systems, computer systems and related infrastructure. His professional experience includes ICT training with Tanzania Ports Authority and technical work with C-NET Technologies (T) Ltd.",
+    background: "His work includes installation, maintenance and support of structured cabling, PABX, networking and billing systems, fibre-optic systems, computers and related ICT equipment.",
+    qualifications: "ICT qualification from Dar es Salaam Institute of Technology (DIT), with additional training in CCTV and surveillance, security systems, PABX, networking, structured cabling and fibre optics, including international ICT training in Dubai.",
+  },
+  "leadership-6": {
+    biography: "Juliette A. Kimaro is a Tanzanian legal professional with a Bachelor of Laws (LL.B.) from Tumaini University Makumira, Dar es Salaam College. Her experience includes independent legal practice and engagement with private-sector firms on corporate, commercial and legal matters.",
+    background: "Her experience includes legal advisory, research and analysis, contracts, corporate documentation and stakeholder engagement, as well as an internship with the National Social Security Fund (NSSF).",
+    qualifications: "Bachelor of Laws (LL.B.), Tumaini University Makumira, Dar es Salaam College.",
+  },
+  "leadership-9": {
+    biography: "Nickson Kimbori is a mining-operations professional with more than 20 years of experience in mine operations, logistics planning and community engagement.",
+    background: "His experience spans mining operations, logistics planning, site coordination, contractor engagement and community relations.",
+    responsibilities: "Operations and logistics coordination.",
+  },
+};
+
+const priorSourceProfileDetails = {
   "leadership-5": {
     biography: "Denis A. Kimaro is an ICT and telecommunications specialist with experience in networking, structured cabling, fibre-optic installation and splicing, PABX, computer systems and related infrastructure. His experience includes work with Tanzania Ports Authority and C-NET Technologies (T) Ltd.",
     background: "Experience includes ICT infrastructure deployment and support, networking, fibre-optic systems, PABX, CCTV and security systems.",
@@ -61,11 +84,6 @@ const sourceProfileDetails = {
     biography: "Juliette Kimaro is a legal professional with a Bachelor of Laws from Tumaini University Makumira, Dar es Salaam College. Her experience includes independent legal practice, private-sector corporate and commercial work, legal advisory, contracts and documentation.",
     background: "Her experience includes legal research and analysis, corporate and commercial advisory, contracts, documentation, regulatory compliance and an internship with the National Social Security Fund (NSSF).",
     qualifications: "Bachelor of Laws (LL.B.), Tumaini University Makumira, Dar es Salaam College.",
-  },
-  "leadership-9": {
-    biography: "Nickson Kimbori is a mining-operations professional with more than 20 years of experience in mine operations, logistics planning and community engagement.",
-    background: "His experience spans mining operations, logistics planning, site coordination, contractor engagement and community relations.",
-    responsibilities: "Operations and logistics coordination.",
   },
 };
 
@@ -318,36 +336,70 @@ async function initialize() {
   }
 
   const sourceDetailsMigrationKey = "verified-leadership-source-details-2026-11-v1";
-  if (await db.get("SELECT migration_key FROM applied_migrations WHERE migration_key = ?", sourceDetailsMigrationKey)) return;
+  if (!await db.get("SELECT migration_key FROM applied_migrations WHERE migration_key = ?", sourceDetailsMigrationKey)) {
+    await db.transaction(async (tx) => {
+      for (const source of profiles) {
+        const details = sourceProfileDetails[source.id] || {};
+        if (!Object.keys(details).length && !source.photo_url) continue;
+        let row = await tx.get("SELECT * FROM profiles WHERE id = ?", source.id);
+        const aliases = legacyAliases[source.id];
+        if (!row && aliases) row = await tx.get("SELECT * FROM profiles WHERE name = ? OR name = ? LIMIT 1", ...aliases);
+        if (!row) continue;
+        const before = profileFromRow(row);
+        const after = {
+          ...before,
+          ...Object.fromEntries(Object.entries(details).map(([field, value]) => [field, before[field] || value])),
+          photo_url: source.photo_url || before.photo_url,
+          updated_at: now,
+        };
+        if (JSON.stringify(before) === JSON.stringify(after)) continue;
+        await tx.run(`UPDATE profiles SET biography=?, background=?, qualifications=?, responsibilities=?,
+          photo_url=?, updated_at=? WHERE id=?`,
+        after.biography, after.background, after.qualifications, after.responsibilities,
+        after.photo_url, after.updated_at, before.id);
+        await writeAuditWith(tx, {
+          profileId: before.id,
+          email: "system-migration",
+          action: "added verified leadership source details and portraits",
+          before,
+          after,
+        });
+      }
+      await tx.run("INSERT INTO applied_migrations (migration_key, applied_at) VALUES (?, ?)", sourceDetailsMigrationKey, now);
+    });
+  }
+
+  const uploadedProfileDetailsMigrationKey = "uploaded-leadership-profiles-2026-11-v1";
+  if (await db.get("SELECT migration_key FROM applied_migrations WHERE migration_key = ?", uploadedProfileDetailsMigrationKey)) return;
   await db.transaction(async (tx) => {
     for (const source of profiles) {
-      const details = sourceProfileDetails[source.id] || {};
-      if (!Object.keys(details).length && !source.photo_url) continue;
-      let row = await tx.get("SELECT * FROM profiles WHERE id = ?", source.id);
-      const aliases = legacyAliases[source.id];
-      if (!row && aliases) row = await tx.get("SELECT * FROM profiles WHERE name = ? OR name = ? LIMIT 1", ...aliases);
+      const details = sourceProfileDetails[source.id];
+      if (!details) continue;
+      const row = await tx.get("SELECT * FROM profiles WHERE id = ?", source.id);
       if (!row) continue;
       const before = profileFromRow(row);
+      const previousDetails = priorSourceProfileDetails[source.id] || {};
       const after = {
         ...before,
-        ...Object.fromEntries(Object.entries(details).map(([field, value]) => [field, before[field] || value])),
-        photo_url: source.photo_url || before.photo_url,
+        ...Object.fromEntries(Object.entries(details).map(([field, value]) => [
+          field,
+          !before[field] || before[field] === previousDetails[field] ? value : before[field],
+        ])),
         updated_at: now,
       };
       if (JSON.stringify(before) === JSON.stringify(after)) continue;
-      await tx.run(`UPDATE profiles SET biography=?, background=?, qualifications=?, responsibilities=?,
-        photo_url=?, updated_at=? WHERE id=?`,
-      after.biography, after.background, after.qualifications, after.responsibilities,
-      after.photo_url, after.updated_at, before.id);
+      await tx.run(`UPDATE profiles SET biography=?, background=?, qualifications=?, responsibilities=?, updated_at=?
+        WHERE id=?`,
+      after.biography, after.background, after.qualifications, after.responsibilities, after.updated_at, before.id);
       await writeAuditWith(tx, {
         profileId: before.id,
         email: "system-migration",
-        action: "added verified leadership source details and portraits",
+        action: "updated leadership profiles from supplied professional documents",
         before,
         after,
       });
     }
-    await tx.run("INSERT INTO applied_migrations (migration_key, applied_at) VALUES (?, ?)", sourceDetailsMigrationKey, now);
+    await tx.run("INSERT INTO applied_migrations (migration_key, applied_at) VALUES (?, ?)", uploadedProfileDetailsMigrationKey, now);
   });
 }
 
