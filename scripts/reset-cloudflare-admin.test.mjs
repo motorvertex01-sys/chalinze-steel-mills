@@ -22,6 +22,7 @@ test("Cloudflare reset SQL updates only the selected account and revokes its ses
   assert.match(sql, /UPDATE admins SET password_hash/);
   assert.match(sql, /WHERE id = 'admin-1'/);
   assert.match(sql, /DELETE FROM sessions WHERE admin_id = 'admin-1'/);
+  assert.match(sql, /DELETE FROM login_attempts/);
   assert.match(sql, /administrator password reset; sessions revoked/);
 });
 

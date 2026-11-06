@@ -26,6 +26,7 @@ export function resetSql(admin, passwordHash, salt) {
   return [
     `UPDATE admins SET password_hash = ${sqlString(passwordHash)}, password_salt = ${sqlString(salt)} WHERE id = ${adminId};`,
     `DELETE FROM sessions WHERE admin_id = ${adminId};`,
+    "DELETE FROM login_attempts;",
     `INSERT INTO audit_log (profile_id, admin_email, action, before_json, after_json, created_at) VALUES (${sqlString(`admin:${admin.id}`)}, ${email}, 'administrator password reset; sessions revoked', NULL, NULL, ${now});`,
   ].join("\n");
 }
