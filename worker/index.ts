@@ -693,6 +693,15 @@ function signatureMatches(bytes: Uint8Array, mime: string) {
   return false;
 }
 
+function bytesFromD1Blob(value: unknown): Uint8Array | null {
+  if (value instanceof ArrayBuffer) return new Uint8Array(value);
+  if (ArrayBuffer.isView(value)) return new Uint8Array(value.buffer, value.byteOffset, value.byteLength);
+  if (Array.isArray(value) && value.every((byte) => Number.isInteger(byte) && byte >= 0 && byte <= 255)) {
+    return Uint8Array.from(value);
+  }
+  return null;
+}
+
 async function uploadMedia(context: WorkerContext, field: string) {
   const form = await context.req.formData();
   const file = form.get(field);
@@ -758,18 +767,16 @@ app.get("/uploads/*", async (context) => {
   const metadata = await one<{ content_type: string; size_bytes: number }>(
     db, "SELECT content_type, size_bytes FROM uploads WHERE object_key = ?", key);
   if (!metadata) return context.notFound();
-  const parts = await many<{ part_number: number; data: ArrayBuffer | ArrayBufferView }>(
+  const parts = await many<{ part_number: number; data: unknown }>(
     db, "SELECT part_number, data FROM upload_parts WHERE object_key = ? ORDER BY part_number", key);
   const bytes = new Uint8Array(metadata.size_bytes);
   let offset = 0;
   for (let index = 0; index < parts.length; index += 1) {
     const part = parts[index];
-    if (part.part_number !== index || !ArrayBuffer.isView(part.data) && !(part.data instanceof ArrayBuffer)) {
+    const data = bytesFromD1Blob(part.data);
+    if (part.part_number !== index || !data) {
       return new Response("Stored media is incomplete.", { status: 500, headers: { "Cache-Control": "no-store" } });
     }
-    const data = part.data instanceof ArrayBuffer
-      ? new Uint8Array(part.data)
-      : new Uint8Array(part.data.buffer, part.data.byteOffset, part.data.byteLength);
     if (offset + data.byteLength > bytes.byteLength) {
       return new Response("Stored media is incomplete.", { status: 500, headers: { "Cache-Control": "no-store" } });
     }

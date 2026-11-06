@@ -1,0 +1,63 @@
+- generic [ref=e2]:
+  - banner [ref=e3]:
+    - generic [ref=e4]:
+      - link "Chalinze Steel Mills Ltd home" [ref=e5] [cursor=pointer]:
+        - /url: /
+        - generic [ref=e6]:
+          - strong [ref=e7]: CHALINZE
+          - generic [ref=e8]: STEEL MILLS LTD
+      - button "Open navigation" [ref=e9] [cursor=pointer]
+  - main [ref=e11]:
+    - generic [ref=e12]:
+      - generic [ref=e13]:
+        - text: CHALINZE STEEL MILLS LTD
+        - heading [level=1] [ref=e14]:
+          - text: Leadership
+          - emphasis [ref=e15]: administration.
+        - paragraph [ref=e16]: Manage, review and publish company leadership profiles.
+      - link "Public leadership page" [ref=e17] [cursor=pointer]:
+        - /url: /leadership
+    - status [ref=e20]: Connecting to the administration service…
+  - contentinfo [ref=e21]:
+    - generic [ref=e22]:
+      - generic [ref=e23]:
+        - img "Approved Chalinze Steel Mills Ltd logo, showing the journey from Tanzanian minerals to low-carbon steel billets." [ref=e24]
+        - generic [ref=e25]:
+          - strong [ref=e26]: CHALINZE
+          - generic [ref=e27]: STEEL MILLS LTD
+        - paragraph [ref=e28]: A Tanzanian steel manufacturing company wholly owned by GYPSUM Plus Mines Ltd.
+      - generic [ref=e29]:
+        - heading "Explore" [level=2] [ref=e30]
+        - link "Company" [ref=e31] [cursor=pointer]:
+          - /url: /company
+        - link "Project" [ref=e32] [cursor=pointer]:
+          - /url: /project
+        - link "Technology" [ref=e33] [cursor=pointer]:
+          - /url: /technology
+        - link "Leadership & Governance" [ref=e34] [cursor=pointer]:
+          - /url: /leadership
+        - link "Administration" [ref=e35] [cursor=pointer]:
+          - /url: /admin
+      - generic [ref=e36]:
+        - heading "Discover" [level=2] [ref=e37]
+        - link "Products" [ref=e38] [cursor=pointer]:
+          - /url: /products
+        - link "Sustainability" [ref=e39] [cursor=pointer]:
+          - /url: /sustainability
+        - link "Markets" [ref=e40] [cursor=pointer]:
+          - /url: /markets
+      - generic [ref=e41]:
+        - heading "Connect" [level=2] [ref=e42]
+        - link "Partnerships" [ref=e43] [cursor=pointer]:
+          - /url: /investment
+        - link "Careers" [ref=e44] [cursor=pointer]:
+          - /url: /careers
+        - link "Contact" [ref=e45] [cursor=pointer]:
+          - /url: /contact
+        - link "ceo@chalinzesteelmills.co.tz" [ref=e46] [cursor=pointer]:
+          - /url: mailto:ceo@chalinzesteelmills.co.tz
+        - link "+255 735 283 711" [ref=e47] [cursor=pointer]:
+          - /url: tel:+255735283711
+    - generic [ref=e48]:
+      - generic [ref=e49]: © 2026 Chalinze Steel Mills Ltd
+      - generic [ref=e50]: Tanzanian steel manufacturing company

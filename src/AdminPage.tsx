@@ -95,7 +95,7 @@ export function AdminPage() {
   const [siteConfigTab, setSiteConfigTab] = useState<"home" | "pages" | "navigation" | "design">("home");
   const [selectedPagePath, setSelectedPagePath] = useState("/company");
   const [historyStatus, setHistoryStatus] = useState<HistoryStatus>({ canUndo: false, canRedo: false, undoLabel: null, redoLabel: null });
-  const [email, setEmail] = useState("");
+  const [email, setEmail] = useState("admin@chalinze.co.tz");
   const [password, setPassword] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState<ProfileInput>(emptyProfile());
@@ -449,13 +449,12 @@ export function AdminPage() {
         <section className="admin-login">
           <span className="leadership-kicker">AUTHORIZED ADMINISTRATORS ONLY</span>
           <h2>Sign in to manage leadership information.</h2>
-          {session.configured ? (
-            <form onSubmit={signIn}>
-              <label>Email address<input type="email" autoComplete="username" value={email} onChange={(event) => setEmail(event.target.value)} required /></label>
-              <label>Password<input type="password" autoComplete="current-password" value={password} onChange={(event) => setPassword(event.target.value)} required /></label>
-              <button className="button button-orange" type="submit" disabled={busy}>Sign in <ArrowUpRight size={15} /></button>
-            </form>
-          ) : <div className="admin-setup-guide">
+          <form onSubmit={signIn}>
+            <label>Email address<input type="email" autoComplete="username" value={email} onChange={(event) => setEmail(event.target.value)} required /></label>
+            <label>Password<input type="password" autoComplete="current-password" value={password} onChange={(event) => setPassword(event.target.value)} required /></label>
+            <button className="button button-orange" type="submit" disabled={busy || !session.configured}>Sign in <ArrowUpRight size={15} /></button>
+          </form>
+          {!session.configured && <div className="admin-setup-guide">
             <p>The first administrator is created automatically after you add a password secret. This secure setup prevents visitors from claiming the admin account.</p>
             <p>From the project folder, run this command in PowerShell and enter a strong password of at least 14 characters at Wrangler's prompt:</p>
             <pre><code>npx wrangler secret put ADMIN_PASSWORD</code></pre>
@@ -606,6 +605,7 @@ export function AdminPage() {
             </div>
             <div className="admin-photo-controls">
               <label className="admin-upload-button"><Upload size={15} /> Upload approved portrait<input type="file" accept="image/jpeg,image/png,image/webp" disabled={busy || form.is_vacant} onChange={(event) => { void uploadPortrait(event.target.files?.[0]); event.currentTarget.value = ""; }} /></label>
+              {form.photo_url && <img className="admin-portrait-preview" src={form.photo_url} alt={`Portrait preview for ${form.name || "this profile"}`} />}
               {form.photo_url && <button className="admin-quiet-button" type="button" onClick={() => setField("photo_url", "")}>Remove portrait</button>}
               <label className="admin-checkbox"><input type="checkbox" checked={form.is_vacant} onChange={(event) => setForm((current) => ({ ...current, is_vacant: event.target.checked, photo_url: event.target.checked ? "" : current.photo_url }))} /> Mark position as vacant</label>
               <small>JPEG, PNG or WebP · 1.8 MB maximum. Do not upload a portrait without company approval.</small>
