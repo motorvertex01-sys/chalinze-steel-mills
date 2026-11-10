@@ -214,7 +214,7 @@ function Home() {
         <h2 className="multiline-heading">{home.introHeadline.split("\n").map((line, index, lines) => <span key={`${line}-${index}`}>{index === lines.length - 1 ? <em>{line}</em> : line}{index < lines.length - 1 && <br />}</span>)}</h2>
         <div><p className="large-copy">{home.introPrimary}</p><p className="muted-copy">{home.introSecondary}</p><ConfigLink className="text-link" path={home.introPath}>{home.introAction} <ArrowUpRight size={15} /></ConfigLink></div>
       </div>
-      <div className="facts-strip"><div><span>PROPOSED CAPACITY</span><strong>1.0 MTPA</strong><small>Phase 1 · earlier source figure differs</small></div><div><span>PROJECT LOCATION</span><strong>Vigwaza</strong><small>Chalinze District, Pwani</small></div><div><span>VALUE CHAIN</span><strong>Ore → billets</strong><small>Five planned stages</small></div><div><span>PROJECT STATUS</span><strong>In development</strong><small>Not yet operational</small></div></div>
+      <div className="facts-strip"><div><span>PROPOSED PHASE 1 CAPACITY</span><strong>1.0 MTPA</strong><small>Earlier diagram: 1.2 MTPA · basis unresolved</small></div><div><span>PROJECT LOCATION</span><strong>Vigwaza</strong><small>Chalinze District, Pwani</small></div><div><span>VALUE CHAIN</span><strong>Ore → billets</strong><small>Five planned stages</small></div><div><span>PROJECT STATUS</span><strong>In development</strong><small>Not yet operational</small></div></div>
     </section>
 
     <section className="brand-story">
