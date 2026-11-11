@@ -180,9 +180,9 @@ export const pages: SitePage[] = [
     path: "/company",
     title: "The company behind the name.",
     eyebrow: "Company",
-    summary: "Learn about Chalinze Steel Mills Ltd, its ownership, vision, mission and corporate objectives.",
+    summary: "Chalinze Steel Mills Ltd is a Tanzanian company focused on developing an integrated iron ore mining and steel manufacturing operation, from run-of-mine iron ore to high-quality steel billets.",
     sections: [
-      { title: "Company overview", body: "Chalinze Steel Mills Ltd is identified in the supplied company materials as a Tanzanian company in the steel manufacturing sector. This page focuses on the company’s identity, ownership and stated purpose.", tag: "Company document · Sections 1–2" },
+      { title: "WHO WE ARE — The Company Behind the Steel.", body: "Chalinze Steel Mills Ltd is a Tanzanian company focused on developing an integrated iron ore mining and steel manufacturing operation, from run-of-mine iron ore to high-quality steel billets.", tag: "Company overview" },
       { title: "Ownership & group relationship", body: "The supplied company document states that Chalinze Steel Mills Ltd is a wholly owned subsidiary of GYPSUM Plus Mines Ltd.", tag: "Ownership statement · source-reported" },
       { title: "Vision & mission", body: "The company’s stated vision is to establish a competitive, efficient and sustainable steel manufacturing business serving Tanzania and regional markets. Its mission emphasizes modern technology, skills development, partnership and responsible practices.", tag: "Company document · Section 4.2" },
       { title: "Corporate objectives", body: "The company document identifies local value creation, regional market development, technology transfer, employment and skills development, and sustainable industrial growth among the company’s objectives.", tag: "Company document · Sections 2 and 7" },
