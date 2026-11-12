@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
-import { contactDetails, departments, pages, type SitePage } from "./content";
+import { contactDetails, pages, type SitePage } from "./content";
 
 export type SiteLink = { label: string; path: string };
 export type SiteGroup = { label: string; links: SiteLink[] };
@@ -50,10 +50,10 @@ export function createDefaultSiteConfig(): SiteConfig {
     headerAction: { label: "Investor relations", path: "/investment" },
     navigation: [
       { label: "Overview", links: [{ label: "Overview", path: "/" }] },
-      { label: "Company & project", links: [{ label: "Company", path: "/company" }, { label: "Leadership & Governance", path: "/leadership" }, { label: "Project overview", path: "/project" }, { label: "Development roadmap", path: "/development" }] },
-      { label: "Manufacturing", links: departments[0].links.map(([label, path]) => ({ label, path })) },
-      { label: "Products & markets", links: [{ label: "Products", path: "/products" }, { label: "Markets", path: "/markets" }] },
-      { label: "Explore", links: departments.slice(1).flatMap((department) => department.links.map(([label, path]) => ({ label, path }))).filter((link) => !["/company", "/project", "/development", "/products", "/markets", "/contact"].includes(link.path)) },
+      { label: "Company & project", links: [{ label: "Company overview", path: "/company" }, { label: "Project overview", path: "/project" }, { label: "Development roadmap", path: "/development" }, { label: "Leadership & Governance", path: "/leadership" }] },
+      { label: "Resources & manufacturing", links: [{ label: "Integrated manufacturing overview", path: "/manufacturing" }, { label: "Six-stage production journey", path: "/technology" }, { label: "Plant infrastructure & utilities", path: "/infrastructure" }, { label: "Quality & product inspection", path: "/manufacturing#quality" }] },
+      { label: "Products & markets", links: [{ label: "Steel billets", path: "/products" }, { label: "Markets & applications", path: "/markets" }, { label: "Customer FAQs", path: "/faqs" }] },
+      { label: "Sustainability & investment", links: [{ label: "Sustainability & HSEC", path: "/sustainability" }, { label: "Careers & skills", path: "/careers" }, { label: "Investment & partnerships", path: "/investment" }, { label: "News & media", path: "/news" }] },
       { label: "Contact", links: [{ label: "Contact", path: "/contact" }] },
     ],
     footer: {
