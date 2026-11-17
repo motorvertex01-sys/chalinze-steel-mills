@@ -1,14 +1,15 @@
-import { useEffect, useState } from "react";
+commit and push import { useEffect, useState } from "react";
 import type { FormEvent } from "react";
-import { ArrowLeft, ArrowUpRight, Eye, Factory, LogOut, Plus, Redo2, Save, Send, Trash2, Undo2, Upload, X } from "lucide-react";
+import { ArrowLeft, ArrowUpRight, Eye, Factory, FileText, LayoutDashboard, LogOut, Plus, Redo2, Save, Send, ShieldCheck, Trash2, Undo2, Upload, Users, X } from "lucide-react";
 import { Link } from "react-router-dom";
 import { ProfileDetails } from "./LeadershipPage";
 import type { LeadershipProfile, ProfileInput, ProfileStatus } from "./leadershipTypes";
 import { availablePageLayouts, createDefaultSiteConfig, mergeSiteConfig, siteConfigPathIsSafe } from "./siteConfig";
 import type { SiteConfig, SiteGroup } from "./siteConfig";
 
-type AdminSession = { authenticated: boolean; email: string | null; role: "admin" | "editor" | null; configured: boolean };
+type AdminSession = { authenticated: boolean; email: string | null; role: "admin" | "editor" | null; configured: boolean; passwordChangeRequired?: boolean };
 type AuditEntry = { id: number; profile_id: string; admin_email: string; action: string; before: unknown; after: unknown; created_at: string };
+type AdminUser = { id: string; email: string; role: "admin" | "editor"; created_at: string };
 type ManufacturingContent = {
   headline: string;
   introduction: string;
@@ -18,6 +19,7 @@ type ManufacturingContent = {
 };
 type ManufacturingAdminData = { published: ManufacturingContent; draft: ManufacturingContent; updated_by: string; updated_at: string };
 type HistoryStatus = { canUndo: boolean; canRedo: boolean; undoLabel: string | null; redoLabel: string | null };
+type CorporateDocument = { id: string; label: string; stored: boolean; size_bytes: number | null; updated_at: string | null };
 
 const emptyProfile = (): ProfileInput => ({
   section: "board",
@@ -95,6 +97,17 @@ export function AdminPage() {
   const [siteConfigTab, setSiteConfigTab] = useState<"home" | "pages" | "navigation" | "design">("home");
   const [selectedPagePath, setSelectedPagePath] = useState("/company");
   const [historyStatus, setHistoryStatus] = useState<HistoryStatus>({ canUndo: false, canRedo: false, undoLabel: null, redoLabel: null });
+  const [corporateDocuments, setCorporateDocuments] = useState<CorporateDocument[]>([]);
+  const [selectedCorporateDocument, setSelectedCorporateDocument] = useState("");
+  const [corporateDocumentsError, setCorporateDocumentsError] = useState("");
+  const [adminUsers, setAdminUsers] = useState<AdminUser[]>([]);
+  const [newUserEmail, setNewUserEmail] = useState("");
+  const [newUserRole, setNewUserRole] = useState<"admin" | "editor">("editor");
+  const [temporaryPassword, setTemporaryPassword] = useState("");
+  const [accountError, setAccountError] = useState("");
+  const [accountNotice, setAccountNotice] = useState("");
+  const [nextPassword, setNextPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [email, setEmail] = useState("admin@chalinze.co.tz");
   const [password, setPassword] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -120,13 +133,31 @@ export function AdminPage() {
     setHistoryStatus(nextHistory);
   };
 
+  const refreshCorporateDocuments = async () => {
+    const documents = await apiRequest<CorporateDocument[]>("/api/admin/corporate-documents");
+    setCorporateDocuments(documents);
+  };
+
+  const refreshAdminUsers = async () => setAdminUsers(await apiRequest<AdminUser[]>("/api/admin/users"));
+
   useEffect(() => {
     let active = true;
     apiRequest<AdminSession>("/api/admin/session")
       .then(async (value) => {
         if (!active) return;
         setSession(value);
-        if (value.authenticated) await refreshAdminData();
+        if (value.authenticated) {
+          if (value.passwordChangeRequired) return;
+          await refreshAdminData();
+          if (value.role === "admin") {
+            await refreshAdminUsers().catch((cause: unknown) => {
+              if (active) setAccountError(cause instanceof Error ? cause.message : "Administrator accounts could not be loaded.");
+            });
+            await refreshCorporateDocuments().catch((cause: unknown) => {
+              if (active) setCorporateDocumentsError(cause instanceof Error ? cause.message : "Private certificates could not be loaded.");
+            });
+          }
+        }
       })
       .catch((cause: unknown) => { if (active) setError(cause instanceof Error ? cause.message : "The administrator service is unavailable."); });
     return () => { active = false; };
@@ -139,16 +170,74 @@ export function AdminPage() {
     clearFeedback();
     setBusy(true);
     try {
-      const signedIn = await apiRequest<{ authenticated: boolean; email: string; role: "admin" | "editor" }>("/api/admin/login", {
+      const signedIn = await apiRequest<{ authenticated: boolean; email: string; role: "admin" | "editor"; passwordChangeRequired?: boolean }>("/api/admin/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password }),
       });
-      setSession({ authenticated: true, email: signedIn.email, role: signedIn.role, configured: true });
+      setSession({ authenticated: true, email: signedIn.email, role: signedIn.role, configured: true, passwordChangeRequired: signedIn.passwordChangeRequired });
       setPassword("");
+      if (signedIn.passwordChangeRequired) return;
       await refreshAdminData();
+      if (signedIn.role === "admin") {
+        await Promise.all([refreshAdminUsers(), refreshCorporateDocuments()]);
+      }
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Sign-in failed.");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const changePassword = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    clearFeedback();
+    if (nextPassword.length < 14 || nextPassword.length > 200) {
+      setError("Choose a password between 14 and 200 characters.");
+      return;
+    }
+    if (nextPassword !== confirmPassword) {
+      setError("The password confirmation does not match.");
+      return;
+    }
+    setBusy(true);
+    try {
+      await apiRequest("/api/admin/password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ password: nextPassword }),
+      });
+      setNextPassword("");
+      setConfirmPassword("");
+      setSession((current) => current ? { ...current, passwordChangeRequired: false } : current);
+      setNotice("Password updated. Your temporary password is no longer valid.");
+      await refreshAdminData();
+      if (session?.role === "admin") await Promise.all([refreshAdminUsers(), refreshCorporateDocuments()]);
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Password could not be changed.");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const createAdminUser = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setAccountError("");
+    setAccountNotice("");
+    setTemporaryPassword("");
+    setBusy(true);
+    try {
+      const created = await apiRequest<AdminUser & { temporaryPassword: string }>("/api/admin/users", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: newUserEmail, role: newUserRole }),
+      });
+      setAdminUsers((current) => [...current, created].sort((left, right) => left.created_at.localeCompare(right.created_at)));
+      setNewUserEmail("");
+      setTemporaryPassword(created.temporaryPassword);
+      setAccountNotice(`Account created for ${created.email}. Copy the temporary password and share it through a trusted channel.`);
+    } catch (cause) {
+      setAccountError(cause instanceof Error ? cause.message : "Account could not be created.");
     } finally {
       setBusy(false);
     }
@@ -177,9 +266,32 @@ export function AdminPage() {
       setSession({ authenticated: false, email: null, role: null, configured: true });
       setProfiles([]);
       setAudit([]);
+      setCorporateDocuments([]);
+      setSelectedCorporateDocument("");
+      setAdminUsers([]);
+      setTemporaryPassword("");
       setEditingId(null);
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Sign-out failed.");
+    }
+  };
+
+  const uploadCorporateDocument = async (id: string, file?: File) => {
+    if (!file) return;
+    setCorporateDocumentsError("");
+    setBusy(true);
+    try {
+      await apiRequest(`/api/admin/corporate-documents/${encodeURIComponent(id)}`, {
+        method: "PUT",
+        headers: { "Content-Type": file.type || "application/octet-stream" },
+        body: file,
+      });
+      await refreshCorporateDocuments();
+      setSelectedCorporateDocument(id);
+    } catch (cause) {
+      setCorporateDocumentsError(cause instanceof Error ? cause.message : "Certificate upload failed.");
+    } finally {
+      setBusy(false);
     }
   };
 
@@ -439,7 +551,7 @@ export function AdminPage() {
   return (
     <main className="admin-page">
       <header className="admin-header">
-        <div><span className="leadership-kicker">CHALINZE STEEL MILLS LTD</span><h1>Leadership<br /><em>administration.</em></h1><p>Manage, review and publish company leadership profiles.</p></div>
+        <div><span className="leadership-kicker">CHALINZE STEEL MILLS LTD · SECURE WORKSPACE</span><h1>Website<br /><em>control room.</em></h1><p>Manage public content, media, leadership and access from one place.</p></div>
         <Link className="button button-outline" to="/leadership"><ArrowLeft size={15} /> Public leadership page</Link>
       </header>
       {!session && !error && <p className="leadership-load-state" role="status">Connecting to the administration service…</p>}
@@ -465,10 +577,50 @@ export function AdminPage() {
           </div>}
         </section>
       )}
-      {session?.authenticated && <>
+      {session?.authenticated && (session.passwordChangeRequired ? <section className="admin-login admin-password-rotation">
+        <span className="leadership-kicker">SECURE YOUR ACCOUNT</span>
+        <h2>Choose a new password to continue.</h2>
+        <p>Your administrator gave you a one-time temporary password. Replace it now before accessing any dashboard features.</p>
+        <form onSubmit={changePassword}>
+          <label>New password<input type="password" autoComplete="new-password" value={nextPassword} onChange={(event) => setNextPassword(event.target.value)} minLength={14} maxLength={200} required /></label>
+          <label>Confirm new password<input type="password" autoComplete="new-password" value={confirmPassword} onChange={(event) => setConfirmPassword(event.target.value)} minLength={14} maxLength={200} required /></label>
+          <small>Use 14–200 characters. Your new password is never shown to administrators.</small>
+          <button className="button button-orange" type="submit" disabled={busy}><ShieldCheck size={15} /> {busy ? "Updating…" : "Set new password"}</button>
+          <button className="admin-quiet-button" type="button" onClick={() => void signOut()} disabled={busy}><LogOut size={15} /> Sign out</button>
+        </form>
+      </section> : <>
         <div className="admin-toolbar"><p>Signed in as <strong>{session.email}</strong> · {session.role === "admin" ? "Administrator" : "Content editor"}. Changes are recorded.</p><div className="admin-toolbar-actions"><button className="admin-quiet-button" type="button" disabled={busy || session.role !== "admin" || !historyStatus.canUndo} title={historyStatus.undoLabel ?? "No recent changes to undo"} onClick={() => void applyUndoRedo("undo")}><Undo2 size={15} /> Undo</button><button className="admin-quiet-button" type="button" disabled={busy || session.role !== "admin" || !historyStatus.canRedo} title={historyStatus.redoLabel ?? "No changes to redo"} onClick={() => void applyUndoRedo("redo")}><Redo2 size={15} /> Redo</button><button className="admin-quiet-button" type="button" onClick={signOut}><LogOut size={15} /> Sign out</button></div></div>
+        <section className="admin-dashboard-overview" id="dashboard-overview">
+          <div className="admin-dashboard-intro"><div><span className="leadership-kicker">OPERATIONS OVERVIEW</span><h2>Everything in one view.</h2><p>Jump directly to a control area. Drafts are reviewed before administrators publish them live.</p></div><LayoutDashboard size={28} aria-hidden="true" /></div>
+          <div className="admin-dashboard-metrics">
+            <a href="#site-content"><span>Website content</span><strong>{Object.keys(siteConfig.pages).length} <small>pages</small></strong><small>Copy · navigation · design</small></a>
+            <a href="#manufacturing-content"><span>Production story</span><strong>{manufacturingPreview?.stages.length ?? 6} <small>stages</small></strong><small>Technical content · media</small></a>
+            <a href="#leadership"><span>Leadership register</span><strong>{profiles.length} <small>profiles</small></strong><small>{profiles.filter((profile) => profile.status === "published").length} published</small></a>
+            {session.role === "admin" && <a href="#user-management"><span>Access management</span><strong>{adminUsers.length} <small>{adminUsers.length === 1 ? "account" : "accounts"}</small></strong><small>Admins · content editors</small></a>}
+          </div>
+        </section>
+        <nav className="admin-dashboard-nav" aria-label="Dashboard sections">
+          <a href="#site-content">Website content</a><a href="#manufacturing-content">Manufacturing</a><a href="#leadership">Leadership</a>
+          {session.role === "admin" && <><a href="#private-records">Private records</a><a href="#user-management">User access</a></>}
+          <a href="#audit-history">Audit history</a>
+        </nav>
         <section className="admin-review-callout"><strong>Publication review</strong><span>Profiles in Draft, Pending Approval or Archived are not visible publicly. Set a profile to Published only after the company has approved its name, position, portrait and biography.</span></section>
-        <section className="admin-site-editor">
+        {session.role === "admin" && <section className="admin-corporate-documents" id="private-records">
+          <div className="admin-section-heading"><div><span className="leadership-kicker">RESTRICTED CORPORATE RECORDS</span><h2><ShieldCheck size={22} /> Private certificates</h2></div></div>
+          <div className="admin-review-callout"><strong>Administrator-only</strong><span>Unredacted PDF files are stored in the private database and served only to signed-in administrators. Views and uploads are audited. This restricts server access but cannot prevent an authorized viewer from saving, photographing, or capturing the displayed document.</span></div>
+          {corporateDocumentsError && <p className="admin-feedback is-error" role="alert">{corporateDocumentsError}</p>}
+          <div className="corporate-document-admin-list">{corporateDocuments.map((document) => <article key={document.id}>
+            <div><FileText size={18} /><div><strong>{document.label}</strong><small>{document.stored ? `Stored · ${Math.ceil((document.size_bytes ?? 0) / 1024)} KB` : "Not uploaded"}</small></div></div>
+            <label className="admin-upload-button"><Upload size={15} /> {document.stored ? "Replace PDF" : "Upload PDF"}<input type="file" accept="application/pdf,.pdf" disabled={busy} onChange={(event) => { void uploadCorporateDocument(document.id, event.target.files?.[0]); event.currentTarget.value = ""; }} /></label>
+            {document.stored && <button className="button button-outline" type="button" disabled={busy} onClick={() => setSelectedCorporateDocument(document.id)}><Eye size={15} /> View securely</button>}
+          </article>)}</div>
+          {selectedCorporateDocument && corporateDocuments.some((document) => document.id === selectedCorporateDocument && document.stored) && <div className="corporate-document-viewer">
+            <div><strong>{corporateDocuments.find((document) => document.id === selectedCorporateDocument)?.label}</strong><button className="admin-quiet-button" type="button" onClick={() => setSelectedCorporateDocument("")}>Close viewer</button></div>
+            <iframe title="Private corporate certificate viewer" src={`/api/admin/corporate-documents/${encodeURIComponent(selectedCorporateDocument)}`} referrerPolicy="no-referrer" />
+          </div>}
+          <p className="corporate-document-security-note">PDFs can be viewed at their original resolution and zoomed in the browser. Do not share screenshots or copies outside approved company channels.</p>
+        </section>}
+        <section className="admin-site-editor" id="site-content">
           <div className="admin-section-heading"><div><span className="leadership-kicker">SITE-WIDE CONTENT MANAGEMENT</span><h2>Website content & design</h2></div></div>
           <div className="admin-review-callout"><strong>Draft & publish</strong><span>Edit home-page messaging, page copy, navigation, footer and visual presets here. Text is displayed as plain text; links accept internal paths or HTTPS URLs. Only administrators can publish changes. Undo/redo tracks site, manufacturing and leadership edits across the change history.</span></div>
           {siteConfigError && <p className="admin-feedback is-error" role="alert">{siteConfigError}</p>}
@@ -537,7 +689,7 @@ export function AdminPage() {
             <div className="admin-form-actions"><button className="button button-orange" type="submit" disabled={busy}><Save size={15} /> Save site draft</button>{session.role === "admin" && <button className="button button-orange" type="button" disabled={busy} onClick={() => void publishSiteConfig()}><Send size={15} /> Publish site changes</button>}</div>
           </form>
         </section>
-        <section className="admin-manufacturing">
+        <section className="admin-manufacturing" id="manufacturing-content">
           <div className="admin-section-heading"><div><span className="leadership-kicker">PUBLIC SITE CONTENT</span><h2>Manufacturing experience</h2></div><Factory size={22} aria-hidden="true" /></div>
           <div className="admin-review-callout"><strong>Draft & approval</strong><span>Save changes to the private draft, preview them, and publish only after company and engineering review. Every save and publication is recorded in the change history. {manufacturingMeta && <>Last content change: {new Date(manufacturingMeta.updated_at).toLocaleString()} by {manufacturingMeta.updated_by}.</>}</span></div>
           {manufacturingError && <p className="admin-feedback is-error" role="alert">{manufacturingError}</p>}
@@ -573,7 +725,7 @@ export function AdminPage() {
             <small>{Object.keys(manufacturingPreview.media?.stageImages ?? {}).length} stage images · {manufacturingPreview.media?.heroImage ? "Hero image set" : "No hero image"} · {manufacturingPreview.media?.heroVideo ? "Hero video set" : "No hero video"}</small>
           </section>}
         </section>
-        <section className="admin-profile-list">
+        <section className="admin-profile-list" id="leadership">
           <div className="admin-section-heading"><div><span className="leadership-kicker">CONTENT REGISTER</span><h2>Leadership profiles</h2></div><button className="button button-orange" type="button" onClick={openNewProfile}><Plus size={16} /> Add profile</button></div>
           <div className="admin-table-wrap"><table className="admin-table"><thead><tr><th>Profile</th><th>Section</th><th>Status</th><th>Order</th><th>Updated</th><th>Actions</th></tr></thead><tbody>
             {profiles.map((profile) => <tr key={profile.id}>
@@ -613,11 +765,26 @@ export function AdminPage() {
             <div className="admin-form-actions"><button className="button button-orange" type="submit" disabled={busy}><Save size={15} /> {busy ? "Saving…" : "Save profile"}</button>{editingId && <button className="button button-outline" type="button" onClick={() => { const profile = profiles.find((item) => item.id === editingId); if (profile) setPreview({ ...profile, ...form }); }}><Eye size={15} /> Preview</button>}</div>
           </form>
         </section>
-        <section className="admin-audit">
+        {session.role === "admin" && <section className="admin-user-management" id="user-management">
+          <div className="admin-section-heading"><div><span className="leadership-kicker">ROLE-BASED ACCESS</span><h2><Users size={21} /> User management</h2></div></div>
+          <p className="admin-user-intro">Create administrator or content editor accounts. New users must replace their one-time password before opening the dashboard. Share it through a trusted channel; it is shown only in this screen and is never retrievable later.</p>
+          {accountError && <p className="admin-feedback is-error" role="alert">{accountError}</p>}
+          {accountNotice && <p className="admin-feedback" role="status">{accountNotice}</p>}
+          {temporaryPassword && <div className="admin-temporary-password"><strong>One-time password</strong><code>{temporaryPassword}</code><button className="admin-quiet-button" type="button" onClick={() => setTemporaryPassword("")}>Hide password</button></div>}
+          <form className="admin-user-create" onSubmit={createAdminUser}>
+            <label>New user email<input type="email" autoComplete="off" maxLength={254} value={newUserEmail} onChange={(event) => setNewUserEmail(event.target.value)} required /></label>
+            <label>Account role<select value={newUserRole} onChange={(event) => setNewUserRole(event.target.value as "admin" | "editor")}><option value="editor">Content editor — prepare drafts</option><option value="admin">Administrator — full publishing and account access</option></select></label>
+            <button className="button button-orange" type="submit" disabled={busy}><Plus size={15} /> Create account</button>
+          </form>
+          <div className="admin-user-list" aria-label="Existing accounts">
+            {adminUsers.map((user) => <article key={user.id}><div><strong>{user.email}</strong><small>Added {new Date(user.created_at).toLocaleDateString()}</small></div><span className={`admin-role-badge role-${user.role}`}>{user.role === "admin" ? "Administrator" : "Content editor"}</span></article>)}
+          </div>
+        </section>}
+        <section className="admin-audit" id="audit-history">
           <div className="admin-section-heading"><div><span className="leadership-kicker">ACCOUNTABILITY RECORD</span><h2>Profile change history</h2></div></div>
           {audit.length ? <div className="admin-audit-list">{audit.map((entry) => <details key={entry.id}><summary><span>{new Date(entry.created_at).toLocaleString()}</span><strong>{entry.action}</strong><span>{auditEntryLabel(entry)}</span><small>{entry.admin_email}</small></summary><pre>{JSON.stringify({ before: auditSnapshot(entry.before), after: auditSnapshot(entry.after) }, null, 2)}</pre></details>)}</div> : <p>No changes have been recorded yet.</p>}
         </section>
-      </>}
+      </>)}
       {preview && <ProfileDetails key={preview.id} profile={preview} onClose={() => setPreview(null)} />}
     </main>
   );

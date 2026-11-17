@@ -37,11 +37,11 @@ async function waitForServer(url, child) {
   throw new Error("Test server did not start within the timeout.");
 }
 
-async function login(base, email) {
+async function login(base, email, suppliedPassword = password) {
   const response = await fetch(`${base}/api/admin/login`, {
     method: "POST",
     headers: { Origin: base, "Content-Type": "application/json" },
-    body: JSON.stringify({ email, password }),
+    body: JSON.stringify({ email, password: suppliedPassword }),
   });
   if (!response.ok) throw new Error(`Administrator login failed (${response.status}).`);
   const cookie = response.headers.get("set-cookie")?.split(";")[0];
@@ -243,6 +243,123 @@ test("leadership roles, authenticated editing, image uploads and publishing", as
 
     const editorCookie = await login(base, editorEmail);
     const editorHeaders = { Cookie: editorCookie, Origin: base, "Content-Type": "application/json" };
+    const forbiddenUserList = await fetch(`${base}/api/admin/users`, { headers: { Cookie: editorCookie } });
+    if (forbiddenUserList.status !== 403) throw new Error("Content editors could access administrator account management.");
+    const forbiddenUserCreate = await fetch(`${base}/api/admin/users`, {
+      method: "POST",
+      headers: editorHeaders,
+      body: JSON.stringify({ email: "unauthorized-user@example.invalid", role: "editor" }),
+    });
+    if (forbiddenUserCreate.status !== 403) throw new Error("Content editors could create accounts.");
+    const userListResponse = await fetch(`${base}/api/admin/users`, { headers: { Cookie: adminCookie } });
+    const initialUsers = await userListResponse.json();
+    if (!userListResponse.ok || initialUsers.length !== 2 || initialUsers.some((user) => "password_hash" in user || "password_salt" in user)) {
+      throw new Error("Administrator user listing did not return only safe account metadata.");
+    }
+    const invalidUser = await fetch(`${base}/api/admin/users`, {
+      method: "POST",
+      headers: adminHeaders,
+      body: JSON.stringify({ email: "not-an-email", role: "editor" }),
+    });
+    if (invalidUser.status !== 400) throw new Error("Invalid account email was accepted.");
+    const duplicateUser = await fetch(`${base}/api/admin/users`, {
+      method: "POST",
+      headers: adminHeaders,
+      body: JSON.stringify({ email: adminEmail, role: "editor" }),
+    });
+    if (duplicateUser.status !== 409) throw new Error("An account with an existing email was accepted.");
+    const createdUserResponse = await fetch(`${base}/api/admin/users`, {
+      method: "POST",
+      headers: adminHeaders,
+      body: JSON.stringify({ email: "new-editor@example.invalid", role: "editor" }),
+    });
+    const createdUser = await createdUserResponse.json();
+    if (createdUserResponse.status !== 201 || createdUser.role !== "editor" || typeof createdUser.temporaryPassword !== "string" ||
+        createdUser.temporaryPassword.length < 14 || createdUser.password_hash) {
+      throw new Error("Administrator account creation did not return the one-time setup credentials safely.");
+    }
+    const temporaryCookie = await login(base, createdUser.email, createdUser.temporaryPassword);
+    const temporarySession = await (await fetch(`${base}/api/admin/session`, { headers: { Cookie: temporaryCookie } })).json();
+    if (temporarySession.passwordChangeRequired !== true) throw new Error("A newly created user was not required to change the temporary password.");
+    const blockedTemporaryAccess = await fetch(`${base}/api/admin/profiles`, { headers: { Cookie: temporaryCookie } });
+    if (blockedTemporaryAccess.status !== 403) throw new Error("A user accessed dashboard data before replacing the temporary password.");
+    const shortPassword = await fetch(`${base}/api/admin/password`, {
+      method: "POST",
+      headers: { Cookie: temporaryCookie, Origin: base, "Content-Type": "application/json" },
+      body: JSON.stringify({ password: "too-short" }),
+    });
+    if (shortPassword.status !== 400) throw new Error("An underlength password was accepted.");
+    const permanentPassword = "New-User-Password-Changed-8426";
+    const passwordChanged = await fetch(`${base}/api/admin/password`, {
+      method: "POST",
+      headers: { Cookie: temporaryCookie, Origin: base, "Content-Type": "application/json" },
+      body: JSON.stringify({ password: permanentPassword }),
+    });
+    if (!passwordChanged.ok) throw new Error("A valid first-login password change was rejected.");
+    const completedSession = await (await fetch(`${base}/api/admin/session`, { headers: { Cookie: temporaryCookie } })).json();
+    if (completedSession.passwordChangeRequired !== false) throw new Error("Password rotation did not clear the required-change state.");
+    const oldTemporaryLogin = await fetch(`${base}/api/admin/login`, {
+      method: "POST",
+      headers: { Origin: base, "Content-Type": "application/json" },
+      body: JSON.stringify({ email: createdUser.email, password: createdUser.temporaryPassword }),
+    });
+    if (oldTemporaryLogin.status !== 401) throw new Error("The temporary password remained valid after rotation.");
+    const permanentCookie = await login(base, createdUser.email, permanentPassword);
+    const userProfiles = await fetch(`${base}/api/admin/profiles`, { headers: { Cookie: permanentCookie } });
+    if (!userProfiles.ok) throw new Error("The user could not access the dashboard after setting a permanent password.");
+    await fetch(`${base}/api/admin/logout`, { method: "POST", headers: { Cookie: permanentCookie, Origin: base } });
+
+    const privateDocumentsUrl = `${base}/api/admin/corporate-documents`;
+    const unauthorizedDocuments = await fetch(privateDocumentsUrl);
+    if (unauthorizedDocuments.status !== 401) throw new Error("Private certificate metadata was accessible without authentication.");
+    const documentListResponse = await fetch(privateDocumentsUrl, { headers: { Cookie: adminCookie } });
+    const documentList = await documentListResponse.json();
+    if (!documentListResponse.ok || documentList.length !== 3 || documentList.some((document) => document.stored)) {
+      throw new Error("The administrator certificate list did not return the expected private document slots.");
+    }
+    const sampleCertificate = Buffer.from("%PDF-1.7\nPrivate certificate test\n%%EOF\n");
+    const wrongContentType = await fetch(`${privateDocumentsUrl}/taxpayerCertificateOne`, {
+      method: "PUT",
+      headers: { Cookie: adminCookie, Origin: base, "Content-Type": "application/octet-stream" },
+      body: sampleCertificate,
+    });
+    if (wrongContentType.status !== 415) throw new Error("A certificate upload with the wrong media type was accepted.");
+    const invalidCertificate = await fetch(`${privateDocumentsUrl}/taxpayerCertificateOne`, {
+      method: "PUT",
+      headers: { Cookie: adminCookie, Origin: base, "Content-Type": "application/pdf" },
+      body: Buffer.from("not a PDF"),
+    });
+    if (invalidCertificate.status !== 400) throw new Error("A non-PDF certificate upload was accepted.");
+    const oversizedCertificate = await fetch(`${privateDocumentsUrl}/taxpayerCertificateOne`, {
+      method: "PUT",
+      headers: { Cookie: adminCookie, Origin: base, "Content-Type": "application/pdf" },
+      body: Buffer.alloc(1_800_001, 65),
+    });
+    if (oversizedCertificate.status !== 413) throw new Error("An oversized certificate upload was accepted.");
+    const uploadedCertificate = await fetch(`${privateDocumentsUrl}/taxpayerCertificateOne`, {
+      method: "PUT",
+      headers: { Cookie: adminCookie, Origin: base, "Content-Type": "application/pdf" },
+      body: sampleCertificate,
+    });
+    if (!uploadedCertificate.ok) throw new Error("An administrator could not upload a valid private certificate.");
+    const publicCertificateFetch = await fetch(`${privateDocumentsUrl}/taxpayerCertificateOne`);
+    if (publicCertificateFetch.status !== 401) throw new Error("A private certificate was accessible without an administrator session.");
+    const adminCertificateFetch = await fetch(`${privateDocumentsUrl}/taxpayerCertificateOne`, { headers: { Cookie: adminCookie } });
+    const receivedCertificate = Buffer.from(await adminCertificateFetch.arrayBuffer());
+    if (!adminCertificateFetch.ok || !receivedCertificate.equals(sampleCertificate)) throw new Error("Private certificate viewing did not return the stored PDF.");
+    if (!adminCertificateFetch.headers.get("cache-control")?.includes("no-store") || adminCertificateFetch.headers.get("content-disposition")?.startsWith("attachment")) {
+      throw new Error("Private certificate responses were cached or forced into attachment downloads.");
+    }
+    const editorCertificateList = await fetch(privateDocumentsUrl, { headers: { Cookie: editorCookie } });
+    const editorCertificateFetch = await fetch(`${privateDocumentsUrl}/taxpayerCertificateOne`, { headers: { Cookie: editorCookie } });
+    const editorCertificateUpload = await fetch(`${privateDocumentsUrl}/vatCertificate`, {
+      method: "PUT",
+      headers: { Cookie: editorCookie, Origin: base, "Content-Type": "application/pdf" },
+      body: sampleCertificate,
+    });
+    if (editorCertificateList.status !== 403 || editorCertificateFetch.status !== 403 || editorCertificateUpload.status !== 403) {
+      throw new Error("A content editor could access or modify administrator-only certificates.");
+    }
     const forbiddenPublish = await fetch(`${base}/api/admin/profiles`, {
       method: "POST", headers: editorHeaders, body: JSON.stringify({ ...newProfile, name: "Editor Attempt", status: "published" }),
     });

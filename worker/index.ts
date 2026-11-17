@@ -15,7 +15,7 @@ type Bindings = {
   ADMIN_PASSWORD?: string;
 };
 
-type AdminSession = { id: string; email: string; role: "admin" | "editor"; expires_at: string };
+type AdminSession = { id: string; email: string; role: "admin" | "editor"; password_change_required: number; expires_at: string };
 type Variables = { admin: AdminSession; db: D1Database };
 type AppEnv = { Bindings: Bindings; Variables: Variables };
 type SqlValue = string | number | null | ArrayBuffer | ArrayBufferView;
@@ -40,6 +40,12 @@ const app = new Hono<AppEnv>();
 const sessionLifetimeSeconds = 12 * 60 * 60;
 const d1MediaMaxBytes = 1_800_000;
 const d1MediaPartBytes = 64 * 1024;
+const corporateDocumentMaxBytes = 1_800_000;
+const corporateDocuments = {
+  taxpayerCertificateOne: { label: "Taxpayer Identification Certificate — copy 1" },
+  taxpayerCertificateTwo: { label: "Taxpayer Identification Certificate — copy 2" },
+  vatCertificate: { label: "VAT Registration Certificate" },
+} as const;
 const allowedSections = new Set(["board", "management", "support"]);
 const allowedStatuses = new Set(["draft", "pending_approval", "published", "archived"]);
 const allowedPlacements = new Set(["board", "governance"]);
@@ -290,7 +296,7 @@ async function getAdmin(request: Request, db: D1Database) {
   const token = cookieToken(request);
   if (!token) return null;
   const tokenHash = await sha256(token);
-  const session = await one<AdminSession>(db, `SELECT admins.id, admins.email, admins.role, sessions.expires_at
+  const session = await one<AdminSession>(db, `SELECT admins.id, admins.email, admins.role, admins.password_change_required, sessions.expires_at
     FROM sessions JOIN admins ON admins.id = sessions.admin_id WHERE sessions.token_hash = ?`, tokenHash);
   if (!session || Date.parse(session.expires_at) <= Date.now()) {
     await statement(db, "DELETE FROM sessions WHERE token_hash = ?", tokenHash).run();
@@ -372,6 +378,9 @@ app.use("/api/admin/*", async (context, next) => {
   const admin = await getAdmin(context.req.raw, context.get('db'));
   if (!admin) return context.json({ error: "Administrator sign-in is required." }, 401);
   context.set("admin", admin);
+  if (admin.password_change_required && path !== "/api/admin/password" && path !== "/api/admin/logout") {
+    return context.json({ error: "Change your temporary password before using the administration dashboard.", passwordChangeRequired: true }, 403);
+  }
   await next();
 });
 
@@ -401,7 +410,10 @@ app.get("/api/admin/session", async (context) => {
   await bootstrapAdmin(context.get('db'), context.env);
   const admin = await getAdmin(context.req.raw, context.get('db'));
   const count = await one<{ count: number }>(context.get('db'), "SELECT COUNT(*) AS count FROM admins");
-  return context.json({ authenticated: Boolean(admin), email: admin?.email ?? null, role: admin?.role ?? null, configured: Boolean(count?.count) });
+  return context.json({
+    authenticated: Boolean(admin), email: admin?.email ?? null, role: admin?.role ?? null,
+    configured: Boolean(count?.count), passwordChangeRequired: Boolean(admin?.password_change_required),
+  });
 });
 
 app.post("/api/admin/login", async (context) => {
@@ -416,7 +428,7 @@ app.post("/api/admin/login", async (context) => {
   const email = typeof body.email === "string" ? body.email.trim().toLowerCase() : "";
   const password = typeof body.password === "string" ? body.password : "";
   if (email.length > 254 || password.length > 200) return context.json({ error: "Email or password is incorrect." }, 401);
-  const admin = await one<{ id: string; email: string; password_hash: string; password_salt: string; role: "admin" | "editor" }>(
+  const admin = await one<{ id: string; email: string; password_hash: string; password_salt: string; role: "admin" | "editor"; password_change_required: number }>(
     context.get('db'), "SELECT * FROM admins WHERE email = ?", email);
   const supplied = await passwordHash(password, admin?.password_salt ?? crypto.randomUUID());
   if (!admin || !constantTimeEqual(supplied, admin.password_hash)) {
@@ -429,7 +441,57 @@ app.post("/api/admin/login", async (context) => {
   await statement(context.get('db'), "INSERT INTO sessions (token_hash, admin_id, expires_at) VALUES (?, ?, ?)",
     await sha256(token), admin.id, expiresAt).run();
   context.header("Set-Cookie", `csm_admin=${encodeURIComponent(token)}; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=${sessionLifetimeSeconds}`);
-  return context.json({ authenticated: true, email: admin.email, role: admin.role });
+  return context.json({ authenticated: true, email: admin.email, role: admin.role, passwordChangeRequired: Boolean(admin.password_change_required) });
+});
+
+app.get("/api/admin/users", async (context) => {
+  const admin = context.get("admin");
+  if (admin.role !== "admin") return context.json({ error: "Administrator privileges are required to manage accounts." }, 403);
+  const users = await many<{ id: string; email: string; role: "admin" | "editor"; created_at: string }>(
+    context.get("db"), "SELECT id, email, role, created_at FROM admins ORDER BY created_at, email");
+  context.header("Cache-Control", "no-store");
+  return context.json(users);
+});
+
+app.post("/api/admin/users", async (context) => {
+  const admin = context.get("admin");
+  if (admin.role !== "admin") return context.json({ error: "Administrator privileges are required to manage accounts." }, 403);
+  const body = await context.req.json<{ email?: unknown; role?: unknown }>();
+  const email = typeof body.email === "string" ? body.email.trim().toLowerCase() : "";
+  const role = body.role;
+  if (email.length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return context.json({ error: "Enter a valid email address." }, 400);
+  if (role !== "admin" && role !== "editor") return context.json({ error: "Choose either the Administrator or Content editor role." }, 400);
+  const temporaryPassword = btoa(String.fromCharCode(...crypto.getRandomValues(new Uint8Array(24))))
+    .replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "");
+  const salt = crypto.randomUUID();
+  const hash = await passwordHash(temporaryPassword, salt);
+  const id = crypto.randomUUID();
+  const createdAt = new Date().toISOString();
+  const result = await statement(context.get("db"),
+    "INSERT OR IGNORE INTO admins (id, email, password_hash, password_salt, role, created_at, password_change_required) VALUES (?, ?, ?, ?, ?, ?, 1)",
+    id, email, hash, salt, role, createdAt).run();
+  if (!result.meta.changes) return context.json({ error: "An account with this email already exists." }, 409);
+  await logAudit(context.get("db"), `admin:${id}`, admin.email, "administrator account created", null, { email, role });
+  context.header("Cache-Control", "no-store");
+  return context.json({ id, email, role, created_at: createdAt, temporaryPassword }, 201);
+});
+
+app.post("/api/admin/password", async (context) => {
+  const admin = context.get("admin");
+  const body = await context.req.json<{ password?: unknown }>();
+  const password = typeof body.password === "string" ? body.password : "";
+  if (password.length < 14 || password.length > 200) return context.json({ error: "Choose a password between 14 and 200 characters." }, 400);
+  const salt = crypto.randomUUID();
+  const hash = await passwordHash(password, salt);
+  const tokenHash = await sha256(cookieToken(context.req.raw));
+  await context.get("db").batch([
+    statement(context.get("db"), "UPDATE admins SET password_hash = ?, password_salt = ?, password_change_required = 0 WHERE id = ?", hash, salt, admin.id),
+    statement(context.get("db"), "DELETE FROM sessions WHERE admin_id = ? AND token_hash != ?", admin.id, tokenHash),
+    statement(context.get("db"), "INSERT INTO audit_log (profile_id, admin_email, action, before_json, after_json, created_at) VALUES (?, ?, ?, NULL, ?, ?)",
+      `admin:${admin.id}`, admin.email, "account password changed", JSON.stringify({ passwordChangeRequired: false }), new Date().toISOString()),
+  ]);
+  context.header("Cache-Control", "no-store");
+  return context.json({ passwordChanged: true });
 });
 
 app.post("/api/admin/logout", async (context) => {
@@ -442,6 +504,80 @@ app.post("/api/admin/logout", async (context) => {
 app.get("/api/admin/profiles", async (context) => {
   const rows = await many<ProfileRow>(context.get('db'), "SELECT * FROM profiles ORDER BY section, sort_order, name");
   return context.json(rows.map((row) => profileFromRow(row)));
+});
+
+app.get("/api/admin/corporate-documents", async (context) => {
+  const admin = context.get("admin");
+  if (admin.role !== "admin") return context.json({ error: "Administrator privileges are required to access corporate certificates." }, 403);
+  const rows = await many<{ document_key: string; size_bytes: number; updated_at: string }>(
+    context.get("db"), "SELECT document_key, size_bytes, updated_at FROM corporate_documents");
+  const stored = new Map(rows.map((row) => [row.document_key, row]));
+  return context.json(Object.entries(corporateDocuments).map(([id, document]) => ({
+    id,
+    label: document.label,
+    stored: stored.has(id),
+    size_bytes: stored.get(id)?.size_bytes ?? null,
+    updated_at: stored.get(id)?.updated_at ?? null,
+  })));
+});
+
+app.put("/api/admin/corporate-documents/:key", async (context) => {
+  const admin = context.get("admin");
+  if (admin.role !== "admin") return context.json({ error: "Administrator privileges are required to manage corporate certificates." }, 403);
+  const key = context.req.param("key") as keyof typeof corporateDocuments;
+  if (!Object.hasOwn(corporateDocuments, key)) return context.json({ error: "Unknown corporate certificate." }, 404);
+  if (!context.req.header("content-type")?.toLowerCase().startsWith("application/pdf")) {
+    return context.json({ error: "Upload a PDF certificate." }, 415);
+  }
+  const declaredSize = Number(context.req.header("content-length"));
+  if (Number.isFinite(declaredSize) && declaredSize > corporateDocumentMaxBytes) {
+    return context.json({ error: "PDF files must be 1.8 MB or smaller." }, 413);
+  }
+  const bytes = new Uint8Array(await context.req.arrayBuffer());
+  if (!bytes.byteLength || bytes.byteLength > corporateDocumentMaxBytes) {
+    return context.json({ error: "PDF files must be non-empty and 1.8 MB or smaller." }, 413);
+  }
+  if (new TextDecoder().decode(bytes.subarray(0, 5)) !== "%PDF-") {
+    return context.json({ error: "The uploaded file is not a valid PDF." }, 400);
+  }
+  const now = new Date().toISOString();
+  await statement(context.get("db"), `INSERT INTO corporate_documents
+    (document_key, content_type, size_bytes, document_data, uploaded_by, updated_at)
+    VALUES (?, 'application/pdf', ?, ?, ?, ?)
+    ON CONFLICT(document_key) DO UPDATE SET content_type = excluded.content_type,
+      size_bytes = excluded.size_bytes, document_data = excluded.document_data,
+      uploaded_by = excluded.uploaded_by, updated_at = excluded.updated_at`,
+  key, bytes.byteLength, bytes, admin.email, now).run();
+  await logAudit(context.get("db"), `corporate-document:${key}`, admin.email, "private corporate certificate uploaded", null, { size_bytes: bytes.byteLength, updated_at: now });
+  return context.json({ uploaded: true, id: key, size_bytes: bytes.byteLength, updated_at: now });
+});
+
+app.get("/api/admin/corporate-documents/:key", async (context) => {
+  const admin = context.get("admin");
+  if (admin.role !== "admin") return context.json({ error: "Administrator privileges are required to view corporate certificates." }, 403);
+  const key = context.req.param("key") as keyof typeof corporateDocuments;
+  if (!Object.hasOwn(corporateDocuments, key)) return context.notFound();
+  const row = await one<{ document_data: unknown; size_bytes: number }>(
+    context.get("db"), "SELECT document_data, size_bytes FROM corporate_documents WHERE document_key = ?", key);
+  if (!row) return context.notFound();
+  const bytes = bytesFromD1Blob(row.document_data);
+  if (!bytes || bytes.byteLength !== row.size_bytes) {
+    return new Response("Stored certificate is incomplete.", { status: 500, headers: { "Cache-Control": "no-store" } });
+  }
+  await logAudit(context.get("db"), `corporate-document:${key}`, admin.email, "private corporate certificate viewed", null, null);
+  return new Response(bytes, {
+    headers: {
+      "Content-Type": "application/pdf",
+      "Content-Disposition": 'inline; filename="corporate-certificate.pdf"',
+      "Cache-Control": "private, no-store, max-age=0",
+      "Pragma": "no-cache",
+      "X-Content-Type-Options": "nosniff",
+      "X-Frame-Options": "SAMEORIGIN",
+      "Referrer-Policy": "no-referrer",
+      "Content-Security-Policy": "default-src 'none'; frame-ancestors 'self'",
+      "Content-Length": String(row.size_bytes),
+    },
+  });
 });
 
 app.get("/api/admin/site-config", async (context) => {

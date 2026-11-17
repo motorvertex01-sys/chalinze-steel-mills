@@ -12,6 +12,12 @@ const app = express();
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const port = Number(process.env.PORT || 4173);
 const sessionLifetimeMs = 12 * 60 * 60 * 1000;
+const corporateDocumentMaxBytes = 1_800_000;
+const corporateDocuments = {
+  taxpayerCertificateOne: "Taxpayer Identification Certificate — copy 1",
+  taxpayerCertificateTwo: "Taxpayer Identification Certificate — copy 2",
+  vatCertificate: "VAT Registration Certificate",
+};
 const loginAttempts = new Map();
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 * 1024 * 1024, files: 1 } });
 const manufacturingMediaUpload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 30 * 1024 * 1024, files: 1 } });
@@ -190,7 +196,7 @@ async function getAdmin(request) {
   if (!token) return null;
   const hash = crypto.createHash("sha256").update(token).digest("hex");
   const session = await db.get(`
-    SELECT admins.id, admins.email, admins.role, sessions.expires_at
+    SELECT admins.id, admins.email, admins.role, admins.password_change_required, sessions.expires_at
     FROM sessions JOIN admins ON admins.id = sessions.admin_id
     WHERE sessions.token_hash = ?
   `, hash);
@@ -205,6 +211,9 @@ async function requireAdmin(request, response, next) {
   const admin = await getAdmin(request);
   if (!admin) return response.status(401).json({ error: "Administrator sign-in is required." });
   request.admin = admin;
+  if (admin.password_change_required && request.path !== "/api/admin/logout" && request.path !== "/api/admin/password") {
+    return response.status(403).json({ error: "Change your temporary password before using the administration dashboard.", passwordChangeRequired: true });
+  }
   next();
 }
 
@@ -351,6 +360,7 @@ app.get("/api/admin/session", async (request, response) => {
     authenticated: Boolean(admin),
     email: admin?.email ?? null,
     role: admin?.role ?? null,
+    passwordChangeRequired: Boolean(admin?.password_change_required),
     configured: Number((await db.get("SELECT COUNT(*) AS count FROM admins")).count) > 0,
   });
 });
@@ -404,7 +414,55 @@ app.post("/api/admin/login", async (request, response) => {
     expiry,
   );
   response.setHeader("Set-Cookie", `csm_admin=${encodeURIComponent(token)}; Path=/; HttpOnly; SameSite=Strict; Max-Age=${Math.floor(sessionLifetimeMs / 1000)}${process.env.NODE_ENV === "production" ? "; Secure" : ""}`);
-  response.json({ authenticated: true, email: admin.email, role: admin.role });
+  response.json({ authenticated: true, email: admin.email, role: admin.role, passwordChangeRequired: Boolean(admin.password_change_required) });
+});
+
+app.get("/api/admin/users", requireAdmin, requireAdministrator, async (_request, response) => {
+  const users = await db.all("SELECT id, email, role, created_at FROM admins ORDER BY created_at, email");
+  response.setHeader("Cache-Control", "no-store");
+  response.json(users);
+});
+
+app.post("/api/admin/users", requireAdmin, requireAdministrator, async (request, response) => {
+  const email = typeof request.body?.email === "string" ? request.body.email.trim().toLowerCase() : "";
+  const role = request.body?.role;
+  if (email.length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    return response.status(400).json({ error: "Enter a valid email address." });
+  }
+  if (role !== "admin" && role !== "editor") return response.status(400).json({ error: "Choose either the Administrator or Content editor role." });
+  if (await db.get("SELECT id FROM admins WHERE email = ?", email)) return response.status(409).json({ error: "An account with this email already exists." });
+
+  const temporaryPassword = crypto.randomBytes(24).toString("base64url");
+  const passwordSalt = crypto.randomBytes(16).toString("hex");
+  const passwordHash = crypto.scryptSync(temporaryPassword, passwordSalt, 64).toString("hex");
+  const id = crypto.randomUUID();
+  const createdAt = new Date().toISOString();
+  try {
+    await db.run(`INSERT INTO admins (id, email, password_hash, password_salt, role, created_at, password_change_required)
+      VALUES (?, ?, ?, ?, ?, ?, 1)`, id, email, passwordHash, passwordSalt, role, createdAt);
+  } catch (cause) {
+    if (cause?.code === "SQLITE_CONSTRAINT_UNIQUE") return response.status(409).json({ error: "An account with this email already exists." });
+    throw cause;
+  }
+  await writeAudit({ profileId: `admin:${id}`, email: request.admin.email, action: "administrator account created", before: null, after: { email, role } });
+  response.status(201).setHeader("Cache-Control", "no-store");
+  response.json({ id, email, role, created_at: createdAt, temporaryPassword });
+});
+
+app.post("/api/admin/password", requireAdmin, async (request, response) => {
+  const password = typeof request.body?.password === "string" ? request.body.password : "";
+  if (password.length < 14 || password.length > 200) return response.status(400).json({ error: "Choose a password between 14 and 200 characters." });
+  const salt = crypto.randomBytes(16).toString("hex");
+  const hash = crypto.scryptSync(password, salt, 64).toString("hex");
+  const tokenHash = crypto.createHash("sha256").update(cookieToken(request)).digest("hex");
+  await db.transaction(async (tx) => {
+    await tx.run("UPDATE admins SET password_hash = ?, password_salt = ?, password_change_required = 0 WHERE id = ?", hash, salt, request.admin.id);
+    await tx.run("DELETE FROM sessions WHERE admin_id = ? AND token_hash != ?", request.admin.id, tokenHash);
+    await tx.run("INSERT INTO audit_log (profile_id, admin_email, action, before_json, after_json, created_at) VALUES (?, ?, ?, NULL, ?, ?)",
+      `admin:${request.admin.id}`, request.admin.email, "account password changed", JSON.stringify({ passwordChangeRequired: false }), new Date().toISOString());
+  });
+  response.setHeader("Cache-Control", "no-store");
+  response.json({ passwordChanged: true });
 });
 
 app.post("/api/admin/logout", requireAdmin, async (request, response) => {
@@ -417,6 +475,68 @@ app.post("/api/admin/logout", requireAdmin, async (request, response) => {
 app.get("/api/admin/profiles", requireAdmin, async (_request, response) => {
   const profiles = await db.all("SELECT * FROM profiles ORDER BY section, sort_order, name");
   response.json(profiles.map(profileFromRow));
+});
+
+app.get("/api/admin/corporate-documents", requireAdmin, requireAdministrator, async (_request, response) => {
+  const rows = await db.all("SELECT document_key, size_bytes, updated_at FROM corporate_documents");
+  const stored = new Map(rows.map((row) => [row.document_key, row]));
+  response.setHeader("Cache-Control", "no-store");
+  response.json(Object.entries(corporateDocuments).map(([id, label]) => ({
+    id,
+    label,
+    stored: stored.has(id),
+    size_bytes: stored.get(id)?.size_bytes ?? null,
+    updated_at: stored.get(id)?.updated_at ?? null,
+  })));
+});
+
+app.put("/api/admin/corporate-documents/:key", requireAdmin, requireAdministrator, (request, response, next) => {
+  if (!request.is("application/pdf")) return response.status(415).json({ error: "Upload a PDF certificate." });
+  next();
+}, express.raw({ type: "application/pdf", limit: corporateDocumentMaxBytes }), async (request, response) => {
+  const { key } = request.params;
+  if (!Object.hasOwn(corporateDocuments, key)) return response.status(404).json({ error: "Unknown corporate certificate." });
+  if (!Buffer.isBuffer(request.body) || !request.body.length || request.body.length > corporateDocumentMaxBytes) {
+    return response.status(413).json({ error: "PDF files must be non-empty and 1.8 MB or smaller." });
+  }
+  if (request.body.subarray(0, 5).toString("ascii") !== "%PDF-") {
+    return response.status(400).json({ error: "The uploaded file is not a valid PDF." });
+  }
+  const now = new Date().toISOString();
+  await db.run(`INSERT INTO corporate_documents
+    (document_key, content_type, size_bytes, document_data, uploaded_by, updated_at)
+    VALUES (?, 'application/pdf', ?, ?, ?, ?)
+    ON CONFLICT(document_key) DO UPDATE SET content_type = excluded.content_type,
+      size_bytes = excluded.size_bytes, document_data = excluded.document_data,
+      uploaded_by = excluded.uploaded_by, updated_at = excluded.updated_at`,
+  key, request.body.length, request.body, request.admin.email, now);
+  await writeAudit({ profileId: `corporate-document:${key}`, email: request.admin.email, action: "private corporate certificate uploaded", before: null, after: { size_bytes: request.body.length, updated_at: now } });
+  response.setHeader("Cache-Control", "no-store");
+  response.json({ uploaded: true, id: key, size_bytes: request.body.length, updated_at: now });
+});
+
+app.get("/api/admin/corporate-documents/:key", requireAdmin, requireAdministrator, async (request, response) => {
+  const { key } = request.params;
+  if (!Object.hasOwn(corporateDocuments, key)) return response.status(404).json({ error: "Corporate certificate was not found." });
+  const row = await db.get("SELECT document_data, size_bytes FROM corporate_documents WHERE document_key = ?", key);
+  if (!row) return response.status(404).json({ error: "Corporate certificate was not found." });
+  const bytes = Buffer.from(row.document_data);
+  if (bytes.length !== row.size_bytes || bytes.subarray(0, 5).toString("ascii") !== "%PDF-") {
+    return response.status(500).json({ error: "Stored certificate is incomplete." });
+  }
+  await writeAudit({ profileId: `corporate-document:${key}`, email: request.admin.email, action: "private corporate certificate viewed", before: null, after: null });
+  response.set({
+    "Content-Type": "application/pdf",
+    "Content-Disposition": 'inline; filename="corporate-certificate.pdf"',
+    "Cache-Control": "private, no-store, max-age=0",
+    "Pragma": "no-cache",
+    "X-Content-Type-Options": "nosniff",
+    "X-Frame-Options": "SAMEORIGIN",
+    "Referrer-Policy": "no-referrer",
+    "Content-Security-Policy": "default-src 'none'; frame-ancestors 'self'",
+    "Content-Length": String(bytes.length),
+  });
+  response.send(bytes);
 });
 
 app.get("/api/admin/site-config", requireAdmin, async (_request, response) => {
@@ -711,6 +831,7 @@ app.use((error, request, response, _next) => {
     const manufacturingMedia = request.path === "/api/admin/manufacturing/media";
     return response.status(400).json({ error: error.code === "LIMIT_FILE_SIZE" ? manufacturingMedia ? "Manufacturing media files must be 30 MB or smaller." : "Portrait images must be 5 MB or smaller." : "The media upload could not be processed." });
   }
+  if (error?.type === "entity.too.large") return response.status(413).json({ error: "PDF files must be 1.8 MB or smaller." });
   console.error(error);
   response.status(500).json({ error: "The server could not complete the request." });
 });

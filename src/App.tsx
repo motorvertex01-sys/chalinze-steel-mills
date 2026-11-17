@@ -320,21 +320,15 @@ function ContactDirectory() {
     <div className="contact-verification-note"><strong>Contact information</strong><span>Contact details are transcribed from company material. The source lists two office-address variants; the planned project site is shown separately from the Dar es Salaam contact office.</span></div>
     <section className="corporate-documents" aria-labelledby="corporate-documents-title">
       <div className="corporate-documents-heading">
-        <div><span className="card-tag">PARENT COMPANY REGISTRATION</span><h2 id="corporate-documents-title">Group credentials.</h2></div>
-        <p>Public viewing copies of the supplied Tanzania Revenue Authority certificates issued to Gypsum Plus Mines Limited. Tax identifiers and signatures are redacted.</p>
+        <div><span className="card-tag">AUTHORIZED COMPANY ACCESS</span><h2 id="corporate-documents-title">Group credentials.</h2></div>
+        <p>Original registration certificates are restricted to signed-in administrators. Open the secure administration area to upload and view them.</p>
       </div>
       <div className="corporate-documents-grid">
         <article className="corporate-document-card">
-          <span className="card-tag">TAXPAYER REGISTRATION</span>
-          <h3>Taxpayer Identification Certificate</h3>
-          <p>Issued to Gypsum Plus Mines Limited by the Tanzania Revenue Authority.</p>
-          <a className="text-link" href="/assets/corporate/taxpayer-registration-public.pdf" target="_blank" rel="noreferrer">View public certificate <ArrowUpRight size={15} /></a>
-        </article>
-        <article className="corporate-document-card">
-          <span className="card-tag">VALUE ADDED TAX</span>
-          <h3>VAT Registration Certificate</h3>
-          <p>Issued to Gypsum Plus Mines Limited by the Tanzania Revenue Authority.</p>
-          <a className="text-link" href="/assets/corporate/vat-registration-public.pdf" target="_blank" rel="noreferrer">View public certificate <ArrowUpRight size={15} /></a>
+          <span className="card-tag">PRIVATE DOCUMENTS</span>
+          <h3>Administrator sign-in required</h3>
+          <p>Only authorized administrator accounts can upload or view these certificates. Document access is logged. Browser screenshots or other capture by an authorized viewer cannot be technically prevented.</p>
+          <Link className="text-link" to="/admin">Open secure administration <ArrowUpRight size={15} /></Link>
         </article>
       </div>
     </section>

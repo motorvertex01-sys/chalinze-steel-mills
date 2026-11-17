@@ -161,7 +161,8 @@ async function initialize() {
   sqlite.exec(`
     CREATE TABLE IF NOT EXISTS admins (
       id TEXT PRIMARY KEY, email TEXT NOT NULL UNIQUE, password_hash TEXT NOT NULL, password_salt TEXT NOT NULL,
-      role TEXT NOT NULL DEFAULT 'admin' CHECK (role IN ('admin', 'editor')), created_at TEXT NOT NULL
+      role TEXT NOT NULL DEFAULT 'admin' CHECK (role IN ('admin', 'editor')), created_at TEXT NOT NULL,
+      password_change_required INTEGER NOT NULL DEFAULT 0
     );
     CREATE TABLE IF NOT EXISTS sessions (
       token_hash TEXT PRIMARY KEY, admin_id TEXT NOT NULL REFERENCES admins(id) ON DELETE CASCADE, expires_at TEXT NOT NULL
@@ -171,6 +172,11 @@ async function initialize() {
       biography TEXT NOT NULL DEFAULT '', background TEXT NOT NULL DEFAULT '', qualifications TEXT NOT NULL DEFAULT '',
       responsibilities TEXT NOT NULL DEFAULT '', photo_url TEXT NOT NULL DEFAULT '', is_vacant INTEGER NOT NULL DEFAULT 0,
       status TEXT NOT NULL, sort_order INTEGER NOT NULL DEFAULT 0, updated_at TEXT NOT NULL
+    );
+    CREATE TABLE IF NOT EXISTS corporate_documents (
+      document_key TEXT PRIMARY KEY, content_type TEXT NOT NULL CHECK (content_type = 'application/pdf'),
+      size_bytes INTEGER NOT NULL CHECK (size_bytes > 0 AND size_bytes <= 1800000),
+      document_data BLOB NOT NULL, uploaded_by TEXT NOT NULL, updated_at TEXT NOT NULL
     );
     CREATE TABLE IF NOT EXISTS audit_log (
       id INTEGER PRIMARY KEY AUTOINCREMENT, profile_id TEXT NOT NULL, admin_email TEXT NOT NULL, action TEXT NOT NULL,
@@ -191,6 +197,7 @@ async function initialize() {
   `);
   const adminColumns = sqlite.pragma("table_info(admins)").map((column) => column.name);
   if (!adminColumns.includes("role")) sqlite.exec("ALTER TABLE admins ADD COLUMN role TEXT NOT NULL DEFAULT 'admin'");
+  if (!adminColumns.includes("password_change_required")) sqlite.exec("ALTER TABLE admins ADD COLUMN password_change_required INTEGER NOT NULL DEFAULT 0");
 
   const manufacturingDefault = JSON.parse(fs.readFileSync(path.join(root, "manufacturing-content.json"), "utf8"));
   const now = new Date().toISOString();
