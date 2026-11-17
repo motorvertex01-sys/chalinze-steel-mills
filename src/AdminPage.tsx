@@ -1,11 +1,12 @@
 import { useEffect, useState } from "react";
 import type { FormEvent } from "react";
-import { ArrowLeft, ArrowUpRight, Eye, Factory, FileText, LayoutDashboard, LogOut, Plus, Redo2, Save, Send, ShieldCheck, Trash2, Undo2, Upload, Users, X } from "lucide-react";
+import { ArrowDown, ArrowLeft, ArrowUp, ArrowUpRight, Eye, Factory, FileText, Image, LayoutDashboard, LogOut, Plus, Redo2, Save, Send, ShieldCheck, Trash2, Undo2, Upload, Users, X } from "lucide-react";
 import { Link } from "react-router-dom";
 import { ProfileDetails } from "./LeadershipPage";
 import type { LeadershipProfile, ProfileInput, ProfileStatus } from "./leadershipTypes";
 import { availablePageLayouts, createDefaultSiteConfig, mergeSiteConfig, siteConfigPathIsSafe } from "./siteConfig";
 import type { SiteConfig, SiteGroup } from "./siteConfig";
+import type { VisualGalleryContent, VisualMediaItem } from "./VisualGallery";
 
 type AdminSession = { authenticated: boolean; email: string | null; role: "admin" | "editor" | null; configured: boolean; passwordChangeRequired?: boolean };
 type AuditEntry = { id: number; profile_id: string; admin_email: string; action: string; before: unknown; after: unknown; created_at: string };
@@ -18,6 +19,8 @@ type ManufacturingContent = {
   [key: string]: unknown;
 };
 type ManufacturingAdminData = { published: ManufacturingContent; draft: ManufacturingContent; updated_by: string; updated_at: string };
+type VisualGalleryAdminData = { published: VisualGalleryContent; draft: VisualGalleryContent; updated_by: string; updated_at: string };
+type VisualGalleryItemForm = Omit<VisualMediaItem, "id" | "sortOrder">;
 type HistoryStatus = { canUndo: boolean; canRedo: boolean; undoLabel: string | null; redoLabel: string | null };
 type CorporateDocument = { id: string; label: string; stored: boolean; size_bytes: number | null; updated_at: string | null };
 
@@ -34,6 +37,15 @@ const emptyProfile = (): ProfileInput => ({
   is_vacant: false,
   status: "draft",
   sort_order: 10,
+});
+
+const emptyGalleryItem = (): VisualGalleryItemForm => ({
+  title: "",
+  category: "",
+  description: "",
+  alt: "",
+  mediaType: "image",
+  mediaUrl: "",
 });
 
 function auditEntryLabel(entry: AuditEntry) {
@@ -91,6 +103,11 @@ export function AdminPage() {
   const [manufacturingMediaTarget, setManufacturingMediaTarget] = useState("heroImage");
   const [manufacturingError, setManufacturingError] = useState("");
   const [manufacturingNotice, setManufacturingNotice] = useState("");
+  const [visualGallery, setVisualGallery] = useState<VisualGalleryAdminData | null>(null);
+  const [galleryItemForm, setGalleryItemForm] = useState<VisualGalleryItemForm>(emptyGalleryItem);
+  const [galleryEditingId, setGalleryEditingId] = useState<string | null>(null);
+  const [galleryError, setGalleryError] = useState("");
+  const [galleryNotice, setGalleryNotice] = useState("");
   const [siteConfig, setSiteConfig] = useState<SiteConfig>(createDefaultSiteConfig);
   const [siteConfigError, setSiteConfigError] = useState("");
   const [siteConfigNotice, setSiteConfigNotice] = useState("");
@@ -118,12 +135,13 @@ export function AdminPage() {
   const [notice, setNotice] = useState("");
 
   const refreshAdminData = async () => {
-    const [nextProfiles, nextAudit, nextManufacturing, nextSiteConfig, nextHistory] = await Promise.all([
+    const [nextProfiles, nextAudit, nextManufacturing, nextSiteConfig, nextHistory, nextVisualGallery] = await Promise.all([
       apiRequest<LeadershipProfile[]>("/api/admin/profiles"),
       apiRequest<AuditEntry[]>("/api/admin/audit"),
       apiRequest<ManufacturingAdminData>("/api/admin/manufacturing"),
       apiRequest<{ draft: Partial<SiteConfig> }>("/api/admin/site-config"),
       apiRequest<HistoryStatus>("/api/admin/history"),
+      apiRequest<VisualGalleryAdminData>("/api/admin/visual-gallery"),
     ]);
     setProfiles(nextProfiles);
     setAudit(nextAudit);
@@ -131,6 +149,7 @@ export function AdminPage() {
     setManufacturingMeta({ updated_by: nextManufacturing.updated_by, updated_at: nextManufacturing.updated_at });
     setSiteConfig(mergeSiteConfig(nextSiteConfig.draft));
     setHistoryStatus(nextHistory);
+    setVisualGallery(nextVisualGallery);
   };
 
   const refreshCorporateDocuments = async () => {
@@ -548,6 +567,131 @@ export function AdminPage() {
     }
   };
 
+  const uploadVisualGalleryMedia = async (file?: File) => {
+    if (!file) return;
+    setGalleryError("");
+    setGalleryNotice("");
+    if (file.size > 1_800_000) {
+      setGalleryError("Visual gallery media files must be 1.8 MB or smaller.");
+      return;
+    }
+    setBusy(true);
+    try {
+      const body = new FormData();
+      body.append("media", file);
+      const result = await apiRequest<{ media_url: string; media_type: "image" | "video" }>("/api/admin/visual-gallery/media", { method: "POST", body });
+      setGalleryItemForm((current) => ({ ...current, mediaType: result.media_type, mediaUrl: result.media_url }));
+      setGalleryNotice("Media uploaded. Complete its details and add it to the saved gallery draft.");
+    } catch (cause) {
+      setGalleryError(cause instanceof Error ? cause.message : "Gallery media upload failed.");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const saveVisualGalleryDraft = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setGalleryError("");
+    setGalleryNotice("");
+    if (!visualGallery) return;
+    setBusy(true);
+    try {
+      await apiRequest("/api/admin/visual-gallery", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(visualGallery.draft),
+      });
+      await refreshAdminData();
+      setGalleryNotice("Gallery draft saved. Public media remains unchanged until an administrator publishes it.");
+    } catch (cause) {
+      setGalleryError(cause instanceof Error ? cause.message : "Gallery draft could not be saved.");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const publishVisualGallery = async () => {
+    if (!visualGallery || !window.confirm("Publish the saved company media gallery? Review every media item and its description first.")) return;
+    setGalleryError("");
+    setGalleryNotice("");
+    setBusy(true);
+    try {
+      await apiRequest("/api/admin/visual-gallery", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(visualGallery.draft),
+      });
+      await apiRequest("/api/admin/visual-gallery/publish", { method: "POST" });
+      await refreshAdminData();
+      setGalleryNotice("Company media gallery published and visible on the public website.");
+    } catch (cause) {
+      setGalleryError(cause instanceof Error ? cause.message : "Gallery could not be published.");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const addGalleryItem = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setGalleryError("");
+    if (!visualGallery) return;
+    if (visualGallery.draft.items.length >= 24 && !galleryEditingId) {
+      setGalleryError("The gallery can contain up to 24 media items.");
+      return;
+    }
+    const updatedItem: VisualMediaItem = {
+      ...galleryItemForm,
+      id: galleryEditingId ?? crypto.randomUUID(),
+      sortOrder: galleryEditingId
+        ? visualGallery.draft.items.find((item) => item.id === galleryEditingId)?.sortOrder ?? 0
+        : (visualGallery.draft.items.reduce((max, item) => Math.max(max, item.sortOrder), -10) + 10),
+    };
+    const items = galleryEditingId
+      ? visualGallery.draft.items.map((item) => item.id === galleryEditingId ? updatedItem : item)
+      : [...visualGallery.draft.items, updatedItem];
+    setVisualGallery((current) => current ? { ...current, draft: { ...current.draft, items } } : current);
+    setGalleryItemForm(emptyGalleryItem());
+    setGalleryEditingId(null);
+    setGalleryNotice("Item added to the unsaved draft. Save the gallery draft to record the change.");
+  };
+
+  const editGalleryItem = (item: VisualMediaItem) => {
+    setGalleryEditingId(item.id);
+    setGalleryItemForm({
+      title: item.title,
+      category: item.category,
+      description: item.description,
+      alt: item.alt,
+      mediaType: item.mediaType,
+      mediaUrl: item.mediaUrl,
+    });
+    document.getElementById("gallery-item-editor")?.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
+
+  const moveGalleryItem = (id: string, direction: -1 | 1) => {
+    if (!visualGallery) return;
+    const items = [...visualGallery.draft.items].sort((left, right) => left.sortOrder - right.sortOrder);
+    const index = items.findIndex((item) => item.id === id);
+    const target = index + direction;
+    if (index < 0 || target < 0 || target >= items.length) return;
+    [items[index], items[target]] = [items[target], items[index]];
+    const ordered = items.map((item, itemIndex) => ({ ...item, sortOrder: itemIndex * 10 }));
+    setVisualGallery((current) => current ? { ...current, draft: { ...current.draft, items: ordered } } : current);
+  };
+
+  const removeGalleryItem = (item: VisualMediaItem) => {
+    if (!visualGallery || !window.confirm(`Remove "${item.title}" from the gallery draft? The uploaded file remains stored.`)) return;
+    setVisualGallery((current) => current ? {
+      ...current,
+      draft: { ...current.draft, items: current.draft.items.filter((entry) => entry.id !== item.id) },
+    } : current);
+    if (galleryEditingId === item.id) {
+      setGalleryEditingId(null);
+      setGalleryItemForm(emptyGalleryItem());
+    }
+    setGalleryNotice("Item removed from the unsaved draft. Save the gallery draft to record the change.");
+  };
+
   return (
     <main className="admin-page">
       <header className="admin-header">
@@ -595,12 +739,13 @@ export function AdminPage() {
           <div className="admin-dashboard-metrics">
             <a href="#site-content"><span>Website content</span><strong>{Object.keys(siteConfig.pages).length} <small>pages</small></strong><small>Copy · navigation · design</small></a>
             <a href="#manufacturing-content"><span>Production story</span><strong>{manufacturingPreview?.stages.length ?? 6} <small>stages</small></strong><small>Technical content · media</small></a>
+            <a href="#visual-gallery"><span>Media gallery</span><strong>{visualGallery?.draft.items.length ?? 0} <small>items</small></strong><small>Images · video · ordering</small></a>
             <a href="#leadership"><span>Leadership register</span><strong>{profiles.length} <small>profiles</small></strong><small>{profiles.filter((profile) => profile.status === "published").length} published</small></a>
             {session.role === "admin" && <a href="#user-management"><span>Access management</span><strong>{adminUsers.length} <small>{adminUsers.length === 1 ? "account" : "accounts"}</small></strong><small>Admins · content editors</small></a>}
           </div>
         </section>
         <nav className="admin-dashboard-nav" aria-label="Dashboard sections">
-          <a href="#site-content">Website content</a><a href="#manufacturing-content">Manufacturing</a><a href="#leadership">Leadership</a>
+          <a href="#site-content">Website content</a><a href="#manufacturing-content">Manufacturing</a><a href="#visual-gallery">Media gallery</a><a href="#leadership">Leadership</a>
           {session.role === "admin" && <><a href="#private-records">Private records</a><a href="#user-management">User access</a></>}
           <a href="#audit-history">Audit history</a>
         </nav>
@@ -724,6 +869,49 @@ export function AdminPage() {
             <ol>{manufacturingPreview.stages.map((stage) => <li key={stage.id}><span>{stage.shortTitle}</span><strong>{stage.title}</strong></li>)}</ol>
             <small>{Object.keys(manufacturingPreview.media?.stageImages ?? {}).length} stage images · {manufacturingPreview.media?.heroImage ? "Hero image set" : "No hero image"} · {manufacturingPreview.media?.heroVideo ? "Hero video set" : "No hero video"}</small>
           </section>}
+        </section>
+        <section className="admin-visual-gallery" id="visual-gallery">
+          <div className="admin-section-heading"><div><span className="leadership-kicker">PUBLIC MEDIA LIBRARY</span><h2><Image size={22} /> Visual gallery</h2></div></div>
+          <div className="admin-review-callout"><strong>Draft & approval</strong><span>Upload company-approved stills or short videos, add accessible descriptions and arrange their display order. Editors can prepare drafts; only administrators can publish them. Concept artwork on the gallery page is separately labeled and is not a facility photograph.</span></div>
+          {galleryError && <p className="admin-feedback is-error" role="alert">{galleryError}</p>}
+          {galleryNotice && <p className="admin-feedback" role="status">{galleryNotice}</p>}
+          {!visualGallery ? <p className="leadership-load-state" role="status">Loading gallery draft…</p> : <>
+            <div className="visual-gallery-admin-status"><span>Draft items <strong>{visualGallery.draft.items.length}</strong></span><span>Published items <strong>{visualGallery.published.items.length}</strong></span><span>Last updated by <strong>{visualGallery.updated_by}</strong></span></div>
+            <form className="visual-gallery-item-form" id="gallery-item-editor" onSubmit={addGalleryItem}>
+              <h3>{galleryEditingId ? "Edit gallery item" : "Add media item"}</h3>
+              <label className="admin-upload-button"><Upload size={15} /> {galleryItemForm.mediaUrl ? "Replace uploaded media" : "Upload image or video"}
+                <input type="file" accept="image/jpeg,image/png,image/webp,video/mp4,video/webm" disabled={busy} onChange={(event) => { void uploadVisualGalleryMedia(event.target.files?.[0]); event.currentTarget.value = ""; }} />
+              </label>
+              <small>JPEG, PNG, WebP, MP4 or WebM · 1.8 MB maximum. Upload company-approved media only.</small>
+              {galleryItemForm.mediaUrl && <div className="visual-gallery-upload-preview">
+                {galleryItemForm.mediaType === "image" ? <img src={galleryItemForm.mediaUrl} alt="Preview of uploaded gallery media" /> : <video src={galleryItemForm.mediaUrl} controls playsInline preload="metadata" aria-label="Uploaded gallery video preview" />}
+                <span>{galleryItemForm.mediaType === "video" ? "VIDEO" : "IMAGE"} · {galleryItemForm.mediaUrl}</span>
+              </div>}
+              <div className="visual-gallery-item-fields">
+                <label>Title<input value={galleryItemForm.title} onChange={(event) => setGalleryItemForm((current) => ({ ...current, title: event.target.value }))} maxLength={120} required /></label>
+                <label>Category<input value={galleryItemForm.category} onChange={(event) => setGalleryItemForm((current) => ({ ...current, category: event.target.value }))} maxLength={80} placeholder="e.g. People, materials, project" required /></label>
+                <label className="visual-gallery-item-description">Description<textarea rows={3} value={galleryItemForm.description} onChange={(event) => setGalleryItemForm((current) => ({ ...current, description: event.target.value }))} maxLength={1200} required /></label>
+                <label>Accessible description<input value={galleryItemForm.alt} onChange={(event) => setGalleryItemForm((current) => ({ ...current, alt: event.target.value }))} maxLength={300} required /></label>
+              </div>
+              <div className="admin-form-actions"><button className="button button-outline" type="submit" disabled={busy || !galleryItemForm.mediaUrl}><Plus size={15} /> {galleryEditingId ? "Update draft item" : "Add to draft"}</button>{galleryEditingId && <button className="admin-quiet-button" type="button" onClick={() => { setGalleryEditingId(null); setGalleryItemForm(emptyGalleryItem()); }}>Cancel edit</button>}</div>
+            </form>
+            <div className="visual-gallery-admin-list">
+              {[...visualGallery.draft.items].sort((left, right) => left.sortOrder - right.sortOrder).map((item, index, items) => <article className="visual-gallery-admin-card" key={item.id}>
+                <div className="visual-gallery-admin-thumb">{item.mediaType === "image" ? <img src={item.mediaUrl} alt="" /> : <video src={item.mediaUrl} muted playsInline preload="metadata" aria-hidden="true" />}</div>
+                <div className="visual-gallery-admin-copy"><span>{String(index + 1).padStart(2, "0")} · {item.category} · {item.mediaType}</span><strong>{item.title}</strong><p>{item.description}</p></div>
+                <div className="visual-gallery-admin-actions">
+                  <button className="admin-quiet-button" type="button" aria-label={`Move ${item.title} up`} title="Move up" disabled={index === 0} onClick={() => moveGalleryItem(item.id, -1)}><ArrowUp size={15} /></button>
+                  <button className="admin-quiet-button" type="button" aria-label={`Move ${item.title} down`} title="Move down" disabled={index === items.length - 1} onClick={() => moveGalleryItem(item.id, 1)}><ArrowDown size={15} /></button>
+                  <button className="admin-quiet-button" type="button" onClick={() => editGalleryItem(item)}>Edit</button>
+                  <button className="admin-quiet-button delete-action" type="button" onClick={() => removeGalleryItem(item)}>Remove</button>
+                </div>
+              </article>)}
+              {!visualGallery.draft.items.length && <p className="visual-gallery-admin-empty">No media in this draft yet. Upload approved company imagery or video to begin.</p>}
+            </div>
+            <form onSubmit={saveVisualGalleryDraft}>
+              <div className="admin-form-actions"><button className="button button-orange" type="submit" disabled={busy}><Save size={15} /> Save gallery draft</button>{session.role === "admin" && <button className="button button-orange" type="button" onClick={() => void publishVisualGallery()} disabled={busy}><Send size={15} /> Publish gallery</button>}<Link className="button button-outline" to="/news#media" target="_blank"><Eye size={15} /> Preview News & media</Link></div>
+            </form>
+          </>}
         </section>
         <section className="admin-profile-list" id="leadership">
           <div className="admin-section-heading"><div><span className="leadership-kicker">CONTENT REGISTER</span><h2>Leadership profiles</h2></div><button className="button button-orange" type="button" onClick={openNewProfile}><Plus size={16} /> Add profile</button></div>

@@ -445,6 +445,49 @@ test("leadership roles, authenticated editing, image uploads and publishing", as
     if (!undoSiteConfig.ok || (await (await fetch(`${base}/api/site-config`)).json()).home.heroHeadline) throw new Error("Site-wide undo did not restore the previous public content.");
     const redoSiteConfig = await fetch(`${base}/api/admin/redo`, { method: "POST", headers: { Cookie: adminCookie, Origin: base } });
     if (!redoSiteConfig.ok || (await (await fetch(`${base}/api/site-config`)).json()).home.heroHeadline !== "Test headline") throw new Error("Site-wide redo did not reapply the published content.");
+    const publicGalleryInitially = await (await fetch(`${base}/api/visual-gallery`)).json();
+    if (!Array.isArray(publicGalleryInitially.items) || publicGalleryInitially.items.length) throw new Error("The new public visual gallery did not start empty.");
+    const unauthorizedGallery = await fetch(`${base}/api/admin/visual-gallery`);
+    if (unauthorizedGallery.status !== 401) throw new Error("Visual gallery drafts were accessible without authentication.");
+    const invalidGallery = await fetch(`${base}/api/admin/visual-gallery`, {
+      method: "PUT", headers: editorHeaders,
+      body: JSON.stringify({ items: [{ id: "bad-media", title: "Bad media", category: "Test", description: "Test item", alt: "Test", mediaType: "video", mediaUrl: "/uploads/not-a-video.webp", sortOrder: 0 }] }),
+    });
+    if (invalidGallery.status !== 400) throw new Error("A visual gallery item with a mismatched media type was accepted.");
+    const galleryUpload = new FormData();
+    galleryUpload.append("media", new Blob([png], { type: "image/png" }), "gallery-image.png");
+    const galleryMediaResponse = await fetch(`${base}/api/admin/visual-gallery/media`, {
+      method: "POST", headers: { Cookie: editorCookie, Origin: base }, body: galleryUpload,
+    });
+    const galleryMedia = await galleryMediaResponse.json();
+    if (galleryMediaResponse.status !== 201 || galleryMedia.media_type !== "image" || !/^\/uploads\/[a-f0-9-]+\.webp$/.test(galleryMedia.media_url)) {
+      throw new Error("An authenticated editor could not upload an approved gallery image.");
+    }
+    const galleryDraft = { items: [{
+      id: "visual-item-1", title: "Material study", category: "Iron & steel",
+      description: "An illustrative sample for testing the published gallery.", alt: "Abstract steel surface",
+      mediaType: "image", mediaUrl: galleryMedia.media_url, sortOrder: 0,
+    }] };
+    const saveGalleryDraft = await fetch(`${base}/api/admin/visual-gallery`, {
+      method: "PUT", headers: editorHeaders, body: JSON.stringify(galleryDraft),
+    });
+    if (!saveGalleryDraft.ok) throw new Error("A content editor could not save a valid gallery draft.");
+    if ((await (await fetch(`${base}/api/visual-gallery`)).json()).items.length !== 0) throw new Error("An unpublished gallery draft became public.");
+    const forbiddenGalleryPublish = await fetch(`${base}/api/admin/visual-gallery/publish`, {
+      method: "POST", headers: { Cookie: editorCookie, Origin: base },
+    });
+    if (forbiddenGalleryPublish.status !== 403) throw new Error("A content editor was able to publish gallery media.");
+    const publishGallery = await fetch(`${base}/api/admin/visual-gallery/publish`, {
+      method: "POST", headers: { Cookie: adminCookie, Origin: base },
+    });
+    const publicGallery = await (await fetch(`${base}/api/visual-gallery`)).json();
+    if (!publishGallery.ok || publicGallery.items.length !== 1 || publicGallery.items[0].title !== "Material study") {
+      throw new Error("Administrator gallery publication did not update the public media endpoint.");
+    }
+    const undoGallery = await fetch(`${base}/api/admin/undo`, { method: "POST", headers: { Cookie: adminCookie, Origin: base } });
+    if (!undoGallery.ok || (await (await fetch(`${base}/api/visual-gallery`)).json()).items.length !== 0) throw new Error("Gallery undo did not restore the previous published media.");
+    const redoGallery = await fetch(`${base}/api/admin/redo`, { method: "POST", headers: { Cookie: adminCookie, Origin: base } });
+    if (!redoGallery.ok || (await (await fetch(`${base}/api/visual-gallery`)).json()).items.length !== 1) throw new Error("Gallery redo did not reapply published media.");
     const malformedCookie = await fetch(`${base}/api/admin/profiles`, { headers: { Cookie: "csm_admin=%ZZ" } });
     if (malformedCookie.status !== 401) throw new Error("Malformed session cookie was not safely rejected.");
 
@@ -467,6 +510,7 @@ test("leadership roles, authenticated editing, image uploads and publishing", as
     if (!audit.some((entry) => entry.profile_id === created.id && entry.action === "updated")) throw new Error("Profile editing was not recorded in the audit history.");
     if (!audit.some((entry) => entry.profile_id === "manufacturing-content" && entry.action === "manufacturing content published")) throw new Error("Manufacturing publication was not recorded in the audit history.");
     if (!audit.some((entry) => entry.profile_id === "site-config" && entry.action === "site-wide content published")) throw new Error("Site-wide publication was not recorded in the audit history.");
+    if (!audit.some((entry) => entry.profile_id === "visual-gallery" && entry.action === "visual gallery published")) throw new Error("Visual gallery publication was not recorded in the audit history.");
     if (!audit.some((entry) => entry.action.startsWith("undo: ") && entry.action.includes("Site-wide content published"))) throw new Error("Undo was not recorded as an audited reversal.");
   } finally {
     if (server && server.exitCode === null) {

@@ -21,6 +21,7 @@ const corporateDocuments = {
 const loginAttempts = new Map();
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 * 1024 * 1024, files: 1 } });
 const manufacturingMediaUpload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 30 * 1024 * 1024, files: 1 } });
+const visualGalleryUpload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 1_800_000, files: 1 } });
 const allowedSections = new Set(["board", "management", "support"]);
 const allowedStatuses = new Set(["draft", "pending_approval", "published", "archived"]);
 const allowedPlacements = new Set(["board", "governance"]);
@@ -37,6 +38,16 @@ const allowedFonts = new Set(["Manrope", "Arial", "Georgia", "Verdana", "Tahoma"
 
 function isPlainText(value, maxLength = 10000, allowEmpty = true) {
   return typeof value === "string" && value.length <= maxLength && (allowEmpty || Boolean(value.trim()));
+}
+
+async function visualGalleryState(tx) {
+  const row = await tx.get("SELECT published_json, draft_json, updated_by, updated_at FROM site_content WHERE content_key = 'visual-gallery'");
+  return {
+    draft: row ? JSON.parse(row.draft_json) : { items: [] },
+    published: row ? JSON.parse(row.published_json) : { items: [] },
+    updated_by: row?.updated_by ?? "system",
+    updated_at: row?.updated_at ?? new Date(0).toISOString(),
+  };
 }
 
 function validSiteLink(link) {
@@ -93,6 +104,25 @@ function validateSiteConfig(config) {
   return null;
 }
 
+function validateVisualGallery(content) {
+  if (!content || typeof content !== "object" || Array.isArray(content) || !Array.isArray(content.items) || content.items.length > 24) {
+    return "The visual gallery must be an object with no more than 24 media items.";
+  }
+  const ids = new Set();
+  for (const item of content.items) {
+    if (!item || typeof item !== "object" || Array.isArray(item)) return "Every gallery item must be a media object.";
+    if (typeof item.id !== "string" || !/^[a-zA-Z0-9_-]{1,80}$/.test(item.id) || ids.has(item.id)) return "Each gallery item must have a unique valid ID.";
+    ids.add(item.id);
+    if (!isPlainText(item.title, 120, false) || !isPlainText(item.category, 80, false) ||
+        !isPlainText(item.description, 1200, false) || !isPlainText(item.alt, 300, false)) return "Complete each gallery item title, category, description and accessible media description.";
+    if (item.mediaType !== "image" && item.mediaType !== "video") return "Choose image or video for each gallery item.";
+    const extension = item.mediaType === "image" ? /\/uploads\/[a-f0-9-]+\.(?:jpg|png|webp)$/i : /\/uploads\/[a-f0-9-]+\.(?:mp4|webm)$/i;
+    if (typeof item.mediaUrl !== "string" || item.mediaUrl.length > 500 || !extension.test(item.mediaUrl)) return "Gallery media must reference an uploaded file of the matching type.";
+    if (!Number.isInteger(item.sortOrder) || item.sortOrder < 0 || item.sortOrder > 10000) return "Gallery order must be a whole number between 0 and 10000.";
+  }
+  return null;
+}
+
 function siteConfigState(row) {
   return {
     draft: JSON.parse(row.draft_json),
@@ -128,7 +158,7 @@ async function restoreHistoryState(tx, entry, value) {
     value.status, value.sort_order, value.updated_at);
     return;
   }
-  if (entry.content_type === "site-config" || entry.content_type === "manufacturing") {
+  if (entry.content_type === "site-config" || entry.content_type === "manufacturing" || entry.content_type === "visual-gallery") {
     const contentKey = entry.content_type;
     const published = JSON.stringify(value.published);
     const draft = JSON.stringify(value.draft);
@@ -354,6 +384,16 @@ app.get("/api/site-config", async (_request, response) => {
   response.json(JSON.parse(row.published_json));
 });
 
+app.get("/api/visual-gallery", async (_request, response) => {
+  const row = await db.get("SELECT published_json FROM site_content WHERE content_key = 'visual-gallery'");
+  const gallery = row ? JSON.parse(row.published_json) : { items: [] };
+  if (!gallery || typeof gallery !== "object" || !Array.isArray(gallery.items)) {
+    return response.status(500).json({ error: "Published visual gallery content is invalid." });
+  }
+  response.setHeader("Cache-Control", "public, max-age=60");
+  response.json({ items: gallery.items });
+});
+
 app.get("/api/admin/session", async (request, response) => {
   const admin = await getAdmin(request);
   response.json({
@@ -447,6 +487,41 @@ app.post("/api/admin/users", requireAdmin, requireAdministrator, async (request,
   await writeAudit({ profileId: `admin:${id}`, email: request.admin.email, action: "administrator account created", before: null, after: { email, role } });
   response.status(201).setHeader("Cache-Control", "no-store");
   response.json({ id, email, role, created_at: createdAt, temporaryPassword });
+});
+
+app.get("/api/admin/visual-gallery", requireAdmin, async (_request, response) => {
+  response.setHeader("Cache-Control", "no-store");
+  response.json(await visualGalleryState(db));
+});
+
+app.put("/api/admin/visual-gallery", requireAdmin, async (request, response) => {
+  const issue = validateVisualGallery(request.body);
+  if (issue) return response.status(400).json({ error: issue });
+  const before = await visualGalleryState(db);
+  const updatedAt = new Date().toISOString();
+  const after = { ...before, draft: request.body, updated_by: request.admin.email, updated_at: updatedAt };
+  await db.transaction(async (tx) => {
+    await tx.run("INSERT INTO site_content (content_key, published_json, draft_json, updated_by, updated_at) VALUES ('visual-gallery', ?, ?, ?, ?) ON CONFLICT(content_key) DO UPDATE SET draft_json=excluded.draft_json, updated_by=excluded.updated_by, updated_at=excluded.updated_at",
+      JSON.stringify(before.published), JSON.stringify(request.body), request.admin.email, updatedAt);
+    await writeAudit({ tx, profileId: "visual-gallery", email: request.admin.email, action: "visual gallery draft updated", before, after });
+    await recordChange(tx, { contentType: "visual-gallery", entityId: "visual-gallery", email: request.admin.email, action: "Visual gallery draft updated", before, after });
+  });
+  response.json({ saved: true, updated_by: request.admin.email, updated_at: updatedAt });
+});
+
+app.post("/api/admin/visual-gallery/publish", requireAdmin, requireAdministrator, async (request, response) => {
+  const current = await visualGalleryState(db);
+  const issue = validateVisualGallery(current.draft);
+  if (issue) return response.status(400).json({ error: issue });
+  const updatedAt = new Date().toISOString();
+  const after = { ...current, published: current.draft, updated_by: request.admin.email, updated_at: updatedAt };
+  await db.transaction(async (tx) => {
+    await tx.run("INSERT INTO site_content (content_key, published_json, draft_json, updated_by, updated_at) VALUES ('visual-gallery', ?, ?, ?, ?) ON CONFLICT(content_key) DO UPDATE SET published_json=excluded.published_json, draft_json=excluded.draft_json, updated_by=excluded.updated_by, updated_at=excluded.updated_at",
+      JSON.stringify(current.draft), JSON.stringify(current.draft), request.admin.email, updatedAt);
+    await writeAudit({ tx, profileId: "visual-gallery", email: request.admin.email, action: "visual gallery published", before: current, after });
+    await recordChange(tx, { contentType: "visual-gallery", entityId: "visual-gallery", email: request.admin.email, action: "Visual gallery published", before: current, after });
+  });
+  response.json({ published: true, updated_by: request.admin.email, updated_at: updatedAt });
 });
 
 app.post("/api/admin/password", requireAdmin, async (request, response) => {
@@ -700,7 +775,9 @@ async function applyHistory(request, response, direction) {
       ? profileFromRow(await tx.get("SELECT * FROM profiles WHERE id = ?", historyRow.entity_id))
       : historyRow.content_type === "site-config"
         ? siteConfigState(await tx.get("SELECT published_json, draft_json, updated_by, updated_at FROM site_content WHERE content_key = 'site-config'"))
-        : await manufacturingState(tx);
+        : historyRow.content_type === "visual-gallery"
+          ? await visualGalleryState(tx)
+          : await manufacturingState(tx);
     const targetValue = historyRow[targetField] ? JSON.parse(historyRow[targetField]) : null;
     await restoreHistoryState(tx, historyRow, targetValue);
     await tx.run("UPDATE change_history SET state = ? WHERE id = ?", direction === "undo" ? "undone" : "applied", historyRow.id);
@@ -811,6 +888,40 @@ app.post("/api/admin/manufacturing/media", requireAdmin, manufacturingMediaUploa
   }
 });
 
+app.post("/api/admin/visual-gallery/media", requireAdmin, visualGalleryUpload.single("media"), async (request, response, next) => {
+  const file = request.file;
+  if (!file) return response.status(400).json({ error: "Choose an approved image or video to upload." });
+  const extension = validManufacturingMedia(file);
+  if (!extension) return response.status(400).json({ error: "Only valid JPEG, PNG, WebP, MP4, or WebM assets are accepted." });
+  const filename = crypto.randomUUID();
+  let mediaUrl;
+  let mediaType;
+  if ([".jpg", ".png", ".webp"].includes(extension)) {
+    let optimized;
+    try {
+      optimized = await optimizeUploadedImage(file.buffer);
+    } catch {
+      return response.status(400).json({ error: "The image could not be decoded. Upload a valid JPEG, PNG, or WebP file." });
+    }
+    try {
+      mediaUrl = await saveImageAsset(file, filename, optimized);
+      mediaType = "image";
+    } catch (cause) {
+      return next(cause);
+    }
+  } else {
+    try {
+      await fs.promises.writeFile(path.join(uploadDirectory, `${filename}${extension}`), file.buffer, { flag: "wx" });
+      mediaUrl = `/uploads/${filename}${extension}`;
+      mediaType = "video";
+    } catch (cause) {
+      return next(cause);
+    }
+  }
+  await writeAudit({ profileId: "visual-gallery-media", email: request.admin.email, action: "visual gallery media uploaded", before: null, after: { mediaType, mediaUrl } });
+  response.status(201).json({ media_url: mediaUrl, media_type: mediaType });
+});
+
 app.use("/uploads", express.static(uploadDirectory, {
   fallthrough: false,
   immutable: true,
@@ -829,7 +940,8 @@ app.get("/{*path}", (request, response, next) => {
 app.use((error, request, response, _next) => {
   if (error instanceof multer.MulterError) {
     const manufacturingMedia = request.path === "/api/admin/manufacturing/media";
-    return response.status(400).json({ error: error.code === "LIMIT_FILE_SIZE" ? manufacturingMedia ? "Manufacturing media files must be 30 MB or smaller." : "Portrait images must be 5 MB or smaller." : "The media upload could not be processed." });
+    const visualGalleryMedia = request.path === "/api/admin/visual-gallery/media";
+    return response.status(400).json({ error: error.code === "LIMIT_FILE_SIZE" ? visualGalleryMedia ? "Visual gallery media files must be 1.8 MB or smaller." : manufacturingMedia ? "Manufacturing media files must be 30 MB or smaller." : "Portrait images must be 5 MB or smaller." : "The media upload could not be processed." });
   }
   if (error?.type === "entity.too.large") return response.status(413).json({ error: "PDF files must be 1.8 MB or smaller." });
   console.error(error);

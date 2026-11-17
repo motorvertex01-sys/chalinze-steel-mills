@@ -218,6 +218,10 @@ async function initialize() {
     "INSERT OR IGNORE INTO site_content (content_key, published_json, draft_json, updated_by, updated_at) VALUES ('site-config', ?, ?, 'system', ?)",
     JSON.stringify(siteConfigDefault), JSON.stringify(siteConfigDefault), now,
   );
+  await db.run(
+    "INSERT OR IGNORE INTO site_content (content_key, published_json, draft_json, updated_by, updated_at) VALUES ('visual-gallery', ?, ?, 'system', ?)",
+    JSON.stringify({ items: [] }), JSON.stringify({ items: [] }), now,
+  );
 
   for (const profile of profiles) {
     const existing = await db.get("SELECT id FROM profiles WHERE id = ?", profile.id);

@@ -28,7 +28,7 @@ type ProfileRow = {
 type ContentRow = { published_json: string; draft_json: string; updated_by: string; updated_at: string };
 type SiteConfigState = { draft: unknown; published: unknown; updated_by: string; updated_at: string };
 type ChangeEntry = {
-  contentType: "profile" | "site-config" | "manufacturing";
+  contentType: "profile" | "site-config" | "manufacturing" | "visual-gallery";
   entityId: string;
   email: string;
   action: string;
@@ -167,6 +167,27 @@ function validateSiteConfig(config: unknown) {
           !section || !isPlainText(section.title, 300, false) || !isPlainText(section.body, 10000, false) || !isPlainText(section.tag ?? "", 160))) {
       return `The ${pathname} page has invalid title, summary or section content.`;
     }
+  }
+  return null;
+}
+
+function validateVisualGallery(content: unknown) {
+  if (!content || typeof content !== "object" || Array.isArray(content)) return "A visual gallery object is required.";
+  const value = content as { items?: unknown };
+  if (!Array.isArray(value.items) || value.items.length > 24) return "The visual gallery must contain no more than 24 media items.";
+  const ids = new Set<string>();
+  for (const item of value.items) {
+    if (!item || typeof item !== "object" || Array.isArray(item)) return "Every gallery item must be a media object.";
+    const media = item as Record<string, unknown>;
+    if (typeof media.id !== "string" || !/^[a-zA-Z0-9_-]{1,80}$/.test(media.id) || ids.has(media.id)) return "Each gallery item must have a unique valid ID.";
+    ids.add(media.id);
+    if (!isPlainText(media.title, 120, false) || !isPlainText(media.category, 80, false) ||
+        !isPlainText(media.description, 1200, false) || !isPlainText(media.alt, 300, false)) return "Complete each gallery item title, category, description and accessible media description.";
+    if (media.mediaType !== "image" && media.mediaType !== "video") return "Choose image or video for each gallery item.";
+    const extension = media.mediaType === "image" ? "(?:jpg|png|webp)" : "(?:mp4|webm)";
+    if (typeof media.mediaUrl !== "string" || media.mediaUrl.length > 500 ||
+        !new RegExp(`^/uploads/[a-f0-9-]+\\.${extension}$`, "i").test(media.mediaUrl)) return "Gallery media must reference an uploaded file of the matching type.";
+    if (!Number.isInteger(media.sortOrder) || Number(media.sortOrder) < 0 || Number(media.sortOrder) > 10000) return "Gallery order must be a whole number between 0 and 10000.";
   }
   return null;
 }
@@ -333,7 +354,7 @@ function historyStatements(db: D1Database, change: ChangeEntry) {
   ];
 }
 
-async function saveContent(db: D1Database, key: "site-config" | "manufacturing", state: SiteConfigState, email: string, action: string) {
+async function saveContent(db: D1Database, key: "site-config" | "manufacturing" | "visual-gallery", state: SiteConfigState, email: string, action: string) {
   const now = new Date().toISOString();
   const after = { ...state, updated_by: email, updated_at: now };
   const saveSql = `INSERT INTO site_content (content_key, published_json, draft_json, updated_by, updated_at)
@@ -343,12 +364,12 @@ async function saveContent(db: D1Database, key: "site-config" | "manufacturing",
     statement(db, saveSql, key, JSON.stringify(state.published), JSON.stringify(state.draft), email, now),
     statement(db, "INSERT INTO audit_log (profile_id, admin_email, action, before_json, after_json, created_at) VALUES (?, ?, ?, ?, ?, ?)",
       key, email, action, JSON.stringify(state), JSON.stringify(after), now),
-    ...historyStatements(db, { contentType: key, entityId: key, email, action: action === "manufacturing draft updated" ? "Manufacturing draft updated" : "Site-wide content draft updated", before: state, after }),
+    ...historyStatements(db, { contentType: key, entityId: key, email, action: action === "manufacturing draft updated" ? "Manufacturing draft updated" : key === "visual-gallery" ? "Visual gallery draft updated" : "Site-wide content draft updated", before: state, after }),
   ]);
   return after;
 }
 
-async function publishContent(db: D1Database, key: "site-config" | "manufacturing", state: SiteConfigState, email: string, action: string) {
+async function publishContent(db: D1Database, key: "site-config" | "manufacturing" | "visual-gallery", state: SiteConfigState, email: string, action: string) {
   const now = new Date().toISOString();
   const after = { ...state, published: state.draft, updated_by: email, updated_at: now };
   await db.batch([
@@ -404,6 +425,16 @@ app.get("/api/manufacturing", async (context) => {
 app.get("/api/site-config", async (context) => {
   const row = await one<Pick<ContentRow, "published_json">>(context.get('db'), "SELECT published_json FROM site_content WHERE content_key = 'site-config'");
   return context.json(row ? parseJson(row.published_json) : defaultSiteConfig);
+});
+
+app.get("/api/visual-gallery", async (context) => {
+  const row = await one<Pick<ContentRow, "published_json">>(context.get("db"),
+    "SELECT published_json FROM site_content WHERE content_key = 'visual-gallery'");
+  const content = row ? parseJson(row.published_json) as { items?: unknown } : { items: [] };
+  if (!content || typeof content !== "object" || !Array.isArray(content.items)) {
+    return responseError("Published visual gallery content is invalid.", 500);
+  }
+  return context.json({ items: content.items }, 200, { "Cache-Control": "public, max-age=60" });
 });
 
 app.get("/api/admin/session", async (context) => {
@@ -474,6 +505,36 @@ app.post("/api/admin/users", async (context) => {
   await logAudit(context.get("db"), `admin:${id}`, admin.email, "administrator account created", null, { email, role });
   context.header("Cache-Control", "no-store");
   return context.json({ id, email, role, created_at: createdAt, temporaryPassword }, 201);
+});
+
+app.get("/api/admin/visual-gallery", async (context) => {
+  const row = await one<ContentRow>(context.get("db"),
+    "SELECT published_json, draft_json, updated_by, updated_at FROM site_content WHERE content_key = 'visual-gallery'");
+  return context.json(contentState(row, { items: [] }));
+});
+
+app.put("/api/admin/visual-gallery", async (context) => {
+  const body = await context.req.json();
+  const issue = validateVisualGallery(body);
+  if (issue) return context.json({ error: issue }, 400);
+  const row = await one<ContentRow>(context.get("db"),
+    "SELECT published_json, draft_json, updated_by, updated_at FROM site_content WHERE content_key = 'visual-gallery'");
+  const before = contentState(row, { items: [] });
+  const after = await saveContent(context.get("db"), "visual-gallery", { ...before, draft: body }, context.get("admin").email,
+    "visual gallery draft updated");
+  return context.json({ saved: true, updated_by: after.updated_by, updated_at: after.updated_at });
+});
+
+app.post("/api/admin/visual-gallery/publish", async (context) => {
+  const admin = context.get("admin");
+  if (admin.role !== "admin") return context.json({ error: "Administrator privileges are required to publish visual media." }, 403);
+  const row = await one<ContentRow>(context.get("db"),
+    "SELECT published_json, draft_json, updated_by, updated_at FROM site_content WHERE content_key = 'visual-gallery'");
+  const current = contentState(row, { items: [] });
+  const issue = validateVisualGallery(current.draft);
+  if (issue) return context.json({ error: issue }, 400);
+  const after = await publishContent(context.get("db"), "visual-gallery", current, admin.email, "visual gallery published");
+  return context.json({ published: true, updated_by: after.updated_by, updated_at: after.updated_at });
 });
 
 app.post("/api/admin/password", async (context) => {
@@ -757,7 +818,7 @@ async function restoreHistory(
       VALUES (?, ?, ?, ?, ?) ON CONFLICT(content_key) DO UPDATE SET
       published_json=excluded.published_json, draft_json=excluded.draft_json,
       updated_by=excluded.updated_by, updated_at=excluded.updated_at`,
-    contentType === "site-config" ? "site-config" : "manufacturing",
+    contentType === "site-config" ? "site-config" : contentType === "visual-gallery" ? "visual-gallery" : "manufacturing",
     JSON.stringify(content.published), JSON.stringify(content.draft), content.updated_by, content.updated_at));
   }
   statements.push(statement(db, "INSERT INTO audit_log (profile_id, admin_email, action, before_json, after_json, created_at) VALUES (?, ?, ?, ?, ?, ?)",
@@ -780,8 +841,8 @@ app.post("/api/admin/:direction{undo|redo}", async (context) => {
   const entityId = String(row.entity_id);
   const current = contentType === "profile"
     ? profileFromRow(await one<ProfileRow>(context.get('db'), "SELECT * FROM profiles WHERE id = ?", entityId))
-    : contentState(await one<ContentRow>(context.get('db'), "SELECT published_json, draft_json, updated_by, updated_at FROM site_content WHERE content_key = ?", contentType === "site-config" ? "site-config" : "manufacturing"),
-      contentType === "site-config" ? defaultSiteConfig : manufacturingDefault);
+    : contentState(await one<ContentRow>(context.get('db'), "SELECT published_json, draft_json, updated_by, updated_at FROM site_content WHERE content_key = ?",     contentType === "site-config" ? "site-config" : contentType === "visual-gallery" ? "visual-gallery" : "manufacturing"),
+    contentType === "site-config" ? defaultSiteConfig : contentType === "visual-gallery" ? { items: [] } : manufacturingDefault);
   const target = row[targetField] ? parseJson(String(row[targetField])) : null;
   const action = `${direction}: ${String(row.action)}`;
   await restoreHistory(context.get('db'), contentType, entityId, target, admin.email, action, current,
@@ -871,6 +932,14 @@ app.post("/api/admin/upload", async (context) => {
 app.post("/api/admin/manufacturing/media", async (context) => {
   const uploaded = await uploadMedia(context, "media");
   if ("error" in uploaded) return context.json({ error: uploaded.error }, uploaded.status);
+  return context.json({ media_url: `/uploads/${uploaded.key}`, media_type: uploaded.type }, 201);
+});
+
+app.post("/api/admin/visual-gallery/media", async (context) => {
+  const uploaded = await uploadMedia(context, "media");
+  if ("error" in uploaded) return context.json({ error: uploaded.error }, uploaded.status);
+  await logAudit(context.get("db"), "visual-gallery-media", context.get("admin").email,
+    "visual gallery media uploaded", null, { mediaType: uploaded.type, mediaUrl: `/uploads/${uploaded.key}` });
   return context.json({ media_url: `/uploads/${uploaded.key}`, media_type: uploaded.type }, 201);
 });
 

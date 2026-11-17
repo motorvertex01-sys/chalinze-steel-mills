@@ -10,6 +10,7 @@ import { ManufacturingExperience } from "./ManufacturingExperience";
 import { useSiteConfig } from "./siteConfig";
 
 const IndustrialScene = lazy(() => import("./IndustrialScene").then((module) => ({ default: module.IndustrialScene })));
+const NewsMediaPage = lazy(() => import("./VisualGallery").then((module) => ({ default: module.NewsMediaPage })));
 const homeGallery = manufacturingGallery.filter((item) => item.category !== "Quality assurance");
 
 function Scene({ kind, size }: { kind?: "billet" | "ore" | "process" | "logo"; size?: "130" | "150" }) {
@@ -22,12 +23,16 @@ function PageMetadata() {
   useEffect(() => {
     const page = config.pages[pathname] ?? pages.find((candidate) => candidate.path === pathname);
     const title = pathname === "/manufacturing" || pathname === "/technology" ? "Integrated Manufacturing | Chalinze Steel Mills Ltd"
+      : pathname === "/gallery" ? "Steel Media Gallery | Chalinze Steel Mills Ltd"
+      : pathname === "/news" ? "News & Media | Chalinze Steel Mills Ltd"
       : pathname === "/leadership" ? "Leadership & Governance | Chalinze Steel Mills Ltd"
       : pathname === "/admin" ? "Leadership Administration | Chalinze Steel Mills Ltd"
         : page ? `${page.eyebrow} | Chalinze Steel Mills Ltd` : "Chalinze Steel Mills Ltd | Engineering Tanzania’s Industrial Future";
     document.title = title;
     const description = pathname === "/manufacturing" || pathname === "/technology"
       ? "Explore the proposed integrated steel manufacturing journey from Tanzanian iron ore to quality-inspected steel billets."
+      : pathname === "/news" || pathname === "/gallery"
+      ? "Company announcements, industry learning videos and approved media from Chalinze Steel Mills Ltd."
       : pathname === "/leadership"
       ? "Meet the Board of Directors, Senior Management Team and Supporting Staff of Chalinze Steel Mills Ltd."
       : page?.summary ?? "Chalinze Steel Mills Ltd — developing an integrated steel manufacturing project in Tanzania.";
@@ -47,7 +52,7 @@ function PageMetadata() {
     updateMeta('meta[property="og:title"]', { property: "og:title" }, title);
     updateMeta('meta[property="og:description"]', { property: "og:description" }, description);
     updateMeta('meta[property="og:url"]', { property: "og:url" }, canonicalUrl);
-    updateMeta('meta[name="robots"]', { name: "robots" }, pathname === "/admin" ? "noindex, nofollow" : "index, follow");
+    updateMeta('meta[name="robots"]', { name: "robots" }, pathname.startsWith("/admin") ? "noindex, nofollow" : "index, follow");
   }, [pathname, config.pages]);
   return null;
 }
@@ -127,7 +132,7 @@ function Footer() {
       </div>
       {config.footer.groups.map((group, index) => <div key={group.label}><h2>{group.label}</h2>{group.links.map(({ label, path }) => <ConfigLink key={`${label}-${path}`} path={path}>{label}</ConfigLink>)}{index === config.footer.groups.length - 1 && <><a href={`mailto:${config.footer.email}`}>{config.footer.email}</a><a href={`tel:${config.footer.phone.replace(/[^\d+]/g, "")}`}>{config.footer.phone}</a></>}</div>)}
     </div>
-    <div className="footer-bottom"><span>© {new Date().getFullYear()} Chalinze Steel Mills Ltd</span><span>{config.footer.copyrightNote}</span></div>
+    <div className="footer-bottom"><span>© {new Date().getFullYear()} Chalinze Steel Mills Ltd</span><Link to="/news#media">News & media</Link><span>{config.footer.copyrightNote}</span></div>
   </footer>;
 }
 
@@ -377,6 +382,7 @@ function ContentPage({ page }: { page: SitePage }) {
   const manufacturing = page.path === "/manufacturing";
   const markets = page.path === "/markets";
   const faqsPage = page.path === "/faqs";
+  if (page.path === "/news") return <Suspense fallback={<main className="visual-gallery-page"><p className="visual-gallery-state" role="status">Loading news and media…</p></main>}><NewsMediaPage page={page} /></Suspense>;
   const selectedBillet = billetSizes[selected];
   const sceneKind = company ? "logo" : product ? "billet" : technology ? processStages[selected]?.kind ?? "ore" : manufacturing ? "ore" : "process";
 
@@ -497,5 +503,5 @@ function ScrollMotion() {
 }
 
 export default function App() {
-  return <><PageMetadata /><ScrollToTop /><ScrollMotion /><Header /><Routes><Route path="/" element={<Home />} /><Route path="/leadership" element={<LeadershipPage />} /><Route path="/admin/*" element={<AdminPage />} /><Route path="/manufacturing" element={<ManufacturingExperience />} /><Route path="/technology" element={<ManufacturingExperience />} /><Route path="/quality" element={<Navigate to="/manufacturing#quality" replace />} />{pages.filter((page) => !["/manufacturing", "/technology", "/quality"].includes(page.path)).map((page) => <Route key={page.path} path={page.path} element={<ContentPage key={page.path} page={page} />} />)}<Route path="*" element={<NotFound />} /></Routes><Footer /></>;
+  return <><PageMetadata /><ScrollToTop /><ScrollMotion /><Header /><Routes><Route path="/" element={<Home />} /><Route path="/leadership" element={<LeadershipPage />} /><Route path="/admin/*" element={<AdminPage />} /><Route path="/gallery" element={<Navigate to="/news#media" replace />} /><Route path="/manufacturing" element={<ManufacturingExperience />} /><Route path="/technology" element={<ManufacturingExperience />} /><Route path="/quality" element={<Navigate to="/manufacturing#quality" replace />} />{pages.filter((page) => !["/manufacturing", "/technology", "/quality", "/gallery"].includes(page.path)).map((page) => <Route key={page.path} path={page.path} element={<ContentPage key={page.path} page={page} />} />)}<Route path="*" element={<NotFound />} /></Routes><Footer /></>;
 }

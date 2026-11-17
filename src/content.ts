@@ -321,9 +321,9 @@ export const pages: SitePage[] = [
   },
   {
     path: "/news",
-    title: "Updates, when verified.",
-    eyebrow: "News & insights",
-    summary: "The company document defines a proposed communications programme; current announcements and media assets require authorized company publication.",
+    title: "News & media",
+    eyebrow: "Company newsroom",
+    summary: "Company announcements, independent steel-industry learning videos and approved media in one place. Company news is published only when verified and authorized.",
     sections: [
       { title: "Corporate news & press releases", body: "Corporate announcements, press releases and executive communications are identified as future publishing categories. No articles, issue dates or quotations have been invented.", tag: "No approved articles supplied" },
       { title: "Project progress", body: "The document calls for project updates but does not provide verified construction percentages, milestones, commissioning dates or operating results.", tag: "Progress evidence required" },
