@@ -488,6 +488,50 @@ test("leadership roles, authenticated editing, image uploads and publishing", as
     if (!undoGallery.ok || (await (await fetch(`${base}/api/visual-gallery`)).json()).items.length !== 0) throw new Error("Gallery undo did not restore the previous published media.");
     const redoGallery = await fetch(`${base}/api/admin/redo`, { method: "POST", headers: { Cookie: adminCookie, Origin: base } });
     if (!redoGallery.ok || (await (await fetch(`${base}/api/visual-gallery`)).json()).items.length !== 1) throw new Error("Gallery redo did not reapply published media.");
+    const publicNewsInitially = await (await fetch(`${base}/api/news-media`)).json();
+    if (!Array.isArray(publicNewsInitially.items) || publicNewsInitially.items.length !== 4) throw new Error("The public News & Media endpoint did not retain the existing newsroom guidance.");
+    const unauthorizedNews = await fetch(`${base}/api/admin/news-media`);
+    if (unauthorizedNews.status !== 401) throw new Error("News & Media drafts were accessible without authentication.");
+    const invalidNews = await fetch(`${base}/api/admin/news-media`, {
+      method: "PUT", headers: editorHeaders,
+      body: JSON.stringify({ items: [{ id: "bad-date", title: "Test update", category: "Company update", publishedAt: "not-a-date", description: "Test content", mediaType: "", mediaUrl: "", alt: "", sortOrder: 0 }] }),
+    });
+    if (invalidNews.status !== 400) throw new Error("An invalid News & Media publication date was accepted.");
+    const newsUpload = new FormData();
+    newsUpload.append("media", new Blob([png], { type: "image/png" }), "news-image.png");
+    const newsMediaResponse = await fetch(`${base}/api/admin/news-media/media`, {
+      method: "POST", headers: { Cookie: editorCookie, Origin: base }, body: newsUpload,
+    });
+    const uploadedNewsMedia = await newsMediaResponse.json();
+    if (newsMediaResponse.status !== 201 || uploadedNewsMedia.media_type !== "image" || !/^\/uploads\/[a-f0-9-]+\.webp$/.test(uploadedNewsMedia.media_url)) {
+      throw new Error("An authenticated editor could not upload approved News & Media imagery.");
+    }
+    const newsDraft = { items: [{
+      id: "news-item-1", title: "Project overview", category: "Company update",
+      publishedAt: "", description: "Company-approved project information, without an unverified publication date.",
+      mediaType: "image", mediaUrl: uploadedNewsMedia.media_url, alt: "Illustrative project image", sortOrder: 0,
+    }] };
+    const saveNewsDraft = await fetch(`${base}/api/admin/news-media`, {
+      method: "PUT", headers: editorHeaders, body: JSON.stringify(newsDraft),
+    });
+    if (!saveNewsDraft.ok || (await (await fetch(`${base}/api/news-media`)).json()).items.length !== 4) {
+      throw new Error("A content editor could not save a private News & Media draft.");
+    }
+    const forbiddenNewsPublish = await fetch(`${base}/api/admin/news-media/publish`, {
+      method: "POST", headers: { Cookie: editorCookie, Origin: base },
+    });
+    if (forbiddenNewsPublish.status !== 403) throw new Error("A content editor was able to publish News & Media.");
+    const publishNews = await fetch(`${base}/api/admin/news-media/publish`, {
+      method: "POST", headers: { Cookie: adminCookie, Origin: base },
+    });
+    const publicNews = await (await fetch(`${base}/api/news-media`)).json();
+    if (!publishNews.ok || publicNews.items.length !== 1 || publicNews.items[0].title !== "Project overview") {
+      throw new Error("Administrator publication did not update public News & Media.");
+    }
+    const undoNews = await fetch(`${base}/api/admin/undo`, { method: "POST", headers: { Cookie: adminCookie, Origin: base } });
+    if (!undoNews.ok || (await (await fetch(`${base}/api/news-media`)).json()).items.length !== 4) throw new Error("News & Media undo did not restore the previous published content.");
+    const redoNews = await fetch(`${base}/api/admin/redo`, { method: "POST", headers: { Cookie: adminCookie, Origin: base } });
+    if (!redoNews.ok || (await (await fetch(`${base}/api/news-media`)).json()).items.length !== 1) throw new Error("News & Media redo did not reapply the publication.");
     const malformedCookie = await fetch(`${base}/api/admin/profiles`, { headers: { Cookie: "csm_admin=%ZZ" } });
     if (malformedCookie.status !== 401) throw new Error("Malformed session cookie was not safely rejected.");
 

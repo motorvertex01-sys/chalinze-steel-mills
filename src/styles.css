@@ -1204,8 +1204,15 @@ body.dialog-open { overflow: hidden; }
   .visual-gallery-empty p { max-width: 520px; margin: 0; color: #a4abad; font-size: 11px; line-height: 1.8; }
   .visual-gallery-empty .text-link { margin-top: 6px; }
   .admin-visual-gallery { margin: 52px 0 64px; padding: 28px; border: 1px solid var(--line); background: rgba(255,255,255,.018); }
+  .admin-news-media { margin: 52px 0 64px; padding: 28px; border: 1px solid var(--line); background: rgba(255,255,255,.018); }
   .admin-visual-gallery .admin-section-heading h2 { display: flex; align-items: center; gap: 10px; }
   .admin-visual-gallery .admin-section-heading h2 svg { color: #d78a4c; }
+  .admin-news-media .admin-section-heading h2 { display: flex; align-items: center; gap: 10px; }
+  .admin-news-media .admin-section-heading h2 svg { color: #d78a4c; }
+  .admin-news-media > .admin-review-callout { margin: 18px 0 22px; }
+  .admin-news-media .visual-gallery-admin-thumb.is-empty { border: 1px dashed rgba(214,221,225,.12); }
+  .newsroom-item-media { margin-top: 16px; overflow: hidden; background: #07090a; }
+  .newsroom-item-media img, .newsroom-item-media video { display: block; width: 100%; max-height: 360px; object-fit: cover; }
   .admin-visual-gallery > .admin-review-callout { margin: 18px 0 22px; }
   .visual-gallery-admin-status { display: flex; flex-wrap: wrap; gap: 10px 24px; padding: 12px 0; color: #9fa8a8; font: 8px var(--mono); text-transform: uppercase; }
   .visual-gallery-admin-status strong { margin-left: 5px; color: #e4e6e2; font-weight: 500; text-transform: none; }
@@ -1248,6 +1255,7 @@ body.dialog-open { overflow: hidden; }
     .visual-media-frame, .visual-media-card-1 .visual-media-frame, .visual-media-card-2 .visual-media-frame { aspect-ratio: 1.3; }
     .visual-media-copy { padding: 14px; }
     .admin-visual-gallery { padding: 20px 14px; }
+    .admin-news-media { padding: 20px 14px; }
     .visual-gallery-item-form { padding: 13px; }
     .visual-gallery-item-fields { grid-template-columns: 1fr; }
     .visual-gallery-item-description { grid-column: auto; }

@@ -50,6 +50,16 @@ async function visualGalleryState(tx) {
   };
 }
 
+async function newsMediaState(tx) {
+  const row = await tx.get("SELECT published_json, draft_json, updated_by, updated_at FROM site_content WHERE content_key = 'news-media'");
+  return {
+    draft: row ? JSON.parse(row.draft_json) : { items: [] },
+    published: row ? JSON.parse(row.published_json) : { items: [] },
+    updated_by: row?.updated_by ?? "system",
+    updated_at: row?.updated_at ?? new Date(0).toISOString(),
+  };
+}
+
 function validSiteLink(link) {
   if (!link || typeof link !== "object" || Array.isArray(link) || !isPlainText(link.label, 120, false) || !isPlainText(link.path, 500, false)) return false;
   if (link.path.startsWith("/") && !link.path.startsWith("//") && /^\/[a-zA-Z0-9_./#?=&%-]*$/.test(link.path)) {
@@ -123,6 +133,31 @@ function validateVisualGallery(content) {
   return null;
 }
 
+function validateNewsMedia(content) {
+  if (!content || typeof content !== "object" || Array.isArray(content) || !Array.isArray(content.items) || content.items.length > 30) {
+    return "News & Media must be an object with no more than 30 items.";
+  }
+  const ids = new Set();
+  for (const item of content.items) {
+    if (!item || typeof item !== "object" || Array.isArray(item)) return "Every news item must be an object.";
+    if (typeof item.id !== "string" || !/^[a-zA-Z0-9_-]{1,80}$/.test(item.id) || ids.has(item.id)) return "Each news item must have a unique valid ID.";
+    ids.add(item.id);
+    if (!isPlainText(item.title, 160, false) || !isPlainText(item.category, 80, false) ||
+        !isPlainText(item.description, 3000, false) || !isPlainText(item.alt, 300)) return "Complete each news item title, category and description.";
+    if (!isPlainText(item.publishedAt, 10) || (item.publishedAt !== "" && !/^\d{4}-\d{2}-\d{2}$/.test(item.publishedAt))) return "Publication dates must use YYYY-MM-DD.";
+    if (item.mediaType === "" && item.mediaUrl === "") {
+      if (item.alt !== "") return "Accessible media description is only used when media is attached.";
+    } else {
+      if (item.mediaType !== "image" && item.mediaType !== "video") return "Choose image or video for attached news media.";
+      const extension = item.mediaType === "image" ? /\/uploads\/[a-f0-9-]+\.(?:jpg|png|webp)$/i : /\/uploads\/[a-f0-9-]+\.(?:mp4|webm)$/i;
+      if (typeof item.mediaUrl !== "string" || item.mediaUrl.length > 500 || !extension.test(item.mediaUrl)) return "News media must reference an uploaded file of the matching type.";
+      if (!isPlainText(item.alt, 300, false)) return "Add an accessible description for attached media.";
+    }
+    if (!Number.isInteger(item.sortOrder) || item.sortOrder < 0 || item.sortOrder > 10000) return "News item order must be a whole number between 0 and 10000.";
+  }
+  return null;
+}
+
 function siteConfigState(row) {
   return {
     draft: JSON.parse(row.draft_json),
@@ -158,7 +193,7 @@ async function restoreHistoryState(tx, entry, value) {
     value.status, value.sort_order, value.updated_at);
     return;
   }
-  if (entry.content_type === "site-config" || entry.content_type === "manufacturing" || entry.content_type === "visual-gallery") {
+  if (entry.content_type === "site-config" || entry.content_type === "manufacturing" || entry.content_type === "visual-gallery" || entry.content_type === "news-media") {
     const contentKey = entry.content_type;
     const published = JSON.stringify(value.published);
     const draft = JSON.stringify(value.draft);
@@ -394,6 +429,16 @@ app.get("/api/visual-gallery", async (_request, response) => {
   response.json({ items: gallery.items });
 });
 
+app.get("/api/news-media", async (_request, response) => {
+  const row = await db.get("SELECT published_json FROM site_content WHERE content_key = 'news-media'");
+  const news = row ? JSON.parse(row.published_json) : { items: [] };
+  if (!news || typeof news !== "object" || !Array.isArray(news.items)) {
+    return response.status(500).json({ error: "Published News & Media content is invalid." });
+  }
+  response.setHeader("Cache-Control", "public, max-age=60");
+  response.json({ items: news.items });
+});
+
 app.get("/api/admin/session", async (request, response) => {
   const admin = await getAdmin(request);
   response.json({
@@ -520,6 +565,41 @@ app.post("/api/admin/visual-gallery/publish", requireAdmin, requireAdministrator
       JSON.stringify(current.draft), JSON.stringify(current.draft), request.admin.email, updatedAt);
     await writeAudit({ tx, profileId: "visual-gallery", email: request.admin.email, action: "visual gallery published", before: current, after });
     await recordChange(tx, { contentType: "visual-gallery", entityId: "visual-gallery", email: request.admin.email, action: "Visual gallery published", before: current, after });
+  });
+  response.json({ published: true, updated_by: request.admin.email, updated_at: updatedAt });
+});
+
+app.get("/api/admin/news-media", requireAdmin, async (_request, response) => {
+  response.setHeader("Cache-Control", "no-store");
+  response.json(await newsMediaState(db));
+});
+
+app.put("/api/admin/news-media", requireAdmin, async (request, response) => {
+  const issue = validateNewsMedia(request.body);
+  if (issue) return response.status(400).json({ error: issue });
+  const before = await newsMediaState(db);
+  const updatedAt = new Date().toISOString();
+  const after = { ...before, draft: request.body, updated_by: request.admin.email, updated_at: updatedAt };
+  await db.transaction(async (tx) => {
+    await tx.run("INSERT INTO site_content (content_key, published_json, draft_json, updated_by, updated_at) VALUES ('news-media', ?, ?, ?, ?) ON CONFLICT(content_key) DO UPDATE SET draft_json=excluded.draft_json, updated_by=excluded.updated_by, updated_at=excluded.updated_at",
+      JSON.stringify(before.published), JSON.stringify(request.body), request.admin.email, updatedAt);
+    await writeAudit({ tx, profileId: "news-media", email: request.admin.email, action: "news & media draft updated", before, after });
+    await recordChange(tx, { contentType: "news-media", entityId: "news-media", email: request.admin.email, action: "News & Media draft updated", before, after });
+  });
+  response.json({ saved: true, updated_by: request.admin.email, updated_at: updatedAt });
+});
+
+app.post("/api/admin/news-media/publish", requireAdmin, requireAdministrator, async (request, response) => {
+  const current = await newsMediaState(db);
+  const issue = validateNewsMedia(current.draft);
+  if (issue) return response.status(400).json({ error: issue });
+  const updatedAt = new Date().toISOString();
+  const after = { ...current, published: current.draft, updated_by: request.admin.email, updated_at: updatedAt };
+  await db.transaction(async (tx) => {
+    await tx.run("INSERT INTO site_content (content_key, published_json, draft_json, updated_by, updated_at) VALUES ('news-media', ?, ?, ?, ?) ON CONFLICT(content_key) DO UPDATE SET published_json=excluded.published_json, draft_json=excluded.draft_json, updated_by=excluded.updated_by, updated_at=excluded.updated_at",
+      JSON.stringify(current.draft), JSON.stringify(current.draft), request.admin.email, updatedAt);
+    await writeAudit({ tx, profileId: "news-media", email: request.admin.email, action: "news & media published", before: current, after });
+    await recordChange(tx, { contentType: "news-media", entityId: "news-media", email: request.admin.email, action: "News & Media published", before: current, after });
   });
   response.json({ published: true, updated_by: request.admin.email, updated_at: updatedAt });
 });
@@ -777,6 +857,8 @@ async function applyHistory(request, response, direction) {
         ? siteConfigState(await tx.get("SELECT published_json, draft_json, updated_by, updated_at FROM site_content WHERE content_key = 'site-config'"))
         : historyRow.content_type === "visual-gallery"
           ? await visualGalleryState(tx)
+          : historyRow.content_type === "news-media"
+            ? await newsMediaState(tx)
           : await manufacturingState(tx);
     const targetValue = historyRow[targetField] ? JSON.parse(historyRow[targetField]) : null;
     await restoreHistoryState(tx, historyRow, targetValue);
@@ -888,7 +970,7 @@ app.post("/api/admin/manufacturing/media", requireAdmin, manufacturingMediaUploa
   }
 });
 
-app.post("/api/admin/visual-gallery/media", requireAdmin, visualGalleryUpload.single("media"), async (request, response, next) => {
+app.post(["/api/admin/visual-gallery/media", "/api/admin/news-media/media"], requireAdmin, visualGalleryUpload.single("media"), async (request, response, next) => {
   const file = request.file;
   if (!file) return response.status(400).json({ error: "Choose an approved image or video to upload." });
   const extension = validManufacturingMedia(file);
@@ -918,7 +1000,14 @@ app.post("/api/admin/visual-gallery/media", requireAdmin, visualGalleryUpload.si
       return next(cause);
     }
   }
-  await writeAudit({ profileId: "visual-gallery-media", email: request.admin.email, action: "visual gallery media uploaded", before: null, after: { mediaType, mediaUrl } });
+  const newsMediaUpload = request.path === "/api/admin/news-media/media";
+  await writeAudit({
+    profileId: newsMediaUpload ? "news-media-media" : "visual-gallery-media",
+    email: request.admin.email,
+    action: newsMediaUpload ? "news & media asset uploaded" : "visual gallery media uploaded",
+    before: null,
+    after: { mediaType, mediaUrl },
+  });
   response.status(201).json({ media_url: mediaUrl, media_type: mediaType });
 });
 
@@ -941,7 +1030,8 @@ app.use((error, request, response, _next) => {
   if (error instanceof multer.MulterError) {
     const manufacturingMedia = request.path === "/api/admin/manufacturing/media";
     const visualGalleryMedia = request.path === "/api/admin/visual-gallery/media";
-    return response.status(400).json({ error: error.code === "LIMIT_FILE_SIZE" ? visualGalleryMedia ? "Visual gallery media files must be 1.8 MB or smaller." : manufacturingMedia ? "Manufacturing media files must be 30 MB or smaller." : "Portrait images must be 5 MB or smaller." : "The media upload could not be processed." });
+    const newsMediaUpload = request.path === "/api/admin/news-media/media";
+    return response.status(400).json({ error: error.code === "LIMIT_FILE_SIZE" ? visualGalleryMedia || newsMediaUpload ? "News & media files must be 1.8 MB or smaller." : manufacturingMedia ? "Manufacturing media files must be 30 MB or smaller." : "Portrait images must be 5 MB or smaller." : "The media upload could not be processed." });
   }
   if (error?.type === "entity.too.large") return response.status(413).json({ error: "PDF files must be 1.8 MB or smaller." });
   console.error(error);

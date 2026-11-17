@@ -19,6 +19,21 @@ export type VisualGalleryContent = { items: VisualMediaItem[] };
 type GalleryResponse = VisualGalleryContent;
 type NewsMediaPageProps = { page: SitePage };
 
+export type NewsMediaItem = {
+  id: string;
+  title: string;
+  category: string;
+  publishedAt: string;
+  description: string;
+  mediaType: "" | "image" | "video";
+  mediaUrl: string;
+  alt: string;
+  sortOrder: number;
+};
+
+export type NewsMediaContent = { items: NewsMediaItem[] };
+type NewsMediaResponse = NewsMediaContent;
+
 const industryVideos = [
   {
     id: "1YS53kRjFAE",
@@ -178,8 +193,11 @@ function AbstractSteelScene() {
 
 export function NewsMediaPage({ page }: NewsMediaPageProps) {
   const [items, setItems] = useState<VisualMediaItem[]>([]);
+  const [newsItems, setNewsItems] = useState<NewsMediaItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [newsLoading, setNewsLoading] = useState(true);
+  const [newsError, setNewsError] = useState("");
 
   useEffect(() => {
     const controller = new AbortController();
@@ -194,6 +212,17 @@ export function NewsMediaPage({ page }: NewsMediaPageProps) {
         if (!controller.signal.aborted) setError(cause instanceof Error ? cause.message : "Published visual media could not be loaded.");
       })
       .finally(() => { if (!controller.signal.aborted) setLoading(false); });
+    fetch("/api/news-media", { signal: controller.signal })
+      .then(async (response) => {
+        if (!response.ok) throw new Error("Published news content could not be loaded.");
+        const content = await response.json() as NewsMediaResponse;
+        if (!Array.isArray(content.items)) throw new Error("Published News & Media content has an invalid format.");
+        setNewsItems([...content.items].sort((left, right) => left.sortOrder - right.sortOrder));
+      })
+      .catch((cause: unknown) => {
+        if (!controller.signal.aborted) setNewsError(cause instanceof Error ? cause.message : "Published news content could not be loaded.");
+      })
+      .finally(() => { if (!controller.signal.aborted) setNewsLoading(false); });
     return () => controller.abort();
   }, []);
 
@@ -211,11 +240,17 @@ export function NewsMediaPage({ page }: NewsMediaPageProps) {
     <section className="newsroom-updates section-pad" id="news-updates" aria-labelledby="newsroom-updates-title">
       <div className="section-index">CHALINZE STEEL MILLS · OFFICIAL UPDATES</div>
       <div className="gallery-heading"><h2 id="newsroom-updates-title">Company news,<br /><em>carefully verified.</em></h2><p>Company announcements and project updates appear here after authorized review. Independent industry videos and company-approved photos are grouped below.</p></div>
-      <div className="newsroom-update-grid">{page.sections.map((section, index) => <article className="newsroom-update-card" key={`${section.title}-${index}`}>
-        <span>{section.tag ?? "Company newsroom"} · {String(index + 1).padStart(2, "0")}</span>
-        <h3>{section.title}</h3>
-        <p>{section.body}</p>
-      </article>)}</div>
+      {newsLoading && <p className="visual-gallery-state" role="status">Loading company updates…</p>}
+      {newsError && <p className="visual-gallery-state is-error" role="alert">{newsError}</p>}
+      {!newsLoading && !newsError && <div className="newsroom-update-grid">{newsItems.map((item, index) => <article className="newsroom-update-card" key={item.id}>
+        <span>{item.category} · {item.publishedAt || `UPDATE ${String(index + 1).padStart(2, "0")}`}</span>
+        <h3>{item.title}</h3>
+        <p>{item.description}</p>
+        {item.mediaUrl && <div className="newsroom-item-media">{item.mediaType === "image"
+          ? <img src={item.mediaUrl} alt={item.alt} loading="lazy" />
+          : <video src={item.mediaUrl} controls playsInline preload="metadata" aria-label={item.alt} />}</div>}
+      </article>)}</div>}
+      {!newsLoading && !newsError && !newsItems.length && <div className="visual-gallery-empty"><strong>No company updates are published yet.</strong><p>Verified company announcements will appear here after editorial approval.</p></div>}
       <p className="newsroom-status"><strong>Editorial status</strong> No unverified announcements, project milestones or operating results are presented as company news.</p>
     </section>
     <section className="industry-video-section section-pad" id="industry-videos" aria-labelledby="industry-video-title">

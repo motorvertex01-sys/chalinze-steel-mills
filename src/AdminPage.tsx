@@ -1,12 +1,12 @@
 import { useEffect, useState } from "react";
 import type { FormEvent } from "react";
-import { ArrowDown, ArrowLeft, ArrowUp, ArrowUpRight, Eye, Factory, FileText, Image, LayoutDashboard, LogOut, Plus, Redo2, Save, Send, ShieldCheck, Trash2, Undo2, Upload, Users, X } from "lucide-react";
+import { ArrowDown, ArrowLeft, ArrowUp, ArrowUpRight, Eye, Factory, FileText, Image, LayoutDashboard, LogOut, Newspaper, Plus, Redo2, Save, Send, ShieldCheck, Trash2, Undo2, Upload, Users, X } from "lucide-react";
 import { Link } from "react-router-dom";
 import { ProfileDetails } from "./LeadershipPage";
 import type { LeadershipProfile, ProfileInput, ProfileStatus } from "./leadershipTypes";
 import { availablePageLayouts, createDefaultSiteConfig, mergeSiteConfig, siteConfigPathIsSafe } from "./siteConfig";
 import type { SiteConfig, SiteGroup } from "./siteConfig";
-import type { VisualGalleryContent, VisualMediaItem } from "./VisualGallery";
+import type { NewsMediaContent, NewsMediaItem, VisualGalleryContent, VisualMediaItem } from "./VisualGallery";
 
 type AdminSession = { authenticated: boolean; email: string | null; role: "admin" | "editor" | null; configured: boolean; passwordChangeRequired?: boolean };
 type AuditEntry = { id: number; profile_id: string; admin_email: string; action: string; before: unknown; after: unknown; created_at: string };
@@ -21,6 +21,8 @@ type ManufacturingContent = {
 type ManufacturingAdminData = { published: ManufacturingContent; draft: ManufacturingContent; updated_by: string; updated_at: string };
 type VisualGalleryAdminData = { published: VisualGalleryContent; draft: VisualGalleryContent; updated_by: string; updated_at: string };
 type VisualGalleryItemForm = Omit<VisualMediaItem, "id" | "sortOrder">;
+type NewsMediaAdminData = { published: NewsMediaContent; draft: NewsMediaContent; updated_by: string; updated_at: string };
+type NewsMediaItemForm = Omit<NewsMediaItem, "id" | "sortOrder">;
 type HistoryStatus = { canUndo: boolean; canRedo: boolean; undoLabel: string | null; redoLabel: string | null };
 type CorporateDocument = { id: string; label: string; stored: boolean; size_bytes: number | null; updated_at: string | null };
 
@@ -46,6 +48,16 @@ const emptyGalleryItem = (): VisualGalleryItemForm => ({
   alt: "",
   mediaType: "image",
   mediaUrl: "",
+});
+
+const emptyNewsMediaItem = (): NewsMediaItemForm => ({
+  title: "",
+  category: "",
+  publishedAt: "",
+  description: "",
+  mediaType: "",
+  mediaUrl: "",
+  alt: "",
 });
 
 function auditEntryLabel(entry: AuditEntry) {
@@ -108,6 +120,11 @@ export function AdminPage() {
   const [galleryEditingId, setGalleryEditingId] = useState<string | null>(null);
   const [galleryError, setGalleryError] = useState("");
   const [galleryNotice, setGalleryNotice] = useState("");
+  const [newsMedia, setNewsMedia] = useState<NewsMediaAdminData | null>(null);
+  const [newsMediaItemForm, setNewsMediaItemForm] = useState<NewsMediaItemForm>(emptyNewsMediaItem);
+  const [newsMediaEditingId, setNewsMediaEditingId] = useState<string | null>(null);
+  const [newsMediaError, setNewsMediaError] = useState("");
+  const [newsMediaNotice, setNewsMediaNotice] = useState("");
   const [siteConfig, setSiteConfig] = useState<SiteConfig>(createDefaultSiteConfig);
   const [siteConfigError, setSiteConfigError] = useState("");
   const [siteConfigNotice, setSiteConfigNotice] = useState("");
@@ -135,13 +152,14 @@ export function AdminPage() {
   const [notice, setNotice] = useState("");
 
   const refreshAdminData = async () => {
-    const [nextProfiles, nextAudit, nextManufacturing, nextSiteConfig, nextHistory, nextVisualGallery] = await Promise.all([
+    const [nextProfiles, nextAudit, nextManufacturing, nextSiteConfig, nextHistory, nextVisualGallery, nextNewsMedia] = await Promise.all([
       apiRequest<LeadershipProfile[]>("/api/admin/profiles"),
       apiRequest<AuditEntry[]>("/api/admin/audit"),
       apiRequest<ManufacturingAdminData>("/api/admin/manufacturing"),
       apiRequest<{ draft: Partial<SiteConfig> }>("/api/admin/site-config"),
       apiRequest<HistoryStatus>("/api/admin/history"),
       apiRequest<VisualGalleryAdminData>("/api/admin/visual-gallery"),
+      apiRequest<NewsMediaAdminData>("/api/admin/news-media"),
     ]);
     setProfiles(nextProfiles);
     setAudit(nextAudit);
@@ -150,6 +168,7 @@ export function AdminPage() {
     setSiteConfig(mergeSiteConfig(nextSiteConfig.draft));
     setHistoryStatus(nextHistory);
     setVisualGallery(nextVisualGallery);
+    setNewsMedia(nextNewsMedia);
   };
 
   const refreshCorporateDocuments = async () => {
@@ -692,6 +711,132 @@ export function AdminPage() {
     setGalleryNotice("Item removed from the unsaved draft. Save the gallery draft to record the change.");
   };
 
+  const uploadNewsMedia = async (file?: File) => {
+    if (!file) return;
+    setNewsMediaError("");
+    setNewsMediaNotice("");
+    if (file.size > 1_800_000) {
+      setNewsMediaError("News & Media files must be 1.8 MB or smaller.");
+      return;
+    }
+    setBusy(true);
+    try {
+      const body = new FormData();
+      body.append("media", file);
+      const result = await apiRequest<{ media_url: string; media_type: "image" | "video" }>("/api/admin/news-media/media", { method: "POST", body });
+      setNewsMediaItemForm((current) => ({ ...current, mediaType: result.media_type, mediaUrl: result.media_url }));
+      setNewsMediaNotice("Media uploaded. Complete the item details and add it to the saved draft.");
+    } catch (cause) {
+      setNewsMediaError(cause instanceof Error ? cause.message : "News media upload failed.");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const saveNewsMediaDraft = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setNewsMediaError("");
+    setNewsMediaNotice("");
+    if (!newsMedia) return;
+    setBusy(true);
+    try {
+      await apiRequest("/api/admin/news-media", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(newsMedia.draft),
+      });
+      await refreshAdminData();
+      setNewsMediaNotice("News & Media draft saved. Public content remains unchanged until an administrator publishes it.");
+    } catch (cause) {
+      setNewsMediaError(cause instanceof Error ? cause.message : "News & Media draft could not be saved.");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const publishNewsMedia = async () => {
+    if (!newsMedia || !window.confirm("Publish the saved News & Media content? Review every title, date, and media description first.")) return;
+    setNewsMediaError("");
+    setNewsMediaNotice("");
+    setBusy(true);
+    try {
+      await apiRequest("/api/admin/news-media", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(newsMedia.draft),
+      });
+      await apiRequest("/api/admin/news-media/publish", { method: "POST" });
+      await refreshAdminData();
+      setNewsMediaNotice("News & Media content published on the public website.");
+    } catch (cause) {
+      setNewsMediaError(cause instanceof Error ? cause.message : "News & Media content could not be published.");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const addNewsMediaItem = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setNewsMediaError("");
+    if (!newsMedia) return;
+    if (newsMedia.draft.items.length >= 30 && !newsMediaEditingId) {
+      setNewsMediaError("News & Media can contain up to 30 items.");
+      return;
+    }
+    const updatedItem: NewsMediaItem = {
+      ...newsMediaItemForm,
+      id: newsMediaEditingId ?? crypto.randomUUID(),
+      sortOrder: newsMediaEditingId
+        ? newsMedia.draft.items.find((item) => item.id === newsMediaEditingId)?.sortOrder ?? 0
+        : newsMedia.draft.items.reduce((max, item) => Math.max(max, item.sortOrder), -10) + 10,
+    };
+    const items = newsMediaEditingId
+      ? newsMedia.draft.items.map((item) => item.id === newsMediaEditingId ? updatedItem : item)
+      : [...newsMedia.draft.items, updatedItem];
+    setNewsMedia((current) => current ? { ...current, draft: { ...current.draft, items } } : current);
+    setNewsMediaItemForm(emptyNewsMediaItem());
+    setNewsMediaEditingId(null);
+    setNewsMediaNotice("Item added to the unsaved draft. Save News & Media to record the change.");
+  };
+
+  const editNewsMediaItem = (item: NewsMediaItem) => {
+    setNewsMediaEditingId(item.id);
+    setNewsMediaItemForm({
+      title: item.title,
+      category: item.category,
+      publishedAt: item.publishedAt,
+      description: item.description,
+      mediaType: item.mediaType,
+      mediaUrl: item.mediaUrl,
+      alt: item.alt,
+    });
+    document.getElementById("news-media-item-editor")?.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
+
+  const moveNewsMediaItem = (id: string, direction: -1 | 1) => {
+    if (!newsMedia) return;
+    const items = [...newsMedia.draft.items].sort((left, right) => left.sortOrder - right.sortOrder);
+    const index = items.findIndex((item) => item.id === id);
+    const target = index + direction;
+    if (index < 0 || target < 0 || target >= items.length) return;
+    [items[index], items[target]] = [items[target], items[index]];
+    const ordered = items.map((item, itemIndex) => ({ ...item, sortOrder: itemIndex * 10 }));
+    setNewsMedia((current) => current ? { ...current, draft: { ...current.draft, items: ordered } } : current);
+  };
+
+  const removeNewsMediaItem = (item: NewsMediaItem) => {
+    if (!newsMedia || !window.confirm(`Remove "${item.title}" from the News & Media draft? The uploaded file remains stored.`)) return;
+    setNewsMedia((current) => current ? {
+      ...current,
+      draft: { ...current.draft, items: current.draft.items.filter((entry) => entry.id !== item.id) },
+    } : current);
+    if (newsMediaEditingId === item.id) {
+      setNewsMediaEditingId(null);
+      setNewsMediaItemForm(emptyNewsMediaItem());
+    }
+    setNewsMediaNotice("Item removed from the unsaved draft. Save News & Media to record the change.");
+  };
+
   return (
     <main className="admin-page">
       <header className="admin-header">
@@ -740,12 +885,13 @@ export function AdminPage() {
             <a href="#site-content"><span>Website content</span><strong>{Object.keys(siteConfig.pages).length} <small>pages</small></strong><small>Copy · navigation · design</small></a>
             <a href="#manufacturing-content"><span>Production story</span><strong>{manufacturingPreview?.stages.length ?? 6} <small>stages</small></strong><small>Technical content · media</small></a>
             <a href="#visual-gallery"><span>Media gallery</span><strong>{visualGallery?.draft.items.length ?? 0} <small>items</small></strong><small>Images · video · ordering</small></a>
+            <a href="#news-media"><span>News & Media</span><strong>{newsMedia?.draft.items.length ?? 0} <small>items</small></strong><small>Updates · publishing</small></a>
             <a href="#leadership"><span>Leadership register</span><strong>{profiles.length} <small>profiles</small></strong><small>{profiles.filter((profile) => profile.status === "published").length} published</small></a>
             {session.role === "admin" && <a href="#user-management"><span>Access management</span><strong>{adminUsers.length} <small>{adminUsers.length === 1 ? "account" : "accounts"}</small></strong><small>Admins · content editors</small></a>}
           </div>
         </section>
         <nav className="admin-dashboard-nav" aria-label="Dashboard sections">
-          <a href="#site-content">Website content</a><a href="#manufacturing-content">Manufacturing</a><a href="#visual-gallery">Media gallery</a><a href="#leadership">Leadership</a>
+          <a href="#site-content">Website content</a><a href="#manufacturing-content">Manufacturing</a><a href="#visual-gallery">Media gallery</a><a href="#news-media">News & Media</a><a href="#leadership">Leadership</a>
           {session.role === "admin" && <><a href="#private-records">Private records</a><a href="#user-management">User access</a></>}
           <a href="#audit-history">Audit history</a>
         </nav>
@@ -910,6 +1056,50 @@ export function AdminPage() {
             </div>
             <form onSubmit={saveVisualGalleryDraft}>
               <div className="admin-form-actions"><button className="button button-orange" type="submit" disabled={busy}><Save size={15} /> Save gallery draft</button>{session.role === "admin" && <button className="button button-orange" type="button" onClick={() => void publishVisualGallery()} disabled={busy}><Send size={15} /> Publish gallery</button>}<Link className="button button-outline" to="/news#media" target="_blank"><Eye size={15} /> Preview News & media</Link></div>
+            </form>
+          </>}
+        </section>
+        <section className="admin-news-media" id="news-media">
+          <div className="admin-section-heading"><div><span className="leadership-kicker">PUBLIC NEWSROOM</span><h2><Newspaper size={22} /> News & Media</h2></div></div>
+          <div className="admin-review-callout"><strong>Editorial review</strong><span>Manage company updates and their optional images or videos. Dates are optional; leave them blank when no verified publication date is available. Editors save drafts; only administrators publish.</span></div>
+          {newsMediaError && <p className="admin-feedback is-error" role="alert">{newsMediaError}</p>}
+          {newsMediaNotice && <p className="admin-feedback" role="status">{newsMediaNotice}</p>}
+          {!newsMedia ? <p className="leadership-load-state" role="status">Loading News & Media draft…</p> : <>
+            <div className="visual-gallery-admin-status"><span>Draft items <strong>{newsMedia.draft.items.length}</strong></span><span>Published items <strong>{newsMedia.published.items.length}</strong></span><span>Last updated by <strong>{newsMedia.updated_by}</strong></span></div>
+            <form className="visual-gallery-item-form news-media-item-form" id="news-media-item-editor" onSubmit={addNewsMediaItem}>
+              <h3>{newsMediaEditingId ? "Edit newsroom item" : "Add newsroom item"}</h3>
+              <label className="admin-upload-button"><Upload size={15} /> {newsMediaItemForm.mediaUrl ? "Replace uploaded media" : "Upload optional image or video"}
+                <input type="file" accept="image/jpeg,image/png,image/webp,video/mp4,video/webm" disabled={busy} onChange={(event) => { void uploadNewsMedia(event.target.files?.[0]); event.currentTarget.value = ""; }} />
+              </label>
+              <small>JPEG, PNG, WebP, MP4 or WebM · 1.8 MB maximum. Only publish approved, accurately described content.</small>
+              {newsMediaItemForm.mediaUrl && <div className="visual-gallery-upload-preview">
+                {newsMediaItemForm.mediaType === "image" ? <img src={newsMediaItemForm.mediaUrl} alt="Preview of uploaded newsroom media" /> : <video src={newsMediaItemForm.mediaUrl} controls playsInline preload="metadata" aria-label="Uploaded newsroom video preview" />}
+                <span>{newsMediaItemForm.mediaType === "video" ? "VIDEO" : "IMAGE"} · {newsMediaItemForm.mediaUrl}</span>
+              </div>}
+              <div className="visual-gallery-item-fields">
+                <label>Title<input value={newsMediaItemForm.title} onChange={(event) => setNewsMediaItemForm((current) => ({ ...current, title: event.target.value }))} maxLength={160} required /></label>
+                <label>Category<input value={newsMediaItemForm.category} onChange={(event) => setNewsMediaItemForm((current) => ({ ...current, category: event.target.value }))} maxLength={80} placeholder="e.g. Company update" required /></label>
+                <label>Publication date (optional)<input type="date" value={newsMediaItemForm.publishedAt} onChange={(event) => setNewsMediaItemForm((current) => ({ ...current, publishedAt: event.target.value }))} /></label>
+                <label className="visual-gallery-item-description">Update copy<textarea rows={4} value={newsMediaItemForm.description} onChange={(event) => setNewsMediaItemForm((current) => ({ ...current, description: event.target.value }))} maxLength={3000} required /></label>
+                {newsMediaItemForm.mediaUrl && <label className="visual-gallery-item-description">Accessible media description<input value={newsMediaItemForm.alt} onChange={(event) => setNewsMediaItemForm((current) => ({ ...current, alt: event.target.value }))} maxLength={300} required /></label>}
+              </div>
+              <div className="admin-form-actions"><button className="button button-outline" type="submit" disabled={busy}><Plus size={15} /> {newsMediaEditingId ? "Update draft item" : "Add to draft"}</button>{newsMediaEditingId && <button className="admin-quiet-button" type="button" onClick={() => { setNewsMediaEditingId(null); setNewsMediaItemForm(emptyNewsMediaItem()); }}>Cancel edit</button>}</div>
+            </form>
+            <div className="visual-gallery-admin-list news-media-admin-list">
+              {[...newsMedia.draft.items].sort((left, right) => left.sortOrder - right.sortOrder).map((item, index, items) => <article className="visual-gallery-admin-card" key={item.id}>
+                <div className={`visual-gallery-admin-thumb${item.mediaUrl ? "" : " is-empty"}`}>{item.mediaUrl && (item.mediaType === "image" ? <img src={item.mediaUrl} alt="" /> : <video src={item.mediaUrl} muted playsInline preload="metadata" aria-hidden="true" />)}</div>
+                <div className="visual-gallery-admin-copy"><span>{String(index + 1).padStart(2, "0")} · {item.category}{item.publishedAt ? ` · ${item.publishedAt}` : ""}</span><strong>{item.title}</strong><p>{item.description}</p></div>
+                <div className="visual-gallery-admin-actions">
+                  <button className="admin-quiet-button" type="button" aria-label={`Move ${item.title} up`} title="Move up" disabled={index === 0} onClick={() => moveNewsMediaItem(item.id, -1)}><ArrowUp size={15} /></button>
+                  <button className="admin-quiet-button" type="button" aria-label={`Move ${item.title} down`} title="Move down" disabled={index === items.length - 1} onClick={() => moveNewsMediaItem(item.id, 1)}><ArrowDown size={15} /></button>
+                  <button className="admin-quiet-button" type="button" onClick={() => editNewsMediaItem(item)}>Edit</button>
+                  <button className="admin-quiet-button delete-action" type="button" onClick={() => removeNewsMediaItem(item)}>Remove</button>
+                </div>
+              </article>)}
+              {!newsMedia.draft.items.length && <p className="visual-gallery-admin-empty">No newsroom items in this draft. Add a verified company update when ready.</p>}
+            </div>
+            <form onSubmit={saveNewsMediaDraft}>
+              <div className="admin-form-actions"><button className="button button-orange" type="submit" disabled={busy}><Save size={15} /> Save News & Media draft</button>{session.role === "admin" && <button className="button button-orange" type="button" onClick={() => void publishNewsMedia()} disabled={busy}><Send size={15} /> Publish News & Media</button>}<Link className="button button-outline" to="/news" target="_blank"><Eye size={15} /> Preview News & Media</Link></div>
             </form>
           </>}
         </section>

@@ -28,7 +28,7 @@ type ProfileRow = {
 type ContentRow = { published_json: string; draft_json: string; updated_by: string; updated_at: string };
 type SiteConfigState = { draft: unknown; published: unknown; updated_by: string; updated_at: string };
 type ChangeEntry = {
-  contentType: "profile" | "site-config" | "manufacturing" | "visual-gallery";
+  contentType: "profile" | "site-config" | "manufacturing" | "visual-gallery" | "news-media";
   entityId: string;
   email: string;
   action: string;
@@ -188,6 +188,32 @@ function validateVisualGallery(content: unknown) {
     if (typeof media.mediaUrl !== "string" || media.mediaUrl.length > 500 ||
         !new RegExp(`^/uploads/[a-f0-9-]+\\.${extension}$`, "i").test(media.mediaUrl)) return "Gallery media must reference an uploaded file of the matching type.";
     if (!Number.isInteger(media.sortOrder) || Number(media.sortOrder) < 0 || Number(media.sortOrder) > 10000) return "Gallery order must be a whole number between 0 and 10000.";
+  }
+  return null;
+}
+
+function validateNewsMedia(content: unknown) {
+  if (!content || typeof content !== "object" || Array.isArray(content)) return "News & Media content must be an object.";
+  const value = content as { items?: unknown };
+  if (!Array.isArray(value.items) || value.items.length > 30) return "News & Media can contain up to 30 items.";
+  const ids = new Set<string>();
+  for (const item of value.items) {
+    if (!item || typeof item !== "object" || Array.isArray(item)) return "Every news item must be an object.";
+    const newsItem = item as Record<string, unknown>;
+    if (typeof newsItem.id !== "string" || !/^[a-zA-Z0-9_-]{1,80}$/.test(newsItem.id) || ids.has(newsItem.id)) return "Each news item must have a unique valid ID.";
+    ids.add(newsItem.id);
+    if (!isPlainText(newsItem.title, 160, false) || !isPlainText(newsItem.category, 80, false) ||
+        !isPlainText(newsItem.description, 3000, false) || !isPlainText(newsItem.alt, 300)) return "Complete each news item title, category and description.";
+    if (!isPlainText(newsItem.publishedAt, 10) || (newsItem.publishedAt !== "" && !/^\d{4}-\d{2}-\d{2}$/.test(newsItem.publishedAt))) return "Publication dates must use YYYY-MM-DD.";
+    if (newsItem.mediaType === "" && newsItem.mediaUrl === "") {
+      if (newsItem.alt !== "") return "Accessible media description is only used when media is attached.";
+    } else {
+      if (newsItem.mediaType !== "image" && newsItem.mediaType !== "video") return "Choose image or video for attached news media.";
+      const extension = newsItem.mediaType === "image" ? /\/uploads\/[a-f0-9-]+\.(?:jpg|png|webp)$/i : /\/uploads\/[a-f0-9-]+\.(?:mp4|webm)$/i;
+      if (typeof newsItem.mediaUrl !== "string" || newsItem.mediaUrl.length > 500 || !extension.test(newsItem.mediaUrl)) return "News media must reference an uploaded file of the matching type.";
+      if (!isPlainText(newsItem.alt, 300, false)) return "Add an accessible description for attached media.";
+    }
+    if (!Number.isInteger(newsItem.sortOrder) || Number(newsItem.sortOrder) < 0 || Number(newsItem.sortOrder) > 10000) return "News item order must be a whole number between 0 and 10000.";
   }
   return null;
 }
@@ -354,7 +380,7 @@ function historyStatements(db: D1Database, change: ChangeEntry) {
   ];
 }
 
-async function saveContent(db: D1Database, key: "site-config" | "manufacturing" | "visual-gallery", state: SiteConfigState, email: string, action: string) {
+async function saveContent(db: D1Database, key: "site-config" | "manufacturing" | "visual-gallery" | "news-media", state: SiteConfigState, email: string, action: string) {
   const now = new Date().toISOString();
   const after = { ...state, updated_by: email, updated_at: now };
   const saveSql = `INSERT INTO site_content (content_key, published_json, draft_json, updated_by, updated_at)
@@ -364,12 +390,12 @@ async function saveContent(db: D1Database, key: "site-config" | "manufacturing" 
     statement(db, saveSql, key, JSON.stringify(state.published), JSON.stringify(state.draft), email, now),
     statement(db, "INSERT INTO audit_log (profile_id, admin_email, action, before_json, after_json, created_at) VALUES (?, ?, ?, ?, ?, ?)",
       key, email, action, JSON.stringify(state), JSON.stringify(after), now),
-    ...historyStatements(db, { contentType: key, entityId: key, email, action: action === "manufacturing draft updated" ? "Manufacturing draft updated" : key === "visual-gallery" ? "Visual gallery draft updated" : "Site-wide content draft updated", before: state, after }),
+    ...historyStatements(db, { contentType: key, entityId: key, email, action: action === "manufacturing draft updated" ? "Manufacturing draft updated" : key === "visual-gallery" ? "Visual gallery draft updated" : key === "news-media" ? "News & Media draft updated" : "Site-wide content draft updated", before: state, after }),
   ]);
   return after;
 }
 
-async function publishContent(db: D1Database, key: "site-config" | "manufacturing" | "visual-gallery", state: SiteConfigState, email: string, action: string) {
+async function publishContent(db: D1Database, key: "site-config" | "manufacturing" | "visual-gallery" | "news-media", state: SiteConfigState, email: string, action: string) {
   const now = new Date().toISOString();
   const after = { ...state, published: state.draft, updated_by: email, updated_at: now };
   await db.batch([
@@ -433,6 +459,16 @@ app.get("/api/visual-gallery", async (context) => {
   const content = row ? parseJson(row.published_json) as { items?: unknown } : { items: [] };
   if (!content || typeof content !== "object" || !Array.isArray(content.items)) {
     return responseError("Published visual gallery content is invalid.", 500);
+  }
+  return context.json({ items: content.items }, 200, { "Cache-Control": "public, max-age=60" });
+});
+
+app.get("/api/news-media", async (context) => {
+  const row = await one<Pick<ContentRow, "published_json">>(context.get("db"),
+    "SELECT published_json FROM site_content WHERE content_key = 'news-media'");
+  const content = row ? parseJson(row.published_json) as { items?: unknown } : { items: [] };
+  if (!content || typeof content !== "object" || !Array.isArray(content.items)) {
+    return responseError("Published News & Media content is invalid.", 500);
   }
   return context.json({ items: content.items }, 200, { "Cache-Control": "public, max-age=60" });
 });
@@ -534,6 +570,37 @@ app.post("/api/admin/visual-gallery/publish", async (context) => {
   const issue = validateVisualGallery(current.draft);
   if (issue) return context.json({ error: issue }, 400);
   const after = await publishContent(context.get("db"), "visual-gallery", current, admin.email, "visual gallery published");
+  return context.json({ published: true, updated_by: after.updated_by, updated_at: after.updated_at });
+});
+
+app.get("/api/admin/news-media", async (context) => {
+  const row = await one<ContentRow>(context.get("db"),
+    "SELECT published_json, draft_json, updated_by, updated_at FROM site_content WHERE content_key = 'news-media'");
+  context.header("Cache-Control", "no-store");
+  return context.json(contentState(row, { items: [] }));
+});
+
+app.put("/api/admin/news-media", async (context) => {
+  const body = await context.req.json();
+  const issue = validateNewsMedia(body);
+  if (issue) return context.json({ error: issue }, 400);
+  const row = await one<ContentRow>(context.get("db"),
+    "SELECT published_json, draft_json, updated_by, updated_at FROM site_content WHERE content_key = 'news-media'");
+  const before = contentState(row, { items: [] });
+  const after = await saveContent(context.get("db"), "news-media", { ...before, draft: body }, context.get("admin").email,
+    "news & media draft updated");
+  return context.json({ saved: true, updated_by: after.updated_by, updated_at: after.updated_at });
+});
+
+app.post("/api/admin/news-media/publish", async (context) => {
+  const admin = context.get("admin");
+  if (admin.role !== "admin") return context.json({ error: "Administrator privileges are required to publish News & Media." }, 403);
+  const row = await one<ContentRow>(context.get("db"),
+    "SELECT published_json, draft_json, updated_by, updated_at FROM site_content WHERE content_key = 'news-media'");
+  const current = contentState(row, { items: [] });
+  const issue = validateNewsMedia(current.draft);
+  if (issue) return context.json({ error: issue }, 400);
+  const after = await publishContent(context.get("db"), "news-media", current, admin.email, "news & media published");
   return context.json({ published: true, updated_by: after.updated_by, updated_at: after.updated_at });
 });
 
@@ -818,7 +885,7 @@ async function restoreHistory(
       VALUES (?, ?, ?, ?, ?) ON CONFLICT(content_key) DO UPDATE SET
       published_json=excluded.published_json, draft_json=excluded.draft_json,
       updated_by=excluded.updated_by, updated_at=excluded.updated_at`,
-    contentType === "site-config" ? "site-config" : contentType === "visual-gallery" ? "visual-gallery" : "manufacturing",
+    contentType === "site-config" ? "site-config" : contentType === "visual-gallery" ? "visual-gallery" : contentType === "news-media" ? "news-media" : "manufacturing",
     JSON.stringify(content.published), JSON.stringify(content.draft), content.updated_by, content.updated_at));
   }
   statements.push(statement(db, "INSERT INTO audit_log (profile_id, admin_email, action, before_json, after_json, created_at) VALUES (?, ?, ?, ?, ?, ?)",
@@ -841,8 +908,8 @@ app.post("/api/admin/:direction{undo|redo}", async (context) => {
   const entityId = String(row.entity_id);
   const current = contentType === "profile"
     ? profileFromRow(await one<ProfileRow>(context.get('db'), "SELECT * FROM profiles WHERE id = ?", entityId))
-    : contentState(await one<ContentRow>(context.get('db'), "SELECT published_json, draft_json, updated_by, updated_at FROM site_content WHERE content_key = ?",     contentType === "site-config" ? "site-config" : contentType === "visual-gallery" ? "visual-gallery" : "manufacturing"),
-    contentType === "site-config" ? defaultSiteConfig : contentType === "visual-gallery" ? { items: [] } : manufacturingDefault);
+    : contentState(await one<ContentRow>(context.get('db'), "SELECT published_json, draft_json, updated_by, updated_at FROM site_content WHERE content_key = ?",     contentType === "site-config" ? "site-config" : contentType === "visual-gallery" ? "visual-gallery" : contentType === "news-media" ? "news-media" : "manufacturing"),
+    contentType === "site-config" ? defaultSiteConfig : contentType === "visual-gallery" || contentType === "news-media" ? { items: [] } : manufacturingDefault);
   const target = row[targetField] ? parseJson(String(row[targetField])) : null;
   const action = `${direction}: ${String(row.action)}`;
   await restoreHistory(context.get('db'), contentType, entityId, target, admin.email, action, current,
@@ -940,6 +1007,14 @@ app.post("/api/admin/visual-gallery/media", async (context) => {
   if ("error" in uploaded) return context.json({ error: uploaded.error }, uploaded.status);
   await logAudit(context.get("db"), "visual-gallery-media", context.get("admin").email,
     "visual gallery media uploaded", null, { mediaType: uploaded.type, mediaUrl: `/uploads/${uploaded.key}` });
+  return context.json({ media_url: `/uploads/${uploaded.key}`, media_type: uploaded.type }, 201);
+});
+
+app.post("/api/admin/news-media/media", async (context) => {
+  const uploaded = await uploadMedia(context, "media");
+  if ("error" in uploaded) return context.json({ error: uploaded.error }, uploaded.status);
+  await logAudit(context.get("db"), "news-media-media", context.get("admin").email,
+    "news & media asset uploaded", null, { mediaType: uploaded.type, mediaUrl: `/uploads/${uploaded.key}` });
   return context.json({ media_url: `/uploads/${uploaded.key}`, media_type: uploaded.type }, 201);
 });
 
