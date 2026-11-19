@@ -7,6 +7,17 @@ export type SiteGroup = { label: string; links: SiteLink[] };
 export type SiteConfig = {
   version: 1;
   theme: { accent: string; background: string; panel: string; headingFont: string; bodyFont: string; bodyFontSize: number };
+  header: {
+    layout: "stacked" | "inline";
+    height: number;
+    logoSize: number;
+    brandSize: number;
+    shadowBlur: number;
+    lightBackground: string;
+    lightText: string;
+    darkBackground: string;
+    darkText: string;
+  };
   layout: "cards" | "editorial" | "split";
   home: {
     heroEyebrow: string; heroHeadline: string; heroDescription: string; primaryAction: string;
@@ -28,6 +39,11 @@ export function createDefaultSiteConfig(): SiteConfig {
   return {
     version: 1,
     theme: { accent: "#e86f1e", background: "#f7f8f8", panel: "#ffffff", headingFont: "Manrope", bodyFont: "Inter", bodyFontSize: 15 },
+    header: {
+      layout: "stacked", height: 150, logoSize: 60, brandSize: 13, shadowBlur: 26,
+      lightBackground: "#080a0c", lightText: "#f3f4f2",
+      darkBackground: "#ffffff", darkText: "#172126",
+    },
     layout: "cards",
     home: {
       heroEyebrow: "Planned integrated steel project · Vigwaza, Tanzania",
@@ -76,6 +92,7 @@ export function mergeSiteConfig(value: Partial<SiteConfig> | null | undefined): 
   return {
     ...defaults, ...value,
     theme: { ...defaults.theme, ...value.theme },
+    header: { ...defaults.header, ...value.header },
     home: { ...defaults.home, ...value.home },
     headerAction: { ...defaults.headerAction, ...value.headerAction },
     navigation: Array.isArray(value.navigation) && value.navigation.length ? value.navigation : defaults.navigation,
@@ -132,7 +149,15 @@ export function SiteConfigProvider({ children }: { children: ReactNode }) {
     root.style.setProperty("--display", `"${config.theme.headingFont}", sans-serif`);
     root.style.setProperty("--body-font", `"${config.theme.bodyFont}", sans-serif`);
     root.style.setProperty("--text-body", `${config.theme.bodyFontSize}px`);
-  }, [config.theme]);
+    root.style.setProperty("--header-height", `${config.header.height}px`);
+    root.style.setProperty("--header-logo-size", `${config.header.logoSize}px`);
+    root.style.setProperty("--header-brand-size", `${config.header.brandSize}px`);
+    root.style.setProperty("--header-shadow-blur", `${config.header.shadowBlur}px`);
+    root.style.setProperty("--header-light-background", config.header.lightBackground);
+    root.style.setProperty("--header-light-text", config.header.lightText);
+    root.style.setProperty("--header-dark-background", config.header.darkBackground);
+    root.style.setProperty("--header-dark-text", config.header.darkText);
+  }, [config.theme, config.header]);
   const value = useMemo(() => config, [config]);
   return <SiteConfigContext.Provider value={value}>{children}</SiteConfigContext.Provider>;
 }

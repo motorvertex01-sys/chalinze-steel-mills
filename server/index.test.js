@@ -409,6 +409,10 @@ test("leadership roles, authenticated editing, image uploads and publishing", as
     const siteConfig = {
       version: 1,
       theme: { accent: "#1199aa", background: "#111111", panel: "#222222", headingFont: "Georgia", bodyFont: "Arial", bodyFontSize: 18 },
+      header: {
+        layout: "inline", height: 170, logoSize: 75, brandSize: 15, shadowBlur: 36,
+        lightBackground: "#121212", lightText: "#ffffff", darkBackground: "#fefefe", darkText: "#161616",
+      },
       layout: "editorial",
       home: {
         heroEyebrow: "Test eyebrow", heroHeadline: "Test headline", heroDescription: "Test description",
@@ -429,6 +433,9 @@ test("leadership roles, authenticated editing, image uploads and publishing", as
     const invalidFontSizeConfig = { ...siteConfig, theme: { ...siteConfig.theme, bodyFontSize: 21 } };
     const rejectedFontSizeConfig = await fetch(`${base}/api/admin/site-config`, { method: "PUT", headers: editorHeaders, body: JSON.stringify(invalidFontSizeConfig) });
     if (rejectedFontSizeConfig.status !== 400) throw new Error("An out-of-range body font size was accepted.");
+    const invalidHeaderConfig = { ...siteConfig, header: { ...siteConfig.header, logoSize: 101 } };
+    const rejectedHeaderConfig = await fetch(`${base}/api/admin/site-config`, { method: "PUT", headers: editorHeaders, body: JSON.stringify(invalidHeaderConfig) });
+    if (rejectedHeaderConfig.status !== 400) throw new Error("An out-of-range header logo size was accepted.");
     const saveSiteConfig = await fetch(`${base}/api/admin/site-config`, {
       method: "PUT", headers: editorHeaders, body: JSON.stringify(siteConfig),
     });
@@ -444,7 +451,8 @@ test("leadership roles, authenticated editing, image uploads and publishing", as
     });
     if (!publishSiteConfig.ok) throw new Error("Administrator could not publish site-wide content.");
     const publishedSiteConfig = await (await fetch(`${base}/api/site-config`)).json();
-    if (publishedSiteConfig.home.heroHeadline !== "Test headline" || publishedSiteConfig.theme.bodyFontSize !== 18) throw new Error("Published site configuration or typography settings were not exposed through the public read-only API.");
+    if (publishedSiteConfig.home.heroHeadline !== "Test headline" || publishedSiteConfig.theme.bodyFontSize !== 18 ||
+        publishedSiteConfig.header.layout !== "inline" || publishedSiteConfig.header.logoSize !== 75) throw new Error("Published site configuration, typography or header settings were not exposed through the public read-only API.");
     const undoSiteConfig = await fetch(`${base}/api/admin/undo`, { method: "POST", headers: { Cookie: adminCookie, Origin: base } });
     if (!undoSiteConfig.ok || (await (await fetch(`${base}/api/site-config`)).json()).home.heroHeadline) throw new Error("Site-wide undo did not restore the previous public content.");
     const redoSiteConfig = await fetch(`${base}/api/admin/redo`, { method: "POST", headers: { Cookie: adminCookie, Origin: base } });

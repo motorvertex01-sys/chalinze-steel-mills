@@ -104,7 +104,7 @@ function Header() {
   );
 
   return (
-    <header className="site-header">
+    <header className={`site-header header-layout-${config.header.layout}`}>
       <div className="header-inner">
         <Link className="brand" to="/" onClick={closeMenus} aria-label="Chalinze Steel Mills Ltd home">
           <img className="brand-emblem" src="/assets/brand/chalinze-emblem-approved.webp" alt="" />
@@ -225,7 +225,11 @@ function Home() {
         <h1>{home.heroHeadline.split("\n").map((line, index, lines) => <span key={`${line}-${index}`}>{index === lines.length - 1 ? <em>{line}</em> : line}{index < lines.length - 1 && <br />}</span>)}</h1>
         <p className="hero-lede">{home.heroDescription}</p>
         <div className="hero-actions"><ConfigLink className="button button-orange" path={home.primaryPath}>{home.primaryAction} <ArrowRight size={17} /></ConfigLink><ConfigLink className="text-link" path={home.secondaryPath}>{home.secondaryAction} <ArrowUpRight size={15} /></ConfigLink><a className="hero-material-link" href="#material-applications">Material applications <ArrowDown size={14} /></a></div>
-        <div className="hero-meta"><span><b>01</b> TANZANIA</span><span><b>02</b> VIGWAZA</span><span><b>03</b> STEEL BILLETS</span></div>
+        <div className="hero-meta" aria-label="Project location and focus">
+          <span><b>01</b><span>TANZANIA</span></span>
+          <span><b>02</b><span>VIGWAZA</span></span>
+          <span><b>03</b><span>STEEL BILLETS</span></span>
+        </div>
       </div>
       <div className="hero-object"><Scene kind="ore" /><div className="scene-caption"><span>RAW MATERIAL / CONCEPT</span><span>ROTATE TO EXPLORE ↗</span></div></div>
       <a className="scroll-cue" href="#journey"><span>Scroll to discover</span><ArrowDown size={16} /></a>

@@ -93,6 +93,20 @@ function validateSiteConfig(config) {
   if (!allowedFonts.has(config.theme.headingFont) || !allowedFonts.has(config.theme.bodyFont)) return "Choose a supported typography preset.";
   if (config.theme.bodyFontSize !== undefined &&
       (!Number.isInteger(config.theme.bodyFontSize) || config.theme.bodyFontSize < 14 || config.theme.bodyFontSize > 20)) return "Choose a body font size between 14 and 20 pixels.";
+  if (config.header !== undefined) {
+    const header = config.header;
+    if (!header || typeof header !== "object" || Array.isArray(header) ||
+        !["stacked", "inline"].includes(header.layout) ||
+        !Number.isInteger(header.height) || header.height < 130 || header.height > 220 ||
+        !Number.isInteger(header.logoSize) || header.logoSize < 40 || header.logoSize > 100 ||
+        !Number.isInteger(header.brandSize) || header.brandSize < 10 || header.brandSize > 18 ||
+        !Number.isInteger(header.shadowBlur) || header.shadowBlur < 0 || header.shadowBlur > 48) {
+      return "Choose valid header layout, sizing and shadow settings.";
+    }
+    for (const field of ["lightBackground", "lightText", "darkBackground", "darkText"]) {
+      if (typeof header[field] !== "string" || !/^#[0-9a-f]{6}$/i.test(header[field])) return `The header ${field} must be a six-digit hex color.`;
+    }
+  }
   if (!allowedLayouts.has(config.layout)) return "Choose a valid page layout preset.";
   const homeFields = ["heroEyebrow", "heroHeadline", "heroDescription", "primaryAction", "primaryPath", "secondaryAction", "secondaryPath", "introEyebrow", "introHeadline", "introPrimary", "introSecondary", "introAction", "introPath", "brandEyebrow", "brandLabel", "brandHeadline", "brandDescription", "brandCaveat", "brandAction", "brandPath"];
   if (!config.home || typeof config.home !== "object" || homeFields.some((field) => !isPlainText(config.home[field], 2000, false))) return "Complete all home-page content fields.";

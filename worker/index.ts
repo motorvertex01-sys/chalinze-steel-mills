@@ -62,6 +62,11 @@ const allowedFonts = new Set(["Inter", "Manrope", "Arial", "Georgia", "Verdana",
 const defaultSiteConfig = {
   version: 1,
   theme: { accent: "#e86f1e", background: "#f7f8f8", panel: "#ffffff", headingFont: "Manrope", bodyFont: "Inter", bodyFontSize: 15 },
+  header: {
+    layout: "stacked", height: 150, logoSize: 60, brandSize: 13, shadowBlur: 26,
+    lightBackground: "#080a0c", lightText: "#f3f4f2",
+    darkBackground: "#ffffff", darkText: "#172126",
+  },
   layout: "cards",
   home: {},
   navigation: [],
@@ -144,6 +149,20 @@ function validateSiteConfig(config: unknown) {
   if (!allowedFonts.has(String(theme.headingFont)) || !allowedFonts.has(String(theme.bodyFont))) return "Choose a supported typography preset.";
   if (theme.bodyFontSize !== undefined &&
       (!Number.isInteger(theme.bodyFontSize) || Number(theme.bodyFontSize) < 14 || Number(theme.bodyFontSize) > 20)) return "Choose a body font size between 14 and 20 pixels.";
+  const header = value.header as Record<string, unknown> | undefined;
+  if (header !== undefined) {
+    if (!header || typeof header !== "object" ||
+        !["stacked", "inline"].includes(String(header.layout)) ||
+        !Number.isInteger(header.height) || Number(header.height) < 130 || Number(header.height) > 220 ||
+        !Number.isInteger(header.logoSize) || Number(header.logoSize) < 40 || Number(header.logoSize) > 100 ||
+        !Number.isInteger(header.brandSize) || Number(header.brandSize) < 10 || Number(header.brandSize) > 18 ||
+        !Number.isInteger(header.shadowBlur) || Number(header.shadowBlur) < 0 || Number(header.shadowBlur) > 48) {
+      return "Choose valid header layout, sizing and shadow settings.";
+    }
+    for (const field of ["lightBackground", "lightText", "darkBackground", "darkText"]) {
+      if (typeof header[field] !== "string" || !/^#[0-9a-f]{6}$/i.test(header[field] as string)) return `The header ${field} must be a six-digit hex color.`;
+    }
+  }
   if (!allowedLayouts.has(String(value.layout))) return "Choose a valid page layout preset.";
   const homeFields = ["heroEyebrow", "heroHeadline", "heroDescription", "primaryAction", "primaryPath", "secondaryAction", "secondaryPath", "introEyebrow", "introHeadline", "introPrimary", "introSecondary", "introAction", "introPath", "brandEyebrow", "brandLabel", "brandHeadline", "brandDescription", "brandCaveat", "brandAction", "brandPath"];
   const home = value.home as Record<string, unknown> | null;
