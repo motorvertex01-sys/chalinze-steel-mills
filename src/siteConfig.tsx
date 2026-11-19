@@ -38,11 +38,11 @@ const pageFromStatic = (page: SitePage): SiteConfig["pages"][string] => ({ ...pa
 export function createDefaultSiteConfig(): SiteConfig {
   return {
     version: 1,
-    theme: { accent: "#e86f1e", background: "#f7f8f8", panel: "#ffffff", headingFont: "Manrope", bodyFont: "Inter", bodyFontSize: 15 },
+    theme: { accent: "#C69A45", background: "#F3F5F7", panel: "#FFFFFF", headingFont: "Manrope", bodyFont: "Inter", bodyFontSize: 15 },
     header: {
       layout: "stacked", height: 150, logoSize: 60, brandSize: 13, shadowBlur: 26,
-      lightBackground: "#080a0c", lightText: "#f3f4f2",
-      darkBackground: "#ffffff", darkText: "#172126",
+      lightBackground: "#172B40", lightText: "#F3F5F7",
+      darkBackground: "#F3F5F7", darkText: "#172B40",
     },
     layout: "cards",
     home: {

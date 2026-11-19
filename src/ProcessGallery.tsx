@@ -72,7 +72,7 @@ function ManufacturingIllustration({ kind, alt }: { kind: NonNullable<GalleryIte
         <path d="M159 183v53q0 17 16 17h101v-45h-76v-25" fill="none" stroke="#c3cacc" strokeWidth="15" />
         <path d="M274 244h217" stroke="#737e83" strokeWidth="25" />
         {[308,362,416,470].map((x) => <g key={x}><circle cx={x} cy="276" r="19" fill="#30373a" stroke="#aab2b5" strokeWidth="4" /><circle cx={x} cy="276" r="7" fill="#141719" /></g>)}
-        <path d="M292 190h188m-174 0v28m58-28v28m58-28v28m58-28v28" stroke="#f47721" strokeOpacity=".75" strokeWidth="5" />
+        <path d="M292 190h188m-174 0v28m58-28v28m58-28v28m58-28v28" stroke="#C69A45" strokeOpacity=".75" strokeWidth="5" />
         <text x="54" y="58" fill="#f3a34e" fontSize="16" letterSpacing="3">CONTINUOUS CASTING / CONCEPT</text>
       </>}
       {kind === "billet" && <>
@@ -90,19 +90,19 @@ function ManufacturingIllustration({ kind, alt }: { kind: NonNullable<GalleryIte
         <path d="M204 250h40v27h-40z" fill="#b8c0c2" />
         <path d="M337 120h110v158H337z" fill="#343d41" stroke="#b7c0c2" strokeWidth="4" />
         <path d="M355 149h73m-73 28h55m-55 28h67m-67 28h49" stroke="#e1e4e5" strokeWidth="5" />
-        <circle cx="469" cy="124" r="30" fill="#202527" stroke="#f47721" strokeWidth="4" />
-        <path d="m490 145 38 39" stroke="#f47721" strokeWidth="8" />
+        <circle cx="469" cy="124" r="30" fill="#202527" stroke="#C69A45" strokeWidth="4" />
+        <path d="m490 145 38 39" stroke="#C69A45" strokeWidth="8" />
         <text x="54" y="58" fill="#f3a34e" fontSize="16" letterSpacing="3">QUALITY ACTIVITIES / PLANNED</text>
       </>}
       {kind === "rolling" && <>
         <path d="M108 268h420" stroke="#abb3b6" strokeWidth="10" />
-        {[175,286,397,492].map((x) => <g key={x}><circle cx={x} cy="201" r="35" fill="#454e52" stroke="#d5dadd" strokeWidth="5" /><circle cx={x} cy="201" r="13" fill="#161a1c" stroke="#f47721" strokeWidth="3" /><path d={`M${x} 166v-48`} stroke="#9da7aa" strokeWidth="8" /></g>)}
-        <path d="M126 249h370" stroke="#f47721" strokeWidth="4" strokeDasharray="16 14" />
+        {[175,286,397,492].map((x) => <g key={x}><circle cx={x} cy="201" r="35" fill="#454e52" stroke="#d5dadd" strokeWidth="5" /><circle cx={x} cy="201" r="13" fill="#161a1c" stroke="#C69A45" strokeWidth="3" /><path d={`M${x} 166v-48`} stroke="#9da7aa" strokeWidth="8" /></g>)}
+        <path d="M126 249h370" stroke="#C69A45" strokeWidth="4" strokeDasharray="16 14" />
         <text x="54" y="58" fill="#f3a34e" fontSize="16" letterSpacing="3">DOWNSTREAM ROLLING / ILLUSTRATION</text>
       </>}
       {kind === "infrastructure" && <>
         <path d="M113 260h418" stroke="#8f9a9e" strokeWidth="5" />
-        {[156,234,312,390,468].map((x) => <g key={x}><path d={`M${x} 260v-116h48v116m-48-87h48m-48 38h48`} fill="none" stroke="#aeb7ba" strokeWidth="6" /><path d={`M${x-13} 144h73`} stroke="#f47721" strokeWidth="4" /></g>)}
+        {[156,234,312,390,468].map((x) => <g key={x}><path d={`M${x} 260v-116h48v116m-48-87h48m-48 38h48`} fill="none" stroke="#aeb7ba" strokeWidth="6" /><path d={`M${x-13} 144h73`} stroke="#C69A45" strokeWidth="4" /></g>)}
         <path d="m130 116 156-52 155 52M130 112v-22m311 22V90" fill="none" stroke="#697479" strokeWidth="8" />
         <text x="54" y="58" fill="#f3a34e" fontSize="16" letterSpacing="3">PLANT SYSTEMS / CONCEPT</text>
       </>}

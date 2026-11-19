@@ -216,18 +216,18 @@ function BilletDimensions({ size }: { size: number }) {
             <stop offset="1" stopColor="#c0c5c8" />
           </linearGradient>
           <marker id="dimension-arrow" viewBox="0 0 8 8" refX="4" refY="4" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
-            <path d="M 0 0 L 8 4 L 0 8 z" fill="#f47721" />
+            <path d="M 0 0 L 8 4 L 0 8 z" fill="#C69A45" />
           </marker>
         </defs>
-        <line x1={start} y1="45" x2={end} y2="45" stroke="#f47721" strokeWidth="1.5" markerStart="url(#dimension-arrow)" markerEnd="url(#dimension-arrow)" />
-        <line x1={start} y1="51" x2={start} y2={start - 4} stroke="#f47721" strokeWidth="1" />
-        <line x1={end} y1="51" x2={end} y2={start - 4} stroke="#f47721" strokeWidth="1" />
+        <line x1={start} y1="45" x2={end} y2="45" stroke="#C69A45" strokeWidth="1.5" markerStart="url(#dimension-arrow)" markerEnd="url(#dimension-arrow)" />
+        <line x1={start} y1="51" x2={start} y2={start - 4} stroke="#C69A45" strokeWidth="1" />
+        <line x1={end} y1="51" x2={end} y2={start - 4} stroke="#C69A45" strokeWidth="1" />
         <text x={center} y="32" textAnchor="middle" className="dimension-svg-label">WIDTH · {measurement}</text>
         <rect x={start} y={start} width={drawingSize} height={drawingSize} rx="3" fill="url(#billet-face)" stroke="#eff1f0" strokeOpacity=".7" />
         <path d={`M ${start + 13} ${start + 18} L ${start + 13} ${end - 18}`} stroke="#ffffff" strokeOpacity=".17" strokeWidth="2" />
-        <line x1="254" y1={start} x2="254" y2={end} stroke="#f47721" strokeWidth="1.5" markerStart="url(#dimension-arrow)" markerEnd="url(#dimension-arrow)" />
-        <line x1={end + 4} y1={start} x2="249" y2={start} stroke="#f47721" strokeWidth="1" />
-        <line x1={end + 4} y1={end} x2="249" y2={end} stroke="#f47721" strokeWidth="1" />
+        <line x1="254" y1={start} x2="254" y2={end} stroke="#C69A45" strokeWidth="1.5" markerStart="url(#dimension-arrow)" markerEnd="url(#dimension-arrow)" />
+        <line x1={end + 4} y1={start} x2="249" y2={start} stroke="#C69A45" strokeWidth="1" />
+        <line x1={end + 4} y1={end} x2="249" y2={end} stroke="#C69A45" strokeWidth="1" />
         <text x="273" y={center} textAnchor="middle" transform={`rotate(90 273 ${center})`} className="dimension-svg-label">HEIGHT · {measurement}</text>
       </svg>
       <figcaption>Square cross-section · dimensions shown to scale</figcaption>
