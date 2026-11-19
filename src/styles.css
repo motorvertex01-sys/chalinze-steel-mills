@@ -1810,6 +1810,8 @@ body[data-theme="dark"] .site-header .department-menu section a { color: var(--h
   .hero-meta > span { gap: 6px; padding-right: 4px; font-size: 8px; }
 }
 .site-header .brand { animation: header-brand-enter .7s cubic-bezier(.2,.75,.25,1) both; }
+.site-header { transition: transform .32s cubic-bezier(.2,.75,.25,1); }
+.site-header.is-scroll-hidden { transform: translate3d(0, calc(-100% - 12px), 0); pointer-events: none; }
 .site-header .brand-emblem { animation: header-logo-enter .85s cubic-bezier(.2,.75,.25,1) both; }
 .site-header .main-nav > * { animation: header-link-enter .55s cubic-bezier(.2,.75,.25,1) both; }
 .site-header .main-nav > :nth-child(1) { animation-delay: .12s; }

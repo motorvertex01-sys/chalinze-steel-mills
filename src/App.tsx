@@ -73,8 +73,34 @@ function Header() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [openGroup, setOpenGroup] = useState("");
   const [theme, setTheme] = useState<"light" | "dark">(() => window.localStorage.getItem("site-appearance") === "dark" ? "dark" : "light");
+  const [headerHidden, setHeaderHidden] = useState(false);
+  const headerRef = useRef<HTMLElement>(null);
   const location = useLocation();
   const config = useSiteConfig();
+
+  useEffect(() => {
+    let previousY = window.scrollY;
+    let accumulatedDelta = 0;
+    const handleScroll = () => {
+      const currentY = Math.max(0, window.scrollY);
+      accumulatedDelta += currentY - previousY;
+      previousY = currentY;
+
+      if (mobileOpen || openGroup || headerRef.current?.contains(document.activeElement) || currentY <= 120) {
+        accumulatedDelta = 0;
+        setHeaderHidden(false);
+      } else if (accumulatedDelta >= 8) {
+        accumulatedDelta = 0;
+        setHeaderHidden(true);
+      } else if (accumulatedDelta <= -8) {
+        accumulatedDelta = 0;
+        setHeaderHidden(false);
+      }
+    };
+
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, [mobileOpen, openGroup]);
 
   useLayoutEffect(() => {
     document.body.dataset.theme = theme;
@@ -104,7 +130,11 @@ function Header() {
   );
 
   return (
-    <header className={`site-header header-layout-${config.header.layout}`}>
+    <header
+      ref={headerRef}
+      className={`site-header header-layout-${config.header.layout}${headerHidden ? " is-scroll-hidden" : ""}`}
+      onFocusCapture={() => setHeaderHidden(false)}
+    >
       <div className="header-inner">
         <Link className="brand" to="/" onClick={closeMenus} aria-label="Chalinze Steel Mills Ltd home">
           <img className="brand-emblem" src="/assets/brand/chalinze-emblem-approved.webp" alt="" />
