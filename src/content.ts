@@ -11,7 +11,7 @@ export const processStages = [
   {
     title: "ROM iron ore",
     status: "Planned project stage",
-    description: "The company document describes Tanzanian run-of-mine iron ore as the starting material for the proposed integrated value chain. The document associates the mineral resource with GYPSUM Plus Mines Ltd; mine permits, assays, reserves and supply agreements are not provided.",
+    description: "Tanzanian run-of-mine iron ore is the planned starting material for the proposed integrated value chain. The resource is associated with GYPSUM Plus Mines Ltd; permits, assays, reserves and supply agreements have not been confirmed.",
     input: "Tanzanian ROM iron ore (planned feed)",
     output: "ROM ore for preparation",
     equipment: "Mining, reception and handling systems are in the project concept; mine and equipment details are not specified.",
@@ -38,7 +38,7 @@ export const processStages = [
   {
     title: "Steelmaking",
     status: "Planned project stage",
-    description: "The company document describes Electric Arc Furnace steelmaking and molten-steel refining in the proposed route. Furnace selection, refining configuration, operating data and capacity require approved engineering confirmation.",
+    description: "Electric Arc Furnace steelmaking and molten-steel refining are described in the proposed route. Furnace selection, refining configuration, operating data and capacity require engineering confirmation.",
     input: "Iron units; the utility basis also lists oxygen and fluxes",
     output: "Liquid steel for casting",
     equipment: "Electric Arc Furnace is the described steelmaking concept; installation or operation is not claimed.",
@@ -101,16 +101,16 @@ export const contactDetails = {
     "P.O. Box 5497",
     "Dar es Salaam, Tanzania",
   ],
-  addressVariant: "A separate headquarters paragraph in the source gives another variant: “8th Floor, Morocco Squire, Mwaki Road, Kinondoni District.” The two address descriptions differ.",
+  addressVariant: "The company should confirm the exact office address before visitors travel.",
   phones: ["+255 735 283 711", "+255 735 283 712", "+255 713 283 711"],
   whatsapp: "+255 752 283 711",
   email: "ceo@chalinzesteelmills.co.tz",
-  website: "https://chalinzesteelmills.co.tz",
+  website: "https://chalinze-steel-mills.motorvertex01.workers.dev",
   officeMap: "https://maps.app.goo.gl/3wb3PRXCqLbRXgo3A",
   siteAddress: "Vigwaza area / Vigwaza Dry Port, Chalinze District, Pwani Region, Tanzania (planned manufacturing project location; exact site address not supplied).",
   siteMap: "https://maps.app.goo.gl/mUPLZc5SQGWxgd46A?g_st=aw",
   officeHours: "Monday–Friday, 8:00 a.m.–5:00 p.m. East Africa Time. Weekends and public holidays: closed. Meetings by prior appointment.",
-  sourceNote: "Corporate contact details transcribed from Sections 24.1–24.10 of the supplied Chalinze company document.",
+  sourceNote: "For meetings and deliveries, please confirm the current contact and address details with the company.",
 } as const;
 
 export const enquiryTypes = [
@@ -127,7 +127,7 @@ export const enquiryTypes = [
 export const faqs = [
   {
     question: "What does Chalinze Steel Mills Ltd plan to manufacture?",
-    answer: "The supplied company document identifies steel billets as the principal planned product of a proposed integrated ROM iron ore-to-steel project. It does not establish that the plant is currently operating.",
+    answer: "Steel billets are the principal planned product of the proposed integrated ROM iron ore-to-steel project. The plant is not currently represented as operational.",
   },
   {
     question: "What is a steel billet?",
@@ -138,7 +138,7 @@ export const faqs = [
     answer: "ROM iron ore is the unprocessed mineral feed identified at the start of the proposed value chain. A steel billet is a semi-finished steel product formed after the planned ironmaking, steelmaking and casting stages.",
   },
   {
-    question: "Which billet cross-sections are listed in the company document?",
+    question: "Which billet cross-sections are planned?",
     answer: "The document lists planned square cross-sections of 130 × 130 mm and 150 × 150 mm. Confirm these against the latest approved product specifications before treating them as definitive sale specifications. Billet length, grade, chemistry, tolerances and mechanical properties were not supplied.",
   },
   {
@@ -147,11 +147,11 @@ export const faqs = [
   },
   {
     question: "How do I request product or technical information?",
-    answer: "Use the product enquiry or email links on the Contact page. They open your email application addressed to the contact email published in the supplied company document. No website form submission is claimed.",
+    answer: "Use the product enquiry or email links on the Contact page. They open your email application; this website does not collect or store enquiry form submissions.",
   },
   {
     question: "How can a supplier or EPC company contact Chalinze Steel Mills?",
-    answer: "The company document invites supplier, engineering, equipment and EPC enquiries. Use the supplier/partnership email action or the listed telephone numbers. No procurement registration portal is currently configured.",
+    answer: "Supplier, engineering, equipment and EPC enquiries are welcome through the partnership email action or listed telephone numbers. A procurement registration portal is not currently available.",
   },
   {
     question: "How can an investor request information?",
@@ -171,21 +171,24 @@ export const faqs = [
   },
   {
     question: "Which ironmaking technology will the project use?",
-    answer: "The main project narrative describes natural-gas-based DRI, while other material refers to electric ironmaking. The selected route is not resolved in the source documents and requires technical confirmation.",
+    answer: "Project descriptions differ: one describes natural-gas-based DRI, while another refers to electric ironmaking. The selected route remains unresolved and requires technical confirmation.",
   },
 ] as const;
 
 export const pages: SitePage[] = [
   {
     path: "/company",
-    title: "The company behind the name.",
+    title: "The company behind the steel.",
     eyebrow: "Company",
-    summary: "Chalinze Steel Mills Ltd is a Tanzanian company focused on developing an integrated iron ore mining and steel manufacturing operation, from run-of-mine iron ore to high-quality steel billets.",
+    summary: "Chalinze Steel Mills Ltd is a Tanzanian registered company focused on developing an integrated iron ore mining, beneficiation and steel manufacturing operation, transforming run-of-mine iron ore into high-quality steel billets.",
     sections: [
-      { title: "WHO WE ARE — The Company Behind the Steel.", body: "Chalinze Steel Mills Ltd is a Tanzanian company focused on developing an integrated iron ore mining and steel manufacturing operation, from run-of-mine iron ore to high-quality steel billets.", tag: "Company overview" },
-      { title: "Ownership & group relationship", body: "The supplied company document states that Chalinze Steel Mills Ltd is a wholly owned subsidiary of GYPSUM Plus Mines Ltd.", tag: "Ownership statement · source-reported" },
-      { title: "Vision & mission", body: "The company’s stated vision is to establish a competitive, efficient and sustainable steel manufacturing business serving Tanzania and regional markets. Its mission emphasizes modern technology, skills development, partnership and responsible practices.", tag: "Company document · Section 4.2" },
-      { title: "Corporate objectives", body: "The company document identifies local value creation, regional market development, technology transfer, employment and skills development, and sustainable industrial growth among the company’s objectives.", tag: "Company document · Sections 2 and 7" },
+      { title: "Who we are", body: "Chalinze Steel Mills Ltd is a Tanzanian registered company focused on developing an integrated iron ore mining, beneficiation and steel manufacturing operation, transforming run-of-mine iron ore into high-quality steel billets.", tag: "Company overview" },
+      { title: "Ownership & group relationship", body: "Chalinze Steel Mills Ltd is a wholly owned subsidiary of GYPSUM Plus Mines Ltd.", tag: "Group structure" },
+      { title: "Our vision", body: "To establish a competitive, efficient and sustainable steel business serving Tanzania and regional markets.", tag: "Vision" },
+      { title: "Our mission", body: "To develop an integrated operation through modern technology, skills development, strategic partnership and responsible practice.", tag: "Mission" },
+      { title: "Strategic priorities", body: "Local value creation, regional market development, technology transfer, employment and skills development, and responsible industrial growth.", tag: "Corporate priorities" },
+      { title: "Business philosophy", body: "Integration across the value chain, technical discipline in design and execution, and commercial competitiveness guide the project approach.", tag: "Integration · discipline · competitiveness" },
+      { title: "Strategic cooperation & responsible development", body: "The company’s approach emphasizes cooperation with investors, technology providers, customers and development partners, alongside responsible environmental, social, safety and governance planning.", tag: "Partnership · responsibility" },
       { title: "Governance & leadership", body: "The Board of Directors, Senior Management Team and Supporting Staff are presented in the Leadership & Governance section.", tag: "Company structure" },
     ],
   },
@@ -209,9 +212,9 @@ export const pages: SitePage[] = [
     eyebrow: "Manufacturing",
     summary: "Explore the proposed ROM iron ore-to-steel billet value chain, with each stage labelled by its documented project status.",
     sections: [
-      { title: "Integrated process overview", body: "The company document sets out ROM iron ore reception and handling, beneficiation, prepared feedstock, iron production, steelmaking, continuous casting, product quality, and downstream billet applications.", tag: "Proposed process" },
+      { title: "Integrated process overview", body: "The planned process includes ROM iron ore reception and handling, beneficiation, feed preparation, ironmaking, steelmaking, continuous casting, product quality and downstream billet applications.", tag: "Proposed process" },
       { title: "Process status", body: "The manufacturing line is a development concept. The supplied files do not establish that the proposed plant, process lines or equipment are installed or operating.", tag: "Not an operating facility claim" },
-      { title: "Design dependencies", body: "Agglomeration depends on the selected process. The ironmaking route is disputed in the source material, and capacity is stated both as 1,000,000 and 1,200,000 tonnes per annum.", tag: "Open engineering decisions" },
+      { title: "Design dependencies", body: "Agglomeration depends on the selected process. Project descriptions differ on the ironmaking route, while planning materials list both 1,000,000 and 1,200,000 tonnes per annum.", tag: "Open engineering decisions" },
     ],
   },
   {
@@ -228,22 +231,22 @@ export const pages: SitePage[] = [
   },
   {
     path: "/products",
-    title: "Steel, shaped with intent.",
+    title: "Steel billets & material applications.",
     eyebrow: "Products",
-    summary: "Steel billets are the principal planned product. Explore the two cross-sections listed in the company document.",
+    summary: "Steel billets are the principal planned product of the proposed integrated value chain. Two nominal cross-sections are listed; final specifications remain to be confirmed.",
     sections: [
-      { title: "130 × 130 mm billet", body: "Listed as a planned billet cross-section in the project product portfolio. The supplied document does not specify billet length, steel grade, chemistry, tolerances or mechanical properties.", tag: "Planned nominal cross-section" },
-      { title: "150 × 150 mm billet", body: "Listed as a second planned billet cross-section. Confirm both dimensions against the latest approved product specification before commercial publication.", tag: "Planned nominal cross-section" },
-      { title: "Downstream uses", body: "The document describes billets as semi-finished feedstock that may be processed by downstream steel industries into reinforcement bars, structural products and other engineering materials. Those downstream products are not claimed as direct Chalinze output.", tag: "Downstream application only" },
-      { title: "Technical data & availability", body: "No approved grade, chemical composition, mechanical properties, tolerance, billet length, price, minimum order, stock, supply lead time, product certificate or specification sheet was supplied.", tag: "Contact for approved information" },
-      { title: "Quality intent", body: "The document discusses raw-material testing, process monitoring, metallurgical analysis and final inspection as planned quality activities. It does not establish that tests are currently being performed at an operating facility.", tag: "Planned quality framework" },
+      { title: "130 × 130 mm billet", body: "A planned billet cross-section. Billet length, steel grade, chemistry, tolerances and mechanical properties remain to be confirmed.", tag: "Planned nominal cross-section" },
+      { title: "150 × 150 mm billet", body: "A second planned billet cross-section. Confirm dimensions against the approved product specification before commercial use.", tag: "Planned nominal cross-section" },
+      { title: "Downstream uses", body: "Steel billets are semi-finished feedstock for downstream steel processing, including reinforcement and structural products. These are potential applications, not direct Chalinze products.", tag: "Downstream application only" },
+      { title: "Technical data & availability", body: "Approved grade, chemistry, mechanical properties, tolerances, length, pricing, stock, lead times and product certificates have not yet been published.", tag: "Specifications pending" },
+      { title: "Quality You Can Trust", body: "The proposed quality framework covers raw-material verification, process monitoring, metallurgical analysis and final billet inspection. Testing methods, operating records and product specifications remain subject to engineering development.", tag: "Planned quality framework" },
     ],
   },
   {
     path: "/quality",
-    title: "Quality through the process.",
+    title: "Quality You Can Trust",
     eyebrow: "Quality & technology",
-    summary: "The company document describes a planned approach to material testing, process monitoring, metallurgical analysis and product inspection.",
+    summary: "The proposed quality approach covers material testing, process monitoring, metallurgical analysis and product inspection.",
     sections: [
       { title: "Raw-material testing", body: "The proposed quality framework starts with verification of iron ore characteristics and composition. No laboratory results, assays or test certificates were supplied.", tag: "Planned quality activity" },
       { title: "Process monitoring", body: "The document describes monitoring operating parameters across iron and steel production. The controls, instrumentation and operating procedures are not documented as commissioned.", tag: "Planned control approach" },
@@ -267,12 +270,12 @@ export const pages: SitePage[] = [
   },
   {
     path: "/sustainability",
-    title: "Progress, responsibly made.",
+    title: "Responsible development and energy management.",
     eyebrow: "Sustainability & HSEC",
-    summary: "The company document sets out low-carbon manufacturing ambition alongside energy, carbon, resource, environmental, safety and community-management themes.",
+    summary: "The project’s sustainability approach addresses energy, carbon, resources, environmental management, safety and community engagement.",
     sections: [
-      { title: "Low-carbon ambition", body: "Low-carbon steel is a stated project and brand ambition. The supplied documents do not provide measured emissions intensity, reduction baselines, verified product-footprint results or environmental certification.", tag: "Ambition, not measured performance" },
-      { title: "Energy & carbon", body: "Energy efficiency, responsible energy management, CO₂ awareness and carbon-management planning appear in the document. No renewable-energy percentage, energy intensity or emissions metric is reported as achieved.", tag: "No measured figures supplied" },
+      { title: "Low-carbon ambition", body: "Low-carbon steel is a project and brand ambition. Measured emissions intensity, reduction baselines, verified product-footprint results and environmental certification have not been provided.", tag: "Ambition, not measured performance" },
+      { title: "Energy management & carbon reduction", body: "Energy efficiency, responsible energy management and CO₂ reduction are integral to the proposed operating strategy. The planned energy system combines Julius Nyerere Hydropower Project (JNHPP) renewable electricity with natural gas, supported by energy-efficient technologies, waste heat recovery and continuous monitoring of energy consumption. The project will establish measurable energy-intensity and greenhouse-gas emissions indicators to guide operational performance, improve efficiency and support long-term carbon-management objectives.", tag: "Proposed strategy · not an operating result" },
       { title: "Environmental & resource management", body: "Environmental assessment and management planning, responsible water use, recycled process water, resource utilisation, waste management, monitoring and regulatory compliance are identified as development topics.", tag: "Planned management framework" },
       { title: "Health & safety", body: "Occupational health, industrial safety culture, emergency preparedness and response are included in the proposed HSEC framework. No safety performance statistics or certifications are supplied.", tag: "No operating metrics supplied" },
       { title: "Community, skills & shared value", body: "The document discusses stakeholder engagement, community development, local employment, training, women and youth inclusion, local enterprise and education as potential CSR/shared-value programmes.", tag: "Programme details require approval" },
@@ -283,7 +286,7 @@ export const pages: SitePage[] = [
     path: "/investment",
     title: "Building partnerships for progress.",
     eyebrow: "Investors & partnerships",
-    summary: "Potential investment, financing and industrial collaboration approaches described in the company document, without implying secured commitments.",
+    summary: "Potential investment, financing and industrial collaboration approaches, without implying secured commitments.",
     sections: [
       { title: "Investment rationale", body: "The document presents mineral value addition, import substitution, domestic manufacturing, regional demand, industrial development and skills/technology transfer as strategic investment themes.", tag: "Project rationale" },
       { title: "Potential financing approaches", body: "Equity investment, senior debt, export credit and development-finance participation are discussed as potential financing approaches. No financing is represented as secured or approved.", tag: "Options, not commitments" },
@@ -296,13 +299,13 @@ export const pages: SitePage[] = [
     path: "/markets",
     title: "Connecting regional demand.",
     eyebrow: "Markets & applications",
-    summary: "The company document describes intended steel billet markets in Tanzania and regional African markets, with downstream industrial use cases.",
+    summary: "The project targets potential steel billet markets in Tanzania and regional African markets, with downstream industrial applications.",
     sections: [
-      { title: "Tanzania", body: "The company document presents Tanzania as the home market and industrial context for the proposed project. It discusses import substitution and domestic supply as strategic rationale, not as measured sales or achieved import savings.", tag: "Target market" },
+      { title: "Tanzania", body: "Tanzania is the home market and industrial context for the proposed project. Import substitution and domestic supply are strategic rationale, not measured sales or achieved import savings.", tag: "Target market" },
       { title: "Regional markets", body: "The document refers to East and Central African markets and broader opportunities through EAC, SADC and AfCFTA. These are target-market ambitions; no current exports or customer territories are claimed.", tag: "Market ambition" },
       { title: "Steel rolling mills", body: "Rolling mills are identified as potential downstream users of steel billets for further processing. No named mill or supply relationship is confirmed.", tag: "Potential customer segment" },
       { title: "Construction & infrastructure", body: "The document links downstream steel applications to construction and public infrastructure. Reinforcement bars and structural sections are examples of further-processed products, not claimed direct company output.", tag: "Downstream use case" },
-      { title: "Energy, mining & industry", body: "Energy projects, mining and mineral processing, manufacturing, industrial fabrication and engineering are identified as potential demand areas in the company material.", tag: "Potential applications" },
+      { title: "Energy, mining & industry", body: "Energy projects, mining and mineral processing, manufacturing, industrial fabrication and engineering are potential demand areas.", tag: "Potential applications" },
       { title: "Distribution & commercial approach", body: "The document discusses customer support, distribution and export development as future commercial strategy areas. Pricing, minimum order quantities, current stock, supply terms and delivery commitments are not provided.", tag: "Commercial details pending" },
     ],
   },
@@ -310,7 +313,7 @@ export const pages: SitePage[] = [
     path: "/development",
     title: "A disciplined path to delivery.",
     eyebrow: "Project roadmap",
-    summary: "The source document outlines engineering, approvals, financing, EPC, commissioning and future operational development as project stages.",
+    summary: "The development roadmap covers engineering, approvals, financing, EPC, commissioning and future operational readiness.",
     sections: [
       { title: "Engineering & technical development", body: "Project definition, process route selection, plant design and technical partnerships are identified as development activities. The capacity and ironmaking route need formal resolution.", tag: "Stage — no completion date supplied" },
       { title: "Environmental & regulatory approvals", body: "The document describes environmental and social assessment, management planning, stakeholder engagement, regulatory compliance and monitoring. No approvals or permits are evidenced here.", tag: "Approval status not supplied" },
@@ -335,7 +338,7 @@ export const pages: SitePage[] = [
     path: "/careers",
     title: "Skills for a stronger future.",
     eyebrow: "Careers & talent",
-    summary: "The company document identifies talent, training and local skills development as part of the long-term project vision, but supplies no approved vacancies.",
+    summary: "Talent, training and local skills development are part of the long-term project vision. Approved vacancies are not currently listed.",
     sections: [
       { title: "Potential career areas", body: "The document names engineering, metallurgy, mining, automation, environment, finance, procurement, administration, IT, project management and industrial operations as areas where future opportunities may arise.", tag: "Potential areas, not vacancies" },
       { title: "Graduate & skills development", body: "Graduate programmes, apprenticeships, internships, training, professional development and leadership development are described as potential people-development themes.", tag: "Programme status not supplied" },
@@ -347,11 +350,11 @@ export const pages: SitePage[] = [
     path: "/faqs",
     title: "Clear answers for customers.",
     eyebrow: "Customer information",
-    summary: "Answers to common product, process, market, location and enquiry questions based on the supplied Chalinze company document.",
+    summary: "Answers to common product, process, market, location and enquiry questions, with unresolved details clearly identified.",
     sections: [
       { title: "Product information", body: "The planned product is steel billets in the two cross-sections listed in the document. Grades, chemistry, tolerances, billet length and supply conditions were not provided.", tag: "See Products" },
       { title: "Markets & supply", body: "Rolling mills, construction, infrastructure, energy, mining and manufacturing are discussed as target segments. They are not confirmed customers or active supply territories.", tag: "See Markets" },
-      { title: "Contact & office", body: "Telephone, WhatsApp, CEO email, postal address and office hours are listed on the Contact page, transcribed from the company document. One office-address variant needs resolution.", tag: "See Contact" },
+      { title: "Contact & office", body: "Telephone, WhatsApp, CEO email, postal address and office hours are listed on the Contact page. Confirm the office address before visiting.", tag: "See Contact" },
       { title: "Technical decisions", body: "The production capacity and ironmaking route are unresolved in the source. The public website identifies both conflicts rather than presenting a single unconfirmed answer.", tag: "See Project" },
     ],
   },
@@ -363,7 +366,7 @@ export const pages: SitePage[] = [
     sections: [
       { title: "Corporate office", body: "Morocco Square, Exchange Tower, Mwai Kibaki Road / New Bagamoyo Road, P.O. Box 5497, Dar es Salaam, Tanzania. A different headquarters description elsewhere in the document gives another floor/street spelling; see the contact notice.", tag: "Company document · Section 24.2" },
       { title: "Telephone & WhatsApp", body: "Telephone: +255 735 283 711, +255 735 283 712 and +255 713 283 711. WhatsApp: +255 752 283 711.", tag: "Company document · Section 24.2" },
-      { title: "Email & website", body: "CEO/corporate email: ceo@chalinzesteelmills.co.tz. Company website: https://chalinzesteelmills.co.tz.", tag: "Company document · Section 24.2" },
+      { title: "Email & website", body: "CEO/corporate email: ceo@chalinzesteelmills.co.tz. Current website: chalinze-steel-mills.motorvertex01.workers.dev.", tag: "Corporate contact" },
       { title: "Office hours", body: "Monday–Friday, 8:00 a.m.–5:00 p.m. East Africa Time; Saturday, Sunday and public holidays closed. Meetings are by prior appointment.", tag: "Company document · Section 24.10" },
       { title: "Planned project site", body: "The document identifies Vigwaza area / Vigwaza Dry Port, Chalinze District, Pwani Region as the planned manufacturing location. This is not the corporate contact office.", tag: "Project location · confirmation required" },
     ],

@@ -182,6 +182,11 @@ export function LeadershipPage() {
   }, []);
 
   const board = profiles.filter((profile) => profile.section === "board" && profile.placement === "board");
+  const aminiIndex = board.findIndex((profile) => profile.name === "Mr. Amini N. Kimaro");
+  if (aminiIndex >= 0 && aminiIndex !== 1) {
+    const [amini] = board.splice(aminiIndex, 1);
+    board.splice(Math.min(1, board.length), 0, amini);
+  }
   const management = profiles.filter((profile) => profile.section === "management");
   const support = profiles.filter((profile) => profile.section === "support");
 

@@ -1,5 +1,5 @@
-import { lazy, Suspense, useEffect, useRef, useState } from "react";
-import { ArrowDown, ArrowRight, ArrowUpRight, MapPin, Menu, X } from "lucide-react";
+import { lazy, Suspense, useEffect, useLayoutEffect, useRef, useState, type FormEvent } from "react";
+import { ArrowDown, ArrowRight, ArrowUpRight, MapPin, Menu, Moon, Sun, X } from "lucide-react";
 import { Link, NavLink, Navigate, Route, Routes, useLocation } from "react-router-dom";
 import { contactDetails, enquiryTypes, faqs, pages, processStages, type SitePage } from "./content";
 import { applicationGallery, manufacturingGallery } from "./galleryData";
@@ -37,7 +37,7 @@ function PageMetadata() {
       ? "Meet the Board of Directors, Senior Management Team and Supporting Staff of Chalinze Steel Mills Ltd."
       : page?.summary ?? "Chalinze Steel Mills Ltd — developing an integrated steel manufacturing project in Tanzania.";
     const canonicalPath = pathname === "/technology" ? "/manufacturing" : pathname;
-    const canonicalUrl = `https://chalinzesteelmills.co.tz${canonicalPath}`;
+    const canonicalUrl = `${window.location.origin}${canonicalPath}`;
     const updateMeta = (selector: string, attributes: Record<string, string>, content: string) => {
       let element = document.querySelector<HTMLMetaElement>(selector);
       if (!element) {
@@ -72,8 +72,15 @@ function ScrollToTop() {
 function Header() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [openGroup, setOpenGroup] = useState("");
+  const [theme, setTheme] = useState<"light" | "dark">(() => window.localStorage.getItem("site-appearance") === "dark" ? "dark" : "light");
   const location = useLocation();
   const config = useSiteConfig();
+
+  useLayoutEffect(() => {
+    document.body.dataset.theme = theme;
+    document.documentElement.dataset.theme = theme;
+    window.localStorage.setItem("site-appearance", theme);
+  }, [theme]);
 
   const closeMenus = () => {
     setMobileOpen(false);
@@ -81,7 +88,7 @@ function Header() {
   };
 
   const renderMenu = (group: (typeof config.navigation)[number]) => (
-    <div className="nav-departments">
+    <div className="nav-departments" key={group.label}>
       <button type="button" className={`nav-link nav-menu-trigger ${openGroup === group.label ? "active" : ""}`} aria-expanded={openGroup === group.label} onClick={() => setOpenGroup((open) => open === group.label ? "" : group.label)}>
         {group.label} <span aria-hidden="true">⌄</span>
       </button>
@@ -113,6 +120,17 @@ function Header() {
           ) : renderMenu(group))}
         </nav>
         <ConfigLink className="header-action" path={config.headerAction.path}>{config.headerAction.label} <ArrowUpRight size={14} /></ConfigLink>
+        <button
+          type="button"
+          className="theme-toggle"
+          onClick={() => setTheme((current) => current === "light" ? "dark" : "light")}
+          aria-label={`Switch to ${theme === "light" ? "dark" : "light"} mode`}
+          aria-pressed={theme === "dark"}
+          title={`Switch to ${theme === "light" ? "dark" : "light"} mode`}
+        >
+          {theme === "light" ? <Moon size={16} aria-hidden="true" /> : <Sun size={16} aria-hidden="true" />}
+          <span>{theme === "light" ? "Light" : "Dark"}</span>
+        </button>
         <button type="button" className="mobile-toggle" aria-label={mobileOpen ? "Close navigation" : "Open navigation"} aria-expanded={mobileOpen} onClick={() => setMobileOpen((open) => !open)}>
           {mobileOpen ? <X size={21} /> : <Menu size={21} />}
         </button>
@@ -196,6 +214,7 @@ function Home() {
     { name: "Ironmaking", kind: "process" as const, label: "03 / PRODUCE IRON", detail: "Ironmaking is part of the project concept, but the source material describes conflicting technology routes." },
     { name: "Steelmaking", kind: "process" as const, label: "04 / MAKE STEEL", detail: "Electric Arc Furnace steelmaking is described as a planned stage; final design and operating status are unconfirmed." },
     { name: "Billet casting", kind: "billet" as const, label: "05 / CAST", detail: "Continuous casting is planned to produce steel billets, the project's principal identified product." },
+    { name: "Billet inspection & dispatch", kind: "billet" as const, label: "06 / INSPECT & DISPATCH", detail: "The planned final stage includes billet inspection, storage, handling and dispatch for downstream steel processing." },
   ];
 
   return <main className="home-page">
@@ -205,7 +224,7 @@ function Home() {
         <Pill>{home.heroEyebrow}</Pill>
         <h1>{home.heroHeadline.split("\n").map((line, index, lines) => <span key={`${line}-${index}`}>{index === lines.length - 1 ? <em>{line}</em> : line}{index < lines.length - 1 && <br />}</span>)}</h1>
         <p className="hero-lede">{home.heroDescription}</p>
-        <div className="hero-actions"><ConfigLink className="button button-orange" path={home.primaryPath}>{home.primaryAction} <ArrowRight size={17} /></ConfigLink><ConfigLink className="text-link" path={home.secondaryPath}>{home.secondaryAction} <ArrowUpRight size={15} /></ConfigLink></div>
+        <div className="hero-actions"><ConfigLink className="button button-orange" path={home.primaryPath}>{home.primaryAction} <ArrowRight size={17} /></ConfigLink><ConfigLink className="text-link" path={home.secondaryPath}>{home.secondaryAction} <ArrowUpRight size={15} /></ConfigLink><a className="hero-material-link" href="#material-applications">Material applications <ArrowDown size={14} /></a></div>
         <div className="hero-meta"><span><b>01</b> TANZANIA</span><span><b>02</b> VIGWAZA</span><span><b>03</b> STEEL BILLETS</span></div>
       </div>
       <div className="hero-object"><Scene kind="ore" /><div className="scene-caption"><span>RAW MATERIAL / CONCEPT</span><span>ROTATE TO EXPLORE ↗</span></div></div>
@@ -219,7 +238,7 @@ function Home() {
         <h2 className="multiline-heading">{home.introHeadline.split("\n").map((line, index, lines) => <span key={`${line}-${index}`}>{index === lines.length - 1 ? <em>{line}</em> : line}{index < lines.length - 1 && <br />}</span>)}</h2>
         <div><p className="large-copy">{home.introPrimary}</p><p className="muted-copy">{home.introSecondary}</p><ConfigLink className="text-link" path={home.introPath}>{home.introAction} <ArrowUpRight size={15} /></ConfigLink></div>
       </div>
-      <div className="facts-strip"><div><span>PROPOSED PHASE 1 CAPACITY</span><strong>1.0 MTPA</strong><small>Earlier diagram: 1.2 MTPA · basis unresolved</small></div><div><span>PROJECT LOCATION</span><strong>Vigwaza</strong><small>Chalinze District, Pwani</small></div><div><span>VALUE CHAIN</span><strong>Ore → billets</strong><small>Five planned stages</small></div><div><span>PROJECT STATUS</span><strong>In development</strong><small>Not yet operational</small></div></div>
+      <div className="facts-strip"><div><span>PROPOSED PHASE 1 CAPACITY</span><strong>1.0 MTPA</strong><small>Earlier diagram: 1.2 MTPA · basis unresolved</small></div><div><span>PROJECT LOCATION</span><strong>Vigwaza</strong><small>Chalinze District, Pwani</small></div><div><span>VALUE CHAIN</span><strong>Ore → billets</strong><small>Six planned stages</small></div><div><span>PROJECT STATUS</span><strong>In development</strong><small>Not yet operational</small></div></div>
     </section>
 
     <section className="brand-story">
@@ -239,7 +258,7 @@ function Home() {
 
     <section className="journey-section section-pad" id="journey">
       <div className="section-index">03 — MATERIAL JOURNEY</div>
-      <div className="journey-heading"><div><Pill>From resource to material</Pill><h2>One connected<br /><em>transformation.</em></h2></div><p>Five planned stages connect mineral extraction to steel billets. The ironmaking route and final plant design remain unconfirmed.</p></div>
+      <div className="journey-heading"><div><Pill>From resource to material</Pill><h2>One connected<br /><em>transformation.</em></h2></div><p>Six planned stages connect mineral extraction to inspected steel billets. The ironmaking route and final plant design remain unconfirmed.</p></div>
       <div className="journey-layout">
         <div className="stage-list" role="tablist" aria-label="Material journey stages">
           {process.map((item, index) => <button key={item.name} role="tab" aria-selected={stage === index} className={`stage-item ${stage === index ? "selected" : ""}`} onClick={() => setStage(index)}><span>{item.label}</span><strong>{item.name}</strong><ArrowUpRight size={16} /></button>)}
@@ -249,19 +268,29 @@ function Home() {
       </div>
     </section>
 
+    <section className="material-applications section-pad" id="material-applications" aria-labelledby="material-applications-title">
+      <div className="section-index">04 — MATERIAL APPLICATIONS</div>
+      <div className="gallery-heading"><div><Pill>From resource to use</Pill><h2 id="material-applications-title">Materials with<br /><em>a clear purpose.</em></h2></div><p>See how the proposed value chain connects Tanzanian iron ore to billet feedstock for downstream steel processing. These stages and applications are planned or illustrative, not claims of current production or customer relationships.</p></div>
+      <ol className="material-flow" aria-label="Proposed material flow">
+        {["Iron ore", "Beneficiation", "Ironmaking", "Steelmaking", "Continuous casting", "Steel billets", "Downstream steel products", "Construction & industry"].map((stage, index) => <li key={stage}><span>{String(index + 1).padStart(2, "0")}</span><strong>{stage}</strong></li>)}
+      </ol>
+      <ProcessGallery items={[manufacturingGallery[0], manufacturingGallery[1], manufacturingGallery[5], applicationGallery[1]]} title="Illustrative materials, planned billets and downstream applications" />
+      <Link className="text-link" to="/products">Explore material applications <ArrowUpRight size={15} /></Link>
+    </section>
+
     <section className="product-feature">
-      <div className="product-copy"><div className="section-index">04 — PLANNED BILLET SIZES</div><Pill>Products / planned</Pill><h2>Designed for<br /><em>what’s ahead.</em></h2><p>Steel billets are the principal planned product. Two cross-section sizes are identified in the development brief; detailed specifications remain to be confirmed.</p><div className="sizes"><span>130 × 130 <small>MM</small></span><span>150 × 150 <small>MM</small></span></div><Link className="button button-outline" to="/products">Explore steel billets <ArrowRight size={16} /></Link><small className="fine-print">No grade, chemistry, tolerance or production availability is claimed.</small></div>
+      <div className="product-copy"><div className="section-index">05 — PLANNED BILLET SIZES</div><Pill>Products / planned</Pill><h2>Designed for<br /><em>what’s ahead.</em></h2><p>Steel billets are the principal planned product. Two cross-section sizes are identified in the development brief; detailed specifications remain to be confirmed.</p><div className="sizes"><span>130 × 130 <small>MM</small></span><span>150 × 150 <small>MM</small></span></div><Link className="button button-outline" to="/products">Explore steel billets <ArrowRight size={16} /></Link><small className="fine-print">No grade, chemistry, tolerance or production availability is claimed.</small></div>
       <div className="product-model"><Scene kind="billet" /><div className="model-dimension dimension-width">130 / 150 mm</div><div className="model-dimension dimension-length">BILLET / CONCEPT</div></div>
     </section>
 
     <section className="home-gallery-section section-pad">
-      <div className="section-index">05 — MATERIALS & PRODUCTS</div>
+      <div className="section-index">06 — MATERIALS & PRODUCTS</div>
       <div className="gallery-heading"><div><Pill>Project imagery</Pill><h2>From ore to<br /><em>billet.</em></h2></div><p>Explore raw-material, proposed process and billet visuals. Concept artwork and supplied example photographs are illustrative, not evidence of current Chalinze production.</p></div>
       <ProcessGallery items={homeGallery} title="Illustrative raw materials, manufacturing stages and steel billet gallery" />
     </section>
 
     <section className="principles-section section-pad">
-      <div className="section-index">06 — BUILT FOR THE LONG VIEW</div><div className="principles-heading"><h2>Progress with<br /><em>purpose.</em></h2><p>Growth that lasts is built on considered engineering, responsible development and open communication.</p></div>
+      <div className="section-index">07 — BUILT FOR THE LONG VIEW</div><div className="principles-heading"><h2>Progress with<br /><em>purpose.</em></h2><p>Growth that lasts is built on considered engineering, responsible development and open communication.</p></div>
       <div className="principle-grid"><article><span>01</span><h3>Engineering ambition</h3><p>Integrated project thinking across materials, process and infrastructure.</p><Link to="/technology" aria-label="Explore engineering ambition">Explore technology <ArrowUpRight size={14} /></Link></article><article><span>02</span><h3>Responsible development</h3><p>Plans and measured performance should be clearly distinguished.</p><Link to="/sustainability" aria-label="Explore responsible development">Our approach <ArrowUpRight size={14} /></Link></article><article><span>03</span><h3>Regional connection</h3><p>Intended markets and partnerships, presented without overstating commitments.</p><Link to="/markets" aria-label="Explore regional connection">Explore markets <ArrowUpRight size={14} /></Link></article></div>
     </section>
     <section className="closing-cta"><div><Pill>Begin a conversation</Pill><h2>Let’s build<br /><em>what’s next.</em></h2></div><Link className="button button-orange" to="/contact">Business enquiries <ArrowUpRight size={16} /></Link><small>Contact details are transcribed from the supplied company document; verify before relying on them.</small></section>
@@ -269,7 +298,27 @@ function Home() {
 }
 
 function ContactDirectory() {
+  const [enquiryNotice, setEnquiryNotice] = useState("");
   const whatsappNumber = contactDetails.whatsapp.replace(/[^\d]/g, "");
+  const submitEnquiry = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const formData = new FormData(event.currentTarget);
+    const selectedEnquiry = enquiryTypes.find((enquiry) => enquiry.subject === formData.get("enquiryType"));
+    if (!selectedEnquiry) {
+      setEnquiryNotice("Choose an enquiry type before continuing.");
+      return;
+    }
+
+    const body = [
+      `Name: ${String(formData.get("name")).trim()}`,
+      `Email: ${String(formData.get("email")).trim()}`,
+      `Enquiry: ${selectedEnquiry.label}`,
+      "",
+      String(formData.get("message")).trim(),
+    ].join("\n");
+    window.location.href = `mailto:${contactDetails.email}?subject=${encodeURIComponent(selectedEnquiry.subject)}&body=${encodeURIComponent(body)}`;
+    setEnquiryNotice("Your email application should open with this enquiry. The website does not submit or store the form.");
+  };
   const locations = [
     {
       id: "office",
@@ -311,7 +360,7 @@ function ContactDirectory() {
         <span className="card-tag">EMAIL & WEB</span>
         <h3>Write to us</h3>
         <a className="contact-highlight" href={`mailto:${contactDetails.email}`}>{contactDetails.email} <ArrowUpRight size={15} /></a>
-        <a className="contact-highlight" href={contactDetails.website} target="_blank" rel="noreferrer">{contactDetails.website.replace(/^https?:\/\//, "")} <ArrowUpRight size={15} /></a>
+        <a className="contact-highlight" href={window.location.origin}>{window.location.host} <ArrowUpRight size={15} /></a>
         <p>Direct contact opens your email app or phone dialler. This website does not collect or store enquiry form submissions.</p>
       </article>
       <article className="contact-card contact-card-site">
@@ -325,15 +374,21 @@ function ContactDirectory() {
     <div className="contact-verification-note"><strong>Contact information</strong><span>Contact details are transcribed from company material. The source lists two office-address variants; the planned project site is shown separately from the Dar es Salaam contact office.</span></div>
     <section className="corporate-documents" aria-labelledby="corporate-documents-title">
       <div className="corporate-documents-heading">
-        <div><span className="card-tag">AUTHORIZED COMPANY ACCESS</span><h2 id="corporate-documents-title">Group credentials.</h2></div>
-        <p>Original registration certificates are restricted to signed-in administrators. Open the secure administration area to upload and view them.</p>
+        <div><span className="card-tag">COMPANY REGISTRATION</span><h2 id="corporate-documents-title">Certifications & registrations.</h2></div>
+        <p>Public copies of the company’s taxpayer and VAT registration records are available for viewing. These are registration documents, not product-quality or environmental certifications.</p>
       </div>
       <div className="corporate-documents-grid">
-        <article className="corporate-document-card">
-          <span className="card-tag">PRIVATE DOCUMENTS</span>
-          <h3>Administrator sign-in required</h3>
-          <p>Only authorized administrator accounts can upload or view these certificates. Document access is logged. Browser screenshots or other capture by an authorized viewer cannot be technically prevented.</p>
-          <Link className="text-link" to="/admin">Open secure administration <ArrowUpRight size={15} /></Link>
+        <article className="corporate-document-card certificate-preview" id="certifications">
+          <span className="card-tag">TAXPAYER REGISTRATION</span>
+          <h3>Taxpayer Identification Certificate</h3>
+          <iframe title="Public copy of the Taxpayer Identification Certificate" src="/assets/corporate/taxpayer-registration-public.pdf#toolbar=0&navpanes=0&view=FitH" loading="lazy" referrerPolicy="no-referrer" />
+          <p>Certificate preview. The in-viewer download controls are hidden where supported by the browser; this cannot prevent screenshots, screen recording or other capture.</p>
+        </article>
+        <article className="corporate-document-card certificate-preview">
+          <span className="card-tag">VALUE ADDED TAX REGISTRATION</span>
+          <h3>VAT Registration Certificate</h3>
+          <iframe title="Public copy of the VAT Registration Certificate" src="/assets/corporate/vat-registration-public.pdf#toolbar=0&navpanes=0&view=FitH" loading="lazy" referrerPolicy="no-referrer" />
+          <p>Certificate preview. The in-viewer download controls are hidden where supported by the browser; this cannot prevent screenshots, screen recording or other capture.</p>
         </article>
       </div>
     </section>
@@ -361,6 +416,17 @@ function ContactDirectory() {
       </div>
     </section>
     <div className="enquiry-options"><h3>Choose an email enquiry</h3><div>{enquiryTypes.map((enquiry) => <a key={enquiry.subject} href={`mailto:${contactDetails.email}?subject=${encodeURIComponent(enquiry.subject)}`}>{enquiry.label}<ArrowUpRight size={14} /></a>)}</div></div>
+    <section className="enquiry-form-section" aria-labelledby="enquiry-form-title">
+      <div><span className="card-tag">CORPORATE ENQUIRIES</span><h3 id="enquiry-form-title">Start a conversation.</h3><p>Complete the fields to prepare an email to the company. Your details stay in your email application; this website does not send or store enquiries.</p></div>
+      <form className="enquiry-form" onSubmit={submitEnquiry}>
+        <label>Your name<input name="name" autoComplete="name" maxLength={160} required /></label>
+        <label>Email address<input name="email" type="email" autoComplete="email" maxLength={254} required /></label>
+        <label>Enquiry type<select name="enquiryType" defaultValue="" required><option value="" disabled>Select a team</option>{enquiryTypes.map((enquiry) => <option key={enquiry.subject} value={enquiry.subject}>{enquiry.label}</option>)}</select></label>
+        <label className="enquiry-message">Message<textarea name="message" rows={5} maxLength={5000} required /></label>
+        <button className="button button-orange" type="submit">Prepare email <ArrowUpRight size={15} /></button>
+        <p className="enquiry-form-notice" role="status" aria-live="polite">{enquiryNotice}</p>
+      </form>
+    </section>
   </section>;
 }
 
@@ -410,6 +476,26 @@ function ContentPage({ page }: { page: SitePage }) {
         <div className="product-select-view"><Scene kind="billet" size={selectedBillet.size} /><span className="measure-label">INTERACTIVE 3D · DRAG TO ROTATE</span></div>
         <BilletDimensions size={selectedBillet.width} />
       </div>
+    </section>}
+    {product && <section className="product-applications section-pad" id="product-applications" aria-labelledby="product-applications-title">
+      <div className="section-index">MATERIALS & DOWNSTREAM APPLICATIONS</div>
+      <div className="gallery-heading"><div><Pill>Planned value chain</Pill><h2 id="product-applications-title">From iron ore<br /><em>to industry.</em></h2></div><p>Iron ore and prepared iron feed are proposed inputs; steel billets are the identified planned product. Rolling and construction products shown below are downstream applications, not direct Chalinze products.</p></div>
+      <ol className="material-flow" aria-label="Proposed steel value chain">
+        {["Run-of-mine iron ore", "Beneficiation & feed preparation", "Ironmaking · route to confirm", "Steelmaking", "Continuous casting", "Steel billets", "Downstream rolling", "Construction & industrial use"].map((stage, index) => <li key={stage}><span>{String(index + 1).padStart(2, "0")}</span><strong>{stage}</strong></li>)}
+      </ol>
+      <ProcessGallery items={[manufacturingGallery[0], manufacturingGallery[1], manufacturingGallery[5], applicationGallery[1]]} title="Illustrative iron-ore, billet and downstream applications" />
+    </section>}
+    {page.path === "/sustainability" && <section className="energy-management section-pad" aria-labelledby="energy-management-title">
+      <div className="section-index">PROPOSED PROJECT STRATEGY</div>
+      <div className="gallery-heading"><div><Pill>Energy & carbon management</Pill><h2 id="energy-management-title">Efficiency by<br /><em>design.</em></h2></div><p>Energy efficiency, responsible energy management and CO₂ reduction are integral to the project's operating strategy. The energy system and monitoring commitments below are proposed and are not presented as achieved results.</p></div>
+      <div className="energy-system-diagram">
+        <article><span>01 · ENERGY SOURCES</span><h3>Proposed supply</h3><ul><li>Julius Nyerere Hydropower Project (JNHPP) renewable electricity</li><li>Natural gas as a supporting energy source</li></ul></article>
+        <span className="energy-flow-arrow" aria-hidden="true">→</span>
+        <article><span>02 · ENERGY MANAGEMENT</span><h3>Planned systems</h3><ul><li>Energy-efficient technologies</li><li>Waste heat recovery</li><li>Continuous energy-consumption monitoring</li></ul></article>
+        <span className="energy-flow-arrow" aria-hidden="true">→</span>
+        <article><span>03 · PERFORMANCE</span><h3>Measured indicators</h3><ul><li>Energy-intensity indicators</li><li>Greenhouse-gas emissions monitoring</li><li>Long-term carbon-management objectives</li></ul></article>
+      </div>
+      <p className="energy-management-note">Final utility arrangements, project connections, operating targets and measurement methods remain subject to project studies and approvals.</p>
     </section>}
     <section className="content-cards section-pad"><div className="section-index">DETAILS & STATUS</div><div className={`content-grid layout-${"layout" in page ? page.layout : config.layout}`}>{page.sections.map((section, index) => <article className="content-card" key={`${section.title}-${index}`}><span className="card-number">0{index + 1}</span><span className="card-tag">{section.tag ?? "Company information"}</span><h2>{section.title}</h2><p>{section.body}</p></article>)}</div></section>
     {manufacturing && <section className="gallery-section section-pad"><div className="section-index">PROCESS & PRODUCT VISUALS</div><div className="gallery-heading"><h2>From raw material<br /><em>to billet.</em></h2><p>Explore each planned stage. The supplied document’s billet photographs are included as illustrative source-document images; they are not verified as Chalinze production photographs.</p></div><ProcessGallery items={manufacturingGallery} title="Manufacturing process and billet gallery" /></section>}
@@ -478,7 +564,7 @@ function ScrollMotion() {
         entry.target.classList.add("is-scroll-visible");
         observer.unobserve(entry.target);
       });
-    }, { threshold: 0.12, rootMargin: "0px 0px -7% 0px" });
+    }, { threshold: 0, rootMargin: "0px 0px -7% 0px" });
 
     const observeTargets = () => {
       main.querySelectorAll<HTMLElement>(selector).forEach((target, index) => {

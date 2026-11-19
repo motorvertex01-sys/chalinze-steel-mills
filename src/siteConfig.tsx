@@ -27,17 +27,17 @@ const pageFromStatic = (page: SitePage): SiteConfig["pages"][string] => ({ ...pa
 export function createDefaultSiteConfig(): SiteConfig {
   return {
     version: 1,
-    theme: { accent: "#f47721", background: "#090a0c", panel: "#111418", headingFont: "Manrope", bodyFont: "Arial" },
+    theme: { accent: "#e86f1e", background: "#f7f8f8", panel: "#ffffff", headingFont: "Manrope", bodyFont: "Inter" },
     layout: "cards",
     home: {
       heroEyebrow: "Planned integrated steel project · Vigwaza, Tanzania",
       heroHeadline: "A Tanzanian\nsteel future.",
-      heroDescription: "Chalinze Steel Mills Ltd is developing a proposed, fully integrated iron ore-to-steel billet project at Vigwaza Dry Port Area in Chalinze District, Pwani Region, Tanzania.",
+      heroDescription: "Chalinze Steel Mills Ltd is a Tanzanian registered company developing a proposed integrated iron ore mining, beneficiation and steel manufacturing project at Vigwaza, Pwani Region.",
       primaryAction: "Explore the project", primaryPath: "/project",
       secondaryAction: "Investment & partnerships", secondaryPath: "/investment",
       introEyebrow: "01 — THE OPPORTUNITY",
       introHeadline: "From Tanzanian ore\nto planned steel billets.",
-      introPrimary: "A proposed integrated project aims to connect iron-ore resources with billet manufacturing in Vigwaza, Chalinze District, Pwani Region.",
+      introPrimary: "Chalinze Steel Mills Ltd is a Tanzanian registered company focused on developing an integrated iron ore mining, beneficiation and steel manufacturing operation, transforming run-of-mine iron ore into high-quality steel billets.",
       introSecondary: "A proposed Phase 1 capacity of 1.0 MTPA appears in current planning material; an earlier project diagram states 1.2 MTPA. The approved capacity basis remains unresolved.",
       introAction: "Meet the company", introPath: "/company",
       brandEyebrow: "02 — THE APPROVED COMPANY MARK",
@@ -51,14 +51,14 @@ export function createDefaultSiteConfig(): SiteConfig {
     navigation: [
       { label: "Home", links: [{ label: "Home", path: "/" }] },
       { label: "About Us", links: [{ label: "Company background", path: "/company" }, { label: "Leadership & governance", path: "/leadership" }] },
-      { label: "The Project", links: [{ label: "Project overview", path: "/project" }, { label: "Project development roadmap", path: "/development" }] },
+      { label: "The Project", links: [{ label: "Project overview", path: "/project" }, { label: "Certifications & registrations", path: "/contact#certifications" }, { label: "Project development roadmap", path: "/development" }] },
       { label: "Iron Ore & Manufacturing", links: [{ label: "Iron ore to billets overview", path: "/manufacturing" }, { label: "Manufacturing technology", path: "/technology" }, { label: "Plant infrastructure & utilities", path: "/infrastructure" }, { label: "Quality & product inspection", path: "/manufacturing#quality" }] },
-      { label: "Products & Markets", links: [{ label: "Steel billets", path: "/products" }, { label: "Markets & applications", path: "/markets" }, { label: "FAQs", path: "/faqs" }] },
+      { label: "Products & Markets", links: [{ label: "Steel billets", path: "/products" }, { label: "Material applications", path: "/products#product-applications" }, { label: "Markets & applications", path: "/markets" }, { label: "FAQs", path: "/faqs" }] },
       { label: "Sustainability & Investment", links: [{ label: "Sustainability & HSEC", path: "/sustainability" }, { label: "Investment & strategic partnerships", path: "/investment" }, { label: "Careers & skills", path: "/careers" }, { label: "News & media", path: "/news" }] },
       { label: "Contact Us", links: [{ label: "Official contacts & enquiries", path: "/contact" }] },
     ],
     footer: {
-      tagline: "A Tanzanian steel manufacturing company wholly owned by GYPSUM Plus Mines Ltd.",
+      tagline: "Tanzanian-registered company developing an integrated iron ore, beneficiation and steel billet project.",
       groups: [
         { label: "Explore", links: [{ label: "Company", path: "/company" }, { label: "Project", path: "/project" }, { label: "Technology", path: "/technology" }, { label: "Leadership & Governance", path: "/leadership" }, { label: "Administration", path: "/admin" }] },
         { label: "Discover", links: [{ label: "Products", path: "/products" }, { label: "Sustainability", path: "/sustainability" }, { label: "Markets", path: "/markets" }, { label: "FAQs", path: "/faqs" }] },

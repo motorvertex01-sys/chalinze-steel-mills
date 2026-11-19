@@ -58,10 +58,10 @@ const suppliedLeadershipPhotos = new Set([
 ]);
 const sitePagePaths = new Set(["/company", "/project", "/products", "/infrastructure", "/sustainability", "/investment", "/markets", "/development", "/news", "/careers", "/faqs", "/contact"]);
 const allowedLayouts = new Set(["cards", "editorial", "split"]);
-const allowedFonts = new Set(["Manrope", "Arial", "Georgia", "Verdana", "Tahoma", "Trebuchet MS", "system-ui"]);
+const allowedFonts = new Set(["Inter", "Manrope", "Arial", "Georgia", "Verdana", "Tahoma", "Trebuchet MS", "system-ui"]);
 const defaultSiteConfig = {
   version: 1,
-  theme: { accent: "#f47721", background: "#090a0c", panel: "#111418", headingFont: "Manrope", bodyFont: "Arial" },
+  theme: { accent: "#e86f1e", background: "#f7f8f8", panel: "#ffffff", headingFont: "Manrope", bodyFont: "Inter" },
   layout: "cards",
   home: {},
   navigation: [],

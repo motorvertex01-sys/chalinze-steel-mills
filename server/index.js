@@ -34,7 +34,7 @@ const suppliedLeadershipPhotos = new Set([
 ]);
 const sitePagePaths = new Set(["/company", "/project", "/products", "/infrastructure", "/sustainability", "/investment", "/markets", "/development", "/news", "/careers", "/faqs", "/contact"]);
 const allowedLayouts = new Set(["cards", "editorial", "split"]);
-const allowedFonts = new Set(["Manrope", "Arial", "Georgia", "Verdana", "Tahoma", "Trebuchet MS", "system-ui"]);
+const allowedFonts = new Set(["Inter", "Manrope", "Arial", "Georgia", "Verdana", "Tahoma", "Trebuchet MS", "system-ui"]);
 
 function isPlainText(value, maxLength = 10000, allowEmpty = true) {
   return typeof value === "string" && value.length <= maxLength && (allowEmpty || Boolean(value.trim()));

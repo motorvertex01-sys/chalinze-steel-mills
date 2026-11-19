@@ -4,8 +4,8 @@ export const manufacturingGallery: readonly GalleryItem[] = [
   {
     title: "ROM iron ore",
     category: "Raw materials",
-    description: "The company website document identifies Tanzanian run-of-mine iron ore as the planned starting material for the integrated value chain. The supplied files do not provide an assay, reserve statement or operating mine photograph.",
-    technical: "The illustration is a conceptual visual aid and is not a verified photograph of Chalinze feedstock.",
+    description: "Tanzanian run-of-mine iron ore is the planned starting material for the proposed integrated value chain. Assays, reserves and supply arrangements remain to be confirmed.",
+    technical: "Illustrative image only; it is not a verified photograph of Chalinze feedstock or mine operations.",
     status: "Planned input",
     alt: "Illustration of raw iron ore fragments on a dark industrial background.",
     illustration: "ore",
@@ -15,7 +15,7 @@ export const manufacturingGallery: readonly GalleryItem[] = [
   {
     title: "Beneficiation & feed preparation",
     category: "Ore processing",
-    description: "The project document includes ore processing, beneficiation and preparation of iron feedstock. It does not specify a final equipment arrangement, recovery yield or concentrate grade.",
+    description: "The proposed process includes ore processing, beneficiation and preparation of iron feedstock. The final equipment arrangement, recovery yield and concentrate grade remain to be confirmed.",
     technical: "No crushing, grinding, separation or screening equipment is confirmed as installed or operational.",
     status: "Planned process",
     alt: "Conceptual material-handling and beneficiation process diagram.",
@@ -37,7 +37,7 @@ export const manufacturingGallery: readonly GalleryItem[] = [
   {
     title: "Steelmaking",
     category: "Steel production",
-    description: "The company document describes Electric Arc Furnace steelmaking in its proposed process. Furnace capacity, design, supplier and commissioning status were not provided.",
+    description: "Electric Arc Furnace steelmaking is part of the proposed process. Furnace capacity, design, supplier and commissioning status remain unconfirmed.",
     technical: "This conceptual furnace illustration is not a photograph or representation of installed company equipment.",
     status: "Planned process",
     alt: "Conceptual electric steelmaking vessel with a restrained molten-steel glow.",
@@ -48,7 +48,7 @@ export const manufacturingGallery: readonly GalleryItem[] = [
   {
     title: "Continuous billet casting",
     category: "Casting",
-    description: "Continuous casting is the planned production stage for forming molten steel into billets. The company document lists 130 × 130 mm and 150 × 150 mm cross-sections.",
+    description: "Continuous casting is the planned stage for forming molten steel into billets. Planned nominal cross-sections are 130 × 130 mm and 150 × 150 mm.",
     technical: "No machine dimensions, casting speed, operational availability or approved product length is specified.",
     status: "Planned process",
     alt: "Conceptual continuous casting line for steel billet formation.",
@@ -61,7 +61,7 @@ export const manufacturingGallery: readonly GalleryItem[] = [
     category: "Planned product",
     description: "Steel billets are identified as the principal planned product. The photograph is reproduced from the supplied website document and is not verified as a photograph of Chalinze production.",
     technical: "The source does not identify this pictured bundle’s grade, dimensions, length or manufacturer. Use the product selector for the two documented nominal cross-sections.",
-    status: "Illustrative source-document image",
+    status: "Illustrative billet image",
     image: "/assets/images/billet-bundle-concept.webp",
     alt: "Illustrative photograph of bundled square steel billets, reproduced from the supplied company website document.",
     relatedLabel: "Product dimensions",
@@ -70,9 +70,9 @@ export const manufacturingGallery: readonly GalleryItem[] = [
   {
     title: "Billet bars",
     category: "Planned product",
-    description: "The source document includes a second billet photograph. It is presented only to help explain the semi-finished billet product category.",
+    description: "An illustrative image of the semi-finished billet product category; it is not a verified Chalinze product photograph.",
     technical: "The source does not verify that this is a Chalinze product or identify the pictured bars’ specifications.",
-    status: "Illustrative source-document image",
+    status: "Illustrative billet image",
     image: "/assets/images/billet-bars-concept.webp",
     alt: "Illustrative photograph of steel billet bars, reproduced from the supplied company website document.",
     relatedLabel: "Product dimensions",
@@ -81,7 +81,7 @@ export const manufacturingGallery: readonly GalleryItem[] = [
   {
     title: "Quality & inspection",
     category: "Quality assurance",
-    description: "The document discusses raw-material checks, process monitoring, metallurgical analysis and final product inspection as planned quality activities.",
+    description: "The proposed quality framework covers raw-material checks, process monitoring, metallurgical analysis and final product inspection.",
     technical: "No test results, laboratory accreditation, product standards or certification evidence is supplied.",
     status: "Planned quality framework",
     alt: "Conceptual illustration of industrial inspection and a laboratory test station.",
@@ -95,7 +95,7 @@ export const applicationGallery: readonly GalleryItem[] = [
   {
     title: "Rolling mills",
     category: "Downstream customer segment",
-    description: "The company document identifies rolling mills as potential downstream users of steel billets, which they may process into other steel products.",
+    description: "Rolling mills are a potential downstream customer segment that may process steel billets into other products.",
     technical: "This conceptual graphic illustrates a downstream manufacturing application. It is not a Chalinze facility or confirmed customer relationship.",
     status: "Potential application",
     alt: "Illustration of downstream rolling stands processing steel feedstock.",
@@ -106,8 +106,8 @@ export const applicationGallery: readonly GalleryItem[] = [
   {
     title: "Construction & infrastructure",
     category: "Downstream application",
-    description: "The company document connects billet-based downstream steel products to construction and infrastructure demand. Reinforcement bars and structural sections are further-processed applications, not direct products claimed for Chalinze Steel Mills Ltd.",
-    technical: "The source-document photograph is an illustration of downstream reinforcement use; it does not identify a Chalinze customer or project.",
+    description: "Billet-based downstream products may serve construction and infrastructure. Reinforcement bars and structural sections are further-processed applications, not direct products claimed for Chalinze Steel Mills Ltd.",
+    technical: "Illustrative downstream reinforcement use; this image does not identify a Chalinze customer or project.",
     status: "Illustrative application",
     image: "/assets/images/downstream-reinforcement-illustration.webp",
     alt: "Illustrative photograph of steel reinforcement bars used in downstream construction.",
@@ -117,7 +117,7 @@ export const applicationGallery: readonly GalleryItem[] = [
   {
     title: "Energy, mining & industry",
     category: "Potential customer segment",
-    description: "Energy projects, mining and mineral processing, manufacturing, fabrication and engineering are listed as possible steel demand areas in the company document.",
+    description: "Energy projects, mining and mineral processing, manufacturing, fabrication and engineering are potential steel-demand areas.",
     technical: "These are target applications only. No named buyer, contract or supply record was supplied.",
     status: "Potential application",
     alt: "Conceptual illustration of industrial plant infrastructure and structural systems.",
