@@ -922,7 +922,7 @@ body.dialog-open { overflow: hidden; }
 .value-chain-downstream > div > strong { text-align: right; }
 .value-chain-downstream > b { color: #f0efea; font: 500 14px var(--display); letter-spacing: .07em; }
 .downstream-product-layout { margin-top: 39px; }
-.downstream-product-selector { display: grid; grid-template-columns: repeat(6,minmax(0,1fr)); border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+.downstream-product-selector { display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
 .downstream-product-selector button { display: flex; min-width: 0; min-height: 83px; align-items: flex-start; flex-direction: column; gap: 7px; padding: 12px 11px; text-align: left; border: 0; border-right: 1px solid rgba(209,216,222,.1); background: none; }
 .downstream-product-selector button:last-child { border: 0; }
 .downstream-product-selector button > span { color: var(--orange); font: 7px var(--mono); }

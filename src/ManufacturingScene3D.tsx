@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import * as THREE from "three";
 
 export type ManufacturingSceneKind = "ore" | "beneficiation" | "ironmaking" | "steelmaking" | "casting" | "inspection";
-export type DownstreamModelKind = "bar" | "coil" | "beam" | "rod" | "component" | "fabrication";
+export type DownstreamModelKind = "bar" | "coil" | "beam" | "rod" | "component" | "fabrication" | "mesh";
 
 type SceneProps = {
   stage: ManufacturingSceneKind | "downstream";
@@ -222,6 +222,14 @@ function createScene(stage: SceneProps["stage"], model: DownstreamModelKind | un
         assembly.add(torus);
       }
       cylinder(assembly, 0.42, 0.42, 1.35, [0, 1.4, 0], materials.darkSteel, 24);
+    } else if (model === "mesh") {
+      for (let index = 0; index < 7; index += 1) {
+        const offset = -1.65 + index * 0.55;
+        box(assembly, [4.1, 0.055, 0.055], [0, 1.45 + offset, 0], materials.brightSteel);
+        box(assembly, [0.055, 3.4, 0.055], [offset * 1.2, 1.45, 0], materials.steel);
+      }
+      for (const y of [-0.3, 3.1]) box(assembly, [4.2, 0.09, 0.09], [0, y, 0], materials.brightSteel);
+      for (const x of [-2.05, 2.05]) box(assembly, [0.09, 3.5, 0.09], [x, 1.4, 0], materials.brightSteel);
     } else if (model === "component" || model === "fabrication") {
       const frame = new THREE.Group();
       assembly.add(frame);

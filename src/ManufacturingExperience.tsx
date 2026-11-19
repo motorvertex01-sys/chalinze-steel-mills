@@ -171,8 +171,8 @@ function ProcessJourney({ stages, stageImages }: { stages: ManufacturingStage[];
 
   return (
     <section className="production-journey section-pad" id="production-journey">
-      <div className="section-index">02 / SIX STAGES · PRIMARY STEEL MANUFACTURING</div>
-      <div className="manufacturing-section-heading"><div><span className="manufacturing-label">AN INTEGRATED PRODUCTION CHAIN</span><h2>Six stages.<br /><em>One material.</em></h2></div><p>{stages[0]?.description ? "Explore the proposed production stages from mineral feed to inspected steel billets. Process routes, equipment, and project status remain subject to company and engineering confirmation." : ""}</p></div>
+      <div className="section-index">02 / SCENARIO 1 · UPSTREAM PRIMARY STEEL MANUFACTURING</div>
+      <div className="manufacturing-section-heading"><div><span className="manufacturing-label">UPSTREAM PRODUCTION · IRON ORE TO STEEL BILLETS</span><h2>Six stages.<br /><em>One billet.</em></h2></div><p>{stages[0]?.description ? "Explore the proposed upstream chain from mineral feed to inspected steel billets. These semi-finished billets are the planned primary output; rebar and other finished steel products belong to separate downstream manufacturing." : ""}</p></div>
       <ProductionFlow stages={stages} selected={selectedIndex} onSelect={setSelectedIndex} />
       <div className={`process-detail-layout${expanded ? " is-fullscreen" : ""}`}>
         <div className="process-scene-column">
@@ -239,17 +239,17 @@ function DownstreamValueChain({ products }: { products: ManufacturingContent["do
   const selected = products.find((item) => item.id === selectedId) ?? products[0];
   return <section className="downstream-section section-pad" id="downstream">
     <div className="section-index">05 / PRIMARY OUTPUT · DOWNSTREAM INDUSTRY</div>
-    <div className="manufacturing-section-heading"><div><span className="manufacturing-label">A CLEAR MANUFACTURING BOUNDARY</span><h2>From billet<br />to <em>industry.</em></h2></div><p>Steel billets are the planned output of primary manufacturing. Separate downstream facilities may reheat and roll billets into finished steel products. Those products are illustrative applications, not confirmed Chalinze production.</p></div>
+    <div className="manufacturing-section-heading"><div><span className="manufacturing-label">SCENARIO 2 · DOWNSTREAM MANUFACTURING</span><h2>From billet<br />to <em>finished steel.</em></h2></div><p>Downstream manufacturing is a separate stage after primary billet production. Other facilities may roll billets into rebar and other long products, then draw, weld or fabricate them into items such as welded wire mesh. These are downstream product categories, not confirmed Chalinze products or operating facilities.</p></div>
     <div className="value-chain-diagram">
-      <div className="value-chain-primary"><span>CHALINZE · PROPOSED PRIMARY MANUFACTURING</span><div className="value-chain-stages">{["ROM iron ore", "Beneficiation", "Ironmaking", "Steelmaking", "Continuous casting"].map((item, index) => <span key={item}><i>{String(index + 1).padStart(2, "0")}</i>{item}</span>)}</div><strong>INSPECTED STEEL BILLETS</strong></div>
-      <div className="value-chain-boundary"><i /><strong>PRIMARY MANUFACTURING OUTPUT<br />STEEL BILLETS</strong><i /></div>
-      <div className="value-chain-downstream"><span>DOWNSTREAM PROCESSING · SEPARATE FACILITIES</span><div><span>STEEL BILLETS</span><ArrowRight size={19} /><strong>REHEATING<br />& ROLLING</strong></div><b>FINISHED STEEL PRODUCTS</b></div>
+      <div className="value-chain-primary"><span>SCENARIO 1 · UPSTREAM PRIMARY STEELMAKING</span><div className="value-chain-stages">{["ROM iron ore", "Beneficiation", "Ironmaking", "Steelmaking", "Continuous casting"].map((item, index) => <span key={item}><i>{String(index + 1).padStart(2, "0")}</i>{item}</span>)}</div><strong>PLANNED PRIMARY PRODUCT · STEEL BILLETS</strong></div>
+      <div className="value-chain-boundary"><i /><strong>UPSTREAM OUTPUT<br />STEEL BILLETS</strong><i /></div>
+      <div className="value-chain-downstream"><span>SCENARIO 2 · DOWNSTREAM CONVERSION</span><div><span>STEEL BILLETS</span><ArrowRight size={19} /><strong>ROLLING &<br />PRODUCT FORMING</strong></div><b>REBAR · WIRE MESH · OTHER PRODUCTS</b></div>
     </div>
     <div className="downstream-product-layout">
-      <div className="downstream-product-selector" role="tablist" aria-label="Representative downstream product categories">{products.map((item, index) => <button key={item.id} type="button" role="tab" aria-selected={selectedId === item.id} className={selectedId === item.id ? "is-selected" : ""} onClick={() => setSelectedId(item.id)}><span>{String(index + 1).padStart(2, "0")}</span><strong>{item.name}</strong><ArrowUpRight size={15} /></button>)}</div>
+      <div className="downstream-product-selector" role="tablist" aria-label="Representative downstream product categories">{products.map((item, index) => <button key={item.id} type="button" role="tab" aria-selected={selectedId === item.id} className={selectedId === item.id ? "is-selected" : ""} onClick={() => setSelectedId(item.id)}><span>{String(index + 1).padStart(2, "0")} · DOWNSTREAM</span><strong>{item.name}</strong><ArrowUpRight size={15} /></button>)}</div>
       {selected && <article className="downstream-product-detail" role="tabpanel">
         <div className="downstream-model"><ProductModel model={selected.model} title={`Representative conceptual illustration of ${selected.name}`} /><span>ILLUSTRATIVE MODEL · NOT A CHALINZE PRODUCT</span></div>
-        <div className="downstream-product-copy"><span className="manufacturing-label">REPRESENTATIVE DOWNSTREAM PRODUCT</span><h3>{selected.name}</h3><p>{selected.description}</p><dl><div><dt>Typical application</dt><dd>{selected.applications}</dd></div><div><dt>Related industries</dt><dd>{selected.industries}</dd></div></dl><p className="downstream-boundary-note">Finished products depend on further processing at downstream facilities; no downstream facility ownership or operating status is claimed.</p></div>
+        <div className="downstream-product-copy"><span className="manufacturing-label">SCENARIO 2 · DOWNSTREAM PRODUCT</span><h3>{selected.name}</h3><p>{selected.description}</p><dl><div><dt>Typical application</dt><dd>{selected.applications}</dd></div><div><dt>Related industries</dt><dd>{selected.industries}</dd></div></dl><p className="downstream-boundary-note">Finished products depend on further processing at downstream facilities; no downstream facility ownership or operating status is claimed.</p></div>
       </article>}
     </div>
   </section>;
@@ -288,7 +288,14 @@ export function ManufacturingExperience() {
         return response.json() as Promise<ManufacturingContent>;
       })
       .then((data) => {
-        if (active && Array.isArray(data.stages) && data.stages.length === 6) setContent({ ...builtInContent, ...data, media: { ...builtInContent.media, ...data.media } });
+        if (active && Array.isArray(data.stages) && data.stages.length === 6) {
+          const publishedProducts = Array.isArray(data.downstream) ? data.downstream : [];
+          const downstream = [
+            ...builtInContent.downstream.map((product) => publishedProducts.find((item) => item.id === product.id) ?? product),
+            ...publishedProducts.filter((item) => !builtInContent.downstream.some((product) => product.id === item.id)),
+          ];
+          setContent({ ...builtInContent, ...data, downstream, media: { ...builtInContent.media, ...data.media } });
+        }
       })
       .catch(() => {
         if (active) setContentError("Showing reviewed reference content. The live manufacturing content service is unavailable.");

@@ -296,7 +296,7 @@ function validateManufacturingContent(content: unknown) {
   }
   if (!Array.isArray(value.quality) || value.quality.length !== 6 || value.quality.some((item: { stageId?: unknown; title?: unknown; detail?: unknown }) => !item || typeof item.stageId !== "string" || typeof item.title !== "string" || typeof item.detail !== "string")) return "Quality assurance must map to all six production stages.";
   if (!Array.isArray(value.downstream) || !value.downstream.length || value.downstream.some((item: { id?: unknown; name?: unknown; description?: unknown; applications?: unknown; industries?: unknown; model?: unknown }) =>
-    !item || typeof item.id !== "string" || typeof item.name !== "string" || typeof item.description !== "string" || typeof item.applications !== "string" || typeof item.industries !== "string" || !["bar", "coil", "beam", "rod", "component", "fabrication"].includes(String(item.model)))) return "At least one valid downstream product category is required.";
+    !item || typeof item.id !== "string" || typeof item.name !== "string" || typeof item.description !== "string" || typeof item.applications !== "string" || typeof item.industries !== "string" || !["bar", "coil", "beam", "rod", "component", "fabrication", "mesh"].includes(String(item.model)))) return "At least one valid downstream product category is required.";
   for (const field of ["industries", "infrastructure", "sustainability"]) {
     if (!Array.isArray(value[field]) || value[field].some((item: { title?: unknown; detail?: unknown }) => !item || typeof item.title !== "string" || typeof item.detail !== "string")) return `The ${field} section must contain titled descriptions.`;
   }

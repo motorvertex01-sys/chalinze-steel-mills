@@ -383,6 +383,10 @@ test("leadership roles, authenticated editing, image uploads and publishing", as
     });
     if (forbiddenManufacturingPublish.status !== 403) throw new Error("Content editor was able to publish manufacturing content.");
     manufacturingDraft.draft.introduction = `${manufacturingDraft.draft.introduction} [editor draft]`;
+    manufacturingDraft.draft.downstream.push({
+      id: "test-wire-mesh", name: "Test welded wire mesh", description: "Test downstream mesh product.",
+      applications: "Test application.", industries: "Test industry.", model: "mesh",
+    });
     const saveManufacturingDraft = await fetch(`${base}/api/admin/manufacturing`, {
       method: "PUT", headers: editorHeaders, body: JSON.stringify(manufacturingDraft.draft),
     });
@@ -394,7 +398,10 @@ test("leadership roles, authenticated editing, image uploads and publishing", as
     });
     if (!adminManufacturingPublish.ok) throw new Error("Administrator could not publish reviewed manufacturing content.");
     const manufacturingAfterPublish = await (await fetch(`${base}/api/manufacturing`)).json();
-    if (manufacturingAfterPublish.introduction !== manufacturingDraft.draft.introduction) throw new Error("Published manufacturing content did not appear publicly.");
+    if (manufacturingAfterPublish.introduction !== manufacturingDraft.draft.introduction ||
+        !manufacturingAfterPublish.downstream.some((item) => item.id === "test-wire-mesh" && item.model === "mesh")) {
+      throw new Error("Published manufacturing content or downstream wire-mesh model did not appear publicly.");
+    }
     const forbiddenEditorUndo = await fetch(`${base}/api/admin/undo`, { method: "POST", headers: { Cookie: editorCookie, Origin: base } });
     if (forbiddenEditorUndo.status !== 403) throw new Error("Content editor was able to undo a published change.");
     const undoManufacturing = await fetch(`${base}/api/admin/undo`, { method: "POST", headers: { Cookie: adminCookie, Origin: base } });

@@ -398,7 +398,7 @@ function validateManufacturingContent(content) {
     if (!Array.isArray(stage.hotspots) || stage.hotspots.some((hotspot) => typeof hotspot.label !== "string" || typeof hotspot.detail !== "string")) return `Stage ${stage.id} has an invalid hotspot list.`;
   }
   if (!Array.isArray(content.quality) || content.quality.length !== 6 || content.quality.some((item) => !item || typeof item.stageId !== "string" || typeof item.title !== "string" || typeof item.detail !== "string")) return "Quality assurance must map to all six production stages.";
-  if (!Array.isArray(content.downstream) || content.downstream.length === 0 || content.downstream.some((item) => !item || typeof item.id !== "string" || typeof item.name !== "string" || typeof item.description !== "string" || typeof item.applications !== "string" || typeof item.industries !== "string" || !["bar", "coil", "beam", "rod", "component", "fabrication"].includes(item.model))) return "At least one valid downstream product category is required.";
+  if (!Array.isArray(content.downstream) || content.downstream.length === 0 || content.downstream.some((item) => !item || typeof item.id !== "string" || typeof item.name !== "string" || typeof item.description !== "string" || typeof item.applications !== "string" || typeof item.industries !== "string" || !["bar", "coil", "beam", "rod", "component", "fabrication", "mesh"].includes(item.model))) return "At least one valid downstream product category is required.";
   for (const field of ["industries", "infrastructure", "sustainability"]) {
     if (!Array.isArray(content[field]) || content[field].some((item) => !item || typeof item.title !== "string" || typeof item.detail !== "string")) return `The ${field} section must contain titled descriptions.`;
   }
