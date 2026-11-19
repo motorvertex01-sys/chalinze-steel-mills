@@ -528,10 +528,10 @@ function ContentPage({ page }: { page: SitePage }) {
         <div className="product-scenario-output"><span>PRINCIPAL PLANNED OUTPUT</span><strong>Steel billets</strong><p>Billets are semi-finished steel products for further processing. They are distinct from finished construction products such as rebar and welded wire mesh.</p><a className="text-link" href="#billet-product-specifications">View planned billet sizes <ArrowDown size={14} /></a></div>
       </section>
       <section className="product-scenario product-scenario-downstream section-pad" id="product-applications" aria-labelledby="downstream-products-title">
-        <div className="section-index">SCENARIO 2 / DOWNSTREAM STEEL MANUFACTURING</div>
+        <div className="section-index">STEEL PRODUCTS & DOWNSTREAM APPLICATIONS</div>
         <div className="product-scenario-heading">
-          <div><Pill>Further processing · potential opportunities</Pill><h2 id="downstream-products-title">Billets to<br /><em>steel products.</em></h2></div>
-          <p>Chalinze Steel Mills Ltd is developing an integrated upstream steel operation with billets as its primary planned product. The wider downstream steel industry could use locally manufactured billets to make rolled products and further-processed goods. These are potential industrial opportunities, not a commitment by Chalinze to manufacture them.</p>
+          <div><Pill>Further processing · potential opportunities</Pill><h2 id="downstream-products-title">Steel products &amp;<br /><em>downstream applications.</em></h2></div>
+          <p>Steel billets are semi-finished products that can serve as feedstock for further downstream processing and manufacturing, including reinforcement bars, structural steel sections, wire rods and other value-added steel products. These represent potential applications of Chalinze Steel Mills Ltd's planned billet production and may inform a future downstream manufacturing phase. Any such phase remains subject to future project decisions and is not a confirmed company commitment.</p>
         </div>
         <div className="downstream-product-group">
           <h3 id="primary-downstream-title">A. Primary downstream products — steel rolling</h3>

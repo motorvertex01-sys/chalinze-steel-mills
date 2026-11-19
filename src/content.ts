@@ -233,10 +233,10 @@ export const pages: SitePage[] = [
     path: "/products",
     title: "Upstream billets. Downstream steel products.",
     eyebrow: "Products",
-    summary: "Chalinze Steel Mills Ltd is developing an integrated upstream steel operation with steel billets as its primary planned product. Locally manufactured billets could support a wider downstream industry, without implying a commitment by Chalinze to make finished steel products.",
+    summary: "Steel billets are the semi-finished primary product planned by Chalinze Steel Mills Ltd and could support further steel processing and a wider downstream industry in Tanzania. A future downstream manufacturing phase remains subject to project decisions and is not a confirmed company commitment.",
     sections: [
       { title: "Billet dimensions & grades", body: "Project materials identify nominal billet cross-sections of 130 × 130 mm and 150 × 150 mm. Billet sizes and grades remain subject to final plant design and customer specifications; length, chemistry, tolerances and mechanical properties have not been confirmed.", tag: "Planned upstream product · specifications pending" },
-      { title: "Primary downstream products — steel rolling", body: "The wider downstream steel industry may roll billets into reinforcement bars, wire rods, round bars, flat and square bars, and structural sections. These are illustrative downstream opportunities, not confirmed Chalinze products or facilities.", tag: "Separate downstream value chain · illustrative products" },
+      { title: "Primary downstream products — steel rolling", body: "Steel billets are semi-finished products that may serve as feedstock for further processing into reinforcement bars, structural steel sections, wire rods, round bars, flat and square bars, and other value-added steel products. These are potential applications of the planned billet production and opportunities for a wider downstream industry; they are not confirmed Chalinze products or facilities.", tag: "Separate downstream value chain · illustrative products" },
       { title: "Secondary downstream products — further processing", body: "Primary rolled products may be processed further into drawn wire, nails, binding wire, fencing, welded wire mesh and fasteners. These products do not necessarily use billets directly and are not confirmed Chalinze manufacturing commitments.", tag: "Further processing · not confirmed company scope" },
     ],
   },
