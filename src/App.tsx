@@ -272,6 +272,10 @@ function Home() {
         <h2 className="multiline-heading">{home.introHeadline.split("\n").map((line, index, lines) => <span key={`${line}-${index}`}>{index === lines.length - 1 ? <em>{line}</em> : line}{index < lines.length - 1 && <br />}</span>)}</h2>
         <div><p className="large-copy">{home.introPrimary}</p><p className="muted-copy">{home.introSecondary}</p><ConfigLink className="text-link" path={home.introPath}>{home.introAction} <ArrowUpRight size={15} /></ConfigLink></div>
       </div>
+      <aside className="upstream-positioning">
+        <span>FOUNDATIONAL UPSTREAM INVESTMENT</span>
+        <p>Chalinze Steel Mills Ltd is more than a planned billet factory: it is an upstream steel manufacturing investment designed to support a wider downstream steel industry in Tanzania.</p>
+      </aside>
       <div className="facts-strip"><div><span>PROPOSED PHASE 1 CAPACITY</span><strong>1.0 MTPA</strong><small>Earlier diagram: 1.2 MTPA · basis unresolved</small></div><div><span>PROJECT LOCATION</span><strong>Vigwaza</strong><small>Chalinze District, Pwani</small></div><div><span>VALUE CHAIN</span><strong>Ore → billets</strong><small>Six planned stages</small></div><div><span>PROJECT STATUS</span><strong>In development</strong><small>Not yet operational</small></div></div>
     </section>
 
@@ -304,11 +308,11 @@ function Home() {
 
     <section className="material-applications section-pad" id="material-applications" aria-labelledby="material-applications-title">
       <div className="section-index">04 — MATERIAL APPLICATIONS</div>
-      <div className="gallery-heading"><div><Pill>From resource to use</Pill><h2 id="material-applications-title">Materials with<br /><em>a clear purpose.</em></h2></div><p>See how the proposed value chain connects Tanzanian iron ore to billet feedstock for downstream steel processing. These stages and applications are planned or illustrative, not claims of current production or customer relationships.</p></div>
+      <div className="gallery-heading"><div><Pill>From resource to use</Pill><h2 id="material-applications-title">Materials with<br /><em>a clear purpose.</em></h2></div><p>See how the proposed value chain connects Tanzanian iron ore to billet feedstock for downstream steel processing. The downstream construction application is explored on the Products page; these stages and applications are illustrative, not claims of current production or customer relationships.</p></div>
       <ol className="material-flow" aria-label="Proposed material flow">
         {["Iron ore", "Beneficiation", "Ironmaking", "Steelmaking", "Continuous casting", "Steel billets", "Downstream steel products", "Construction & industry"].map((stage, index) => <li key={stage}><span>{String(index + 1).padStart(2, "0")}</span><strong>{stage}</strong></li>)}
       </ol>
-      <ProcessGallery items={[manufacturingGallery[0], manufacturingGallery[1], manufacturingGallery[5], applicationGallery[1]]} title="Illustrative materials, planned billets and downstream applications" />
+      <ProcessGallery items={[manufacturingGallery[0], manufacturingGallery[1], manufacturingGallery[5]]} title="Illustrative materials, manufacturing stages and planned billets" />
       <Link className="text-link" to="/products">Explore material applications <ArrowUpRight size={15} /></Link>
     </section>
 
@@ -550,6 +554,13 @@ function ContentPage({ page }: { page: SitePage }) {
             <article><span>04 · WIRE FABRICATION</span><h4>Fencing products</h4><p>Wire further processed into fencing for agricultural, industrial and property uses.</p></article>
             <article><span>05 · WIRE FABRICATION</span><h4>Welded wire mesh</h4><p>Steel wire formed into a grid and welded at intersections for construction and infrastructure.</p></article>
           </div>
+        </div>
+        <div className="downstream-application-gallery">
+          <div className="downstream-product-group">
+            <h3>Illustrative downstream application</h3>
+            <p className="downstream-product-intro">Construction and infrastructure are among the potential markets for further-processed steel products.</p>
+          </div>
+          <ProcessGallery items={[applicationGallery[1]]} title="Illustrative downstream construction application" />
         </div>
         <p className="product-scenario-disclaimer">These examples describe the wider downstream steel industry and the industrial opportunity supported by locally manufactured billets. They are not confirmed Chalinze products, facilities or operating capabilities; the company's primary planned product is steel billets.</p>
       </section>

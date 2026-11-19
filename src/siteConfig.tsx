@@ -53,7 +53,7 @@ export function createDefaultSiteConfig(): SiteConfig {
       secondaryAction: "Investment & partnerships", secondaryPath: "/investment",
       introEyebrow: "01 — THE OPPORTUNITY",
       introHeadline: "From Tanzanian ore\nto planned steel billets.",
-      introPrimary: "Chalinze Steel Mills Ltd is a Tanzanian registered company focused on developing an integrated iron ore mining, beneficiation and steel manufacturing operation, transforming run-of-mine iron ore into high-quality steel billets.",
+      introPrimary: "Chalinze Steel Mills Ltd is a Tanzanian registered company developing an integrated upstream iron ore, beneficiation and steel manufacturing investment, with steel billets as its primary planned product.",
       introSecondary: "A proposed Phase 1 capacity of 1.0 MTPA appears in current planning material; an earlier project diagram states 1.2 MTPA. The approved capacity basis remains unresolved.",
       introAction: "Meet the company", introPath: "/company",
       brandEyebrow: "02 — THE APPROVED COMPANY MARK",
