@@ -91,6 +91,8 @@ function validateSiteConfig(config) {
     if (typeof config.theme[field] !== "string" || !/^#[0-9a-f]{6}$/i.test(config.theme[field])) return `The ${field} color must be a six-digit hex color.`;
   }
   if (!allowedFonts.has(config.theme.headingFont) || !allowedFonts.has(config.theme.bodyFont)) return "Choose a supported typography preset.";
+  if (config.theme.bodyFontSize !== undefined &&
+      (!Number.isInteger(config.theme.bodyFontSize) || config.theme.bodyFontSize < 14 || config.theme.bodyFontSize > 20)) return "Choose a body font size between 14 and 20 pixels.";
   if (!allowedLayouts.has(config.layout)) return "Choose a valid page layout preset.";
   const homeFields = ["heroEyebrow", "heroHeadline", "heroDescription", "primaryAction", "primaryPath", "secondaryAction", "secondaryPath", "introEyebrow", "introHeadline", "introPrimary", "introSecondary", "introAction", "introPath", "brandEyebrow", "brandLabel", "brandHeadline", "brandDescription", "brandCaveat", "brandAction", "brandPath"];
   if (!config.home || typeof config.home !== "object" || homeFields.some((field) => !isPlainText(config.home[field], 2000, false))) return "Complete all home-page content fields.";

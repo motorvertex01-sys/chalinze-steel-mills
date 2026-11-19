@@ -61,7 +61,7 @@ const allowedLayouts = new Set(["cards", "editorial", "split"]);
 const allowedFonts = new Set(["Inter", "Manrope", "Arial", "Georgia", "Verdana", "Tahoma", "Trebuchet MS", "system-ui"]);
 const defaultSiteConfig = {
   version: 1,
-  theme: { accent: "#e86f1e", background: "#f7f8f8", panel: "#ffffff", headingFont: "Manrope", bodyFont: "Inter" },
+  theme: { accent: "#e86f1e", background: "#f7f8f8", panel: "#ffffff", headingFont: "Manrope", bodyFont: "Inter", bodyFontSize: 15 },
   layout: "cards",
   home: {},
   navigation: [],
@@ -142,6 +142,8 @@ function validateSiteConfig(config: unknown) {
     if (typeof theme[field] !== "string" || !/^#[0-9a-f]{6}$/i.test(theme[field])) return `The ${field} color must be a six-digit hex color.`;
   }
   if (!allowedFonts.has(String(theme.headingFont)) || !allowedFonts.has(String(theme.bodyFont))) return "Choose a supported typography preset.";
+  if (theme.bodyFontSize !== undefined &&
+      (!Number.isInteger(theme.bodyFontSize) || Number(theme.bodyFontSize) < 14 || Number(theme.bodyFontSize) > 20)) return "Choose a body font size between 14 and 20 pixels.";
   if (!allowedLayouts.has(String(value.layout))) return "Choose a valid page layout preset.";
   const homeFields = ["heroEyebrow", "heroHeadline", "heroDescription", "primaryAction", "primaryPath", "secondaryAction", "secondaryPath", "introEyebrow", "introHeadline", "introPrimary", "introSecondary", "introAction", "introPath", "brandEyebrow", "brandLabel", "brandHeadline", "brandDescription", "brandCaveat", "brandAction", "brandPath"];
   const home = value.home as Record<string, unknown> | null;

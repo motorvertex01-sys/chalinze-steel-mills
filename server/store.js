@@ -207,7 +207,7 @@ async function initialize() {
   );
   const siteConfigDefault = {
     version: 1,
-    theme: { accent: "#e86f1e", background: "#f7f8f8", panel: "#ffffff", headingFont: "Manrope", bodyFont: "Inter" },
+    theme: { accent: "#e86f1e", background: "#f7f8f8", panel: "#ffffff", headingFont: "Manrope", bodyFont: "Inter", bodyFontSize: 15 },
     layout: "cards",
     home: {},
     navigation: [],

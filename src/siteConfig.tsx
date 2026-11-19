@@ -6,7 +6,7 @@ export type SiteLink = { label: string; path: string };
 export type SiteGroup = { label: string; links: SiteLink[] };
 export type SiteConfig = {
   version: 1;
-  theme: { accent: string; background: string; panel: string; headingFont: string; bodyFont: string };
+  theme: { accent: string; background: string; panel: string; headingFont: string; bodyFont: string; bodyFontSize: number };
   layout: "cards" | "editorial" | "split";
   home: {
     heroEyebrow: string; heroHeadline: string; heroDescription: string; primaryAction: string;
@@ -27,7 +27,7 @@ const pageFromStatic = (page: SitePage): SiteConfig["pages"][string] => ({ ...pa
 export function createDefaultSiteConfig(): SiteConfig {
   return {
     version: 1,
-    theme: { accent: "#e86f1e", background: "#f7f8f8", panel: "#ffffff", headingFont: "Manrope", bodyFont: "Inter" },
+    theme: { accent: "#e86f1e", background: "#f7f8f8", panel: "#ffffff", headingFont: "Manrope", bodyFont: "Inter", bodyFontSize: 15 },
     layout: "cards",
     home: {
       heroEyebrow: "Planned integrated steel project · Vigwaza, Tanzania",
@@ -131,6 +131,7 @@ export function SiteConfigProvider({ children }: { children: ReactNode }) {
     root.style.setProperty("--panel", config.theme.panel);
     root.style.setProperty("--display", `"${config.theme.headingFont}", sans-serif`);
     root.style.setProperty("--body-font", `"${config.theme.bodyFont}", sans-serif`);
+    root.style.setProperty("--text-body", `${config.theme.bodyFontSize}px`);
   }, [config.theme]);
   const value = useMemo(() => config, [config]);
   return <SiteConfigContext.Provider value={value}>{children}</SiteConfigContext.Provider>;
