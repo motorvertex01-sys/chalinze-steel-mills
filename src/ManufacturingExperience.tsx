@@ -234,22 +234,41 @@ function BilletShowcase({ billet }: { billet: ManufacturingContent["billet"] }) 
   </section>;
 }
 
+const primaryRolledProductIds = new Set([
+  "reinforcement-bars",
+  "wire-rods",
+  "round-bars",
+  "flat-square-bars",
+  "structural-sections",
+  "merchant-bars",
+]);
+
 function DownstreamValueChain({ products }: { products: ManufacturingContent["downstream"] }) {
   const [selectedId, setSelectedId] = useState(products[0]?.id ?? "");
   const selected = products.find((item) => item.id === selectedId) ?? products[0];
+  const primaryProducts = products.filter((item) => primaryRolledProductIds.has(item.id));
+  const secondaryProducts = products.filter((item) => !primaryRolledProductIds.has(item.id));
+  const productGroups = [
+    { id: "primary", title: "A. Primary downstream products — steel rolling", description: "Potential products rolled directly from billets at separate downstream facilities.", products: primaryProducts },
+    { id: "secondary", title: "B. Secondary downstream products — further processing", description: "Products made from primary rolled products; they do not necessarily use billets directly.", products: secondaryProducts },
+  ].filter((group) => group.products.length > 0);
+  const selectedGroup = primaryRolledProductIds.has(selected?.id ?? "") ? "primary" : "secondary";
   return <section className="downstream-section section-pad" id="downstream">
     <div className="section-index">05 / PRIMARY OUTPUT · DOWNSTREAM INDUSTRY</div>
-    <div className="manufacturing-section-heading"><div><span className="manufacturing-label">SCENARIO 2 · DOWNSTREAM MANUFACTURING</span><h2>From billet<br />to <em>finished steel.</em></h2></div><p>Downstream manufacturing is a separate stage after primary billet production. Other facilities may roll billets into rebar and other long products, then draw, weld or fabricate them into items such as welded wire mesh. These are downstream product categories, not confirmed Chalinze products or operating facilities.</p></div>
+    <div className="manufacturing-section-heading"><div><span className="manufacturing-label">SCENARIO 2 · DOWNSTREAM STEEL INDUSTRY</span><h2>From billet<br />to <em>finished steel.</em></h2></div><p>Chalinze Steel Mills Ltd is developing an integrated upstream operation with steel billets as its primary planned product. The wider downstream industry could use locally manufactured billets to produce rolled products and further-processed goods. These examples show the potential industrial opportunity; they are not a commitment by Chalinze to manufacture downstream products.</p></div>
     <div className="value-chain-diagram">
       <div className="value-chain-primary"><span>SCENARIO 1 · UPSTREAM PRIMARY STEELMAKING</span><div className="value-chain-stages">{["ROM iron ore", "Beneficiation", "Ironmaking", "Steelmaking", "Continuous casting"].map((item, index) => <span key={item}><i>{String(index + 1).padStart(2, "0")}</i>{item}</span>)}</div><strong>PLANNED PRIMARY PRODUCT · STEEL BILLETS</strong></div>
       <div className="value-chain-boundary"><i /><strong>UPSTREAM OUTPUT<br />STEEL BILLETS</strong><i /></div>
-      <div className="value-chain-downstream"><span>SCENARIO 2 · DOWNSTREAM CONVERSION</span><div><span>STEEL BILLETS</span><ArrowRight size={19} /><strong>ROLLING &<br />PRODUCT FORMING</strong></div><b>REBAR · WIRE MESH · OTHER PRODUCTS</b></div>
+      <div className="value-chain-downstream"><span>SCENARIO 2 · DOWNSTREAM CONVERSION</span><div><span>STEEL BILLETS</span><ArrowRight size={19} /><strong>ROLLING &amp;<br />PRODUCT FORMING</strong></div><b>PRIMARY ROLLED PRODUCTS → SECONDARY PROCESSING</b></div>
     </div>
     <div className="downstream-product-layout">
-      <div className="downstream-product-selector" role="tablist" aria-label="Representative downstream product categories">{products.map((item, index) => <button key={item.id} type="button" role="tab" aria-selected={selectedId === item.id} className={selectedId === item.id ? "is-selected" : ""} onClick={() => setSelectedId(item.id)}><span>{String(index + 1).padStart(2, "0")} · DOWNSTREAM</span><strong>{item.name}</strong><ArrowUpRight size={15} /></button>)}</div>
-      {selected && <article className="downstream-product-detail" role="tabpanel">
+      <div className="downstream-product-catalog">{productGroups.map((group) => <section key={group.id} aria-labelledby={`downstream-${group.id}-heading`}>
+        <h3 id={`downstream-${group.id}-heading`}>{group.title}</h3><p>{group.description}</p>
+        <div className="downstream-product-selector" role="tablist" aria-label={group.title}>{group.products.map((item, index) => <button id={`downstream-product-tab-${item.id}`} key={item.id} type="button" role="tab" aria-controls="downstream-product-panel" aria-selected={selectedId === item.id} className={selectedId === item.id ? "is-selected" : ""} onClick={() => setSelectedId(item.id)}><span>{String(index + 1).padStart(2, "0")} · {group.id === "primary" ? "PRIMARY ROLLING" : "SECONDARY PROCESSING"}</span><strong>{item.name}</strong><ArrowUpRight size={15} /></button>)}</div>
+      </section>)}</div>
+      {selected && <article className="downstream-product-detail" id="downstream-product-panel" role="tabpanel" aria-labelledby={`downstream-product-tab-${selected.id}`}>
         <div className="downstream-model"><ProductModel model={selected.model} title={`Representative conceptual illustration of ${selected.name}`} /><span>ILLUSTRATIVE MODEL · NOT A CHALINZE PRODUCT</span></div>
-        <div className="downstream-product-copy"><span className="manufacturing-label">SCENARIO 2 · DOWNSTREAM PRODUCT</span><h3>{selected.name}</h3><p>{selected.description}</p><dl><div><dt>Typical application</dt><dd>{selected.applications}</dd></div><div><dt>Related industries</dt><dd>{selected.industries}</dd></div></dl><p className="downstream-boundary-note">Finished products depend on further processing at downstream facilities; no downstream facility ownership or operating status is claimed.</p></div>
+        <div className="downstream-product-copy"><span className="manufacturing-label">SCENARIO 2 · {selectedGroup === "primary" ? "PRIMARY DOWNSTREAM ROLLED PRODUCT" : "SECONDARY DOWNSTREAM PROCESSED PRODUCT"}</span><h3>{selected.name}</h3><p>{selected.description}</p><dl><div><dt>Typical application</dt><dd>{selected.applications}</dd></div><div><dt>Related industries</dt><dd>{selected.industries}</dd></div></dl><p className="downstream-boundary-note">These are illustrative industry products, not confirmed Chalinze products or operating capabilities. Chalinze's primary planned product is steel billets.</p></div>
       </article>}
     </div>
   </section>;

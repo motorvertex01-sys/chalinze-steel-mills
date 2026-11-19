@@ -489,7 +489,7 @@ function ContentPage({ page }: { page: SitePage }) {
   return <main className={`content-page page-layout-${"layout" in page ? page.layout : config.layout}`}>
     <section className="inner-hero"><div className="inner-hero-copy"><Pill>{page.eyebrow}</Pill><h1>{page.title}</h1><p>{page.summary}</p><div className="breadcrumbs"><Link to="/">Home</Link><span>/</span><span>{page.eyebrow}</span></div></div><div className="inner-hero-visual"><Scene kind={sceneKind} size={product ? selectedBillet.size : undefined} /><span className="concept-stamp">{company ? "APPROVED BRAND / 3D PRESENTATION" : "CONCEPT VISUALIZATION"}</span></div></section>
     {(technology || manufacturing) && <section className="explorer-section section-pad"><div className="section-index">INTERACTIVE PROCESS EXPLORER</div><h2>Follow the <em>transformation.</em></h2><div className="explorer-layout"><div className="explorer-tabs" role="tablist" aria-label="Process stages">{processStages.map((stage, index) => <button role="tab" aria-selected={selected === index} className={selected === index ? "selected" : ""} onClick={() => setSelected(index)} key={stage.title}><span>{String(index + 1).padStart(2, "0")}</span>{stage.title}<ArrowRight size={15} /></button>)}</div><div className="explorer-model"><Scene kind={processStages[selected]?.kind ?? "ore"} /><div className="process-stage-detail" aria-live="polite"><span>{String(selected + 1).padStart(2, "0")} / {processStages[selected].status}</span><h3>{processStages[selected].title}</h3><p>{processStages[selected].description}</p><dl className="process-data"><div><dt>Input</dt><dd>{processStages[selected].input}</dd></div><div><dt>Output</dt><dd>{processStages[selected].output}</dd></div><div><dt>Equipment & status</dt><dd>{processStages[selected].equipment}</dd></div></dl></div><p className="concept-disclaimer">Concept models illustrate process categories only; they are not the approved equipment selection or final plant configuration.</p></div></div></section>}
-    {product && <section className="product-select section-pad">
+    {product && <section className="product-select section-pad" id="billet-product-specifications">
       <div className="product-selector-copy">
         <div className="section-index">PRODUCT SIZE SELECTOR</div>
         <h2>Choose your <em>billet.</em></h2>
@@ -511,14 +511,49 @@ function ContentPage({ page }: { page: SitePage }) {
         <BilletDimensions size={selectedBillet.width} />
       </div>
     </section>}
-    {product && <section className="product-applications section-pad" id="product-applications" aria-labelledby="product-applications-title">
-      <div className="section-index">MATERIALS & DOWNSTREAM APPLICATIONS</div>
-      <div className="gallery-heading"><div><Pill>Planned value chain</Pill><h2 id="product-applications-title">From iron ore<br /><em>to industry.</em></h2></div><p>Iron ore and prepared iron feed are proposed inputs; steel billets are the identified planned product. Rolling and construction products shown below are downstream applications, not direct Chalinze products.</p></div>
-      <ol className="material-flow" aria-label="Proposed steel value chain">
-        {["Run-of-mine iron ore", "Beneficiation & feed preparation", "Ironmaking · route to confirm", "Steelmaking", "Continuous casting", "Steel billets", "Downstream rolling", "Construction & industrial use"].map((stage, index) => <li key={stage}><span>{String(index + 1).padStart(2, "0")}</span><strong>{stage}</strong></li>)}
-      </ol>
-      <ProcessGallery items={[manufacturingGallery[0], manufacturingGallery[1], manufacturingGallery[5], applicationGallery[1]]} title="Illustrative iron-ore, billet and downstream applications" />
-    </section>}
+    {product && <>
+      <section className="product-scenario product-scenario-upstream section-pad" id="upstream-products" aria-labelledby="upstream-products-title">
+        <div className="section-index">SCENARIO 1 / UPSTREAM PRIMARY STEEL MANUFACTURING</div>
+        <div className="product-scenario-heading">
+          <div><Pill>Core business · planned primary operation</Pill><h2 id="upstream-products-title">Iron ore to<br /><em>steel billets.</em></h2></div>
+          <p>Chalinze Steel Mills Ltd is developing an integrated iron ore-to-steel billet manufacturing operation. The proposed process begins with run-of-mine (ROM) iron ore and proceeds through beneficiation, ironmaking, steelmaking and continuous casting.</p>
+        </div>
+        <ol className="product-scenario-flow" aria-label="Proposed upstream manufacturing stages">
+          {["ROM iron ore", "Beneficiation", "Ironmaking", "Steelmaking", "Continuous casting", "Steel billets"].map((stage, index) => <li key={stage}><span>{String(index + 1).padStart(2, "0")}</span><strong>{stage}</strong></li>)}
+        </ol>
+        <div className="product-scenario-output"><span>PRINCIPAL PLANNED OUTPUT</span><strong>Steel billets</strong><p>Billets are semi-finished steel products for further processing. They are distinct from finished construction products such as rebar and welded wire mesh.</p><a className="text-link" href="#billet-product-specifications">View planned billet sizes <ArrowDown size={14} /></a></div>
+      </section>
+      <section className="product-scenario product-scenario-downstream section-pad" id="product-applications" aria-labelledby="downstream-products-title">
+        <div className="section-index">SCENARIO 2 / DOWNSTREAM STEEL MANUFACTURING</div>
+        <div className="product-scenario-heading">
+          <div><Pill>Further processing · potential opportunities</Pill><h2 id="downstream-products-title">Billets to<br /><em>steel products.</em></h2></div>
+          <p>Chalinze Steel Mills Ltd is developing an integrated upstream steel operation with billets as its primary planned product. The wider downstream steel industry could use locally manufactured billets to make rolled products and further-processed goods. These are potential industrial opportunities, not a commitment by Chalinze to manufacture them.</p>
+        </div>
+        <div className="downstream-product-group">
+          <h3 id="primary-downstream-title">A. Primary downstream products — steel rolling</h3>
+          <p className="downstream-product-intro">These are potential products rolled directly from steel billets at separate downstream facilities.</p>
+          <div className="downstream-opportunity-grid">
+            <article><span>01 · ROLLING</span><h4>Reinforcement steel bars (rebar)</h4><p>For reinforced-concrete buildings, bridges, roads, dams and other infrastructure.</p></article>
+            <article><span>02 · ROLLING</span><h4>Steel wire rods</h4><p>Rolled feedstock for wire drawing and further products such as nails, binding wire, fencing, mesh and fasteners.</p></article>
+            <article><span>03 · ROLLING</span><h4>Steel round bars</h4><p>For engineering, machinery, fabrication and other industrial applications.</p></article>
+            <article><span>04 · ROLLING</span><h4>Steel flat bars &amp; square bars</h4><p>For fabrication, engineering, metalworking and construction.</p></article>
+            <article><span>05 · SECTION ROLLING</span><h4>Structural steel sections</h4><p>Angles, channels and other rolled sections for industrial structures, buildings, towers and infrastructure.</p></article>
+          </div>
+        </div>
+        <div className="downstream-product-group">
+          <h3 id="secondary-downstream-title">B. Secondary downstream products — further steel processing</h3>
+          <p className="downstream-product-intro">These products are made by processing primary rolled products; they do not necessarily use billets directly.</p>
+          <div className="downstream-opportunity-grid downstream-secondary-grid">
+            <article><span>01 · WIRE DRAWING</span><h4>Drawn steel wire</h4><p>Wire rods drawn into smaller diameters for fabrication and manufacturing.</p></article>
+            <article><span>02 · WIRE FABRICATION</span><h4>Nails &amp; fasteners</h4><p>Manufactured from processed wire or other suitable steel feedstock.</p></article>
+            <article><span>03 · WIRE PROCESSING</span><h4>Binding wire</h4><p>Processed wire used in construction and general tying applications.</p></article>
+            <article><span>04 · WIRE FABRICATION</span><h4>Fencing products</h4><p>Wire further processed into fencing for agricultural, industrial and property uses.</p></article>
+            <article><span>05 · WIRE FABRICATION</span><h4>Welded wire mesh</h4><p>Steel wire formed into a grid and welded at intersections for construction and infrastructure.</p></article>
+          </div>
+        </div>
+        <p className="product-scenario-disclaimer">These examples describe the wider downstream steel industry and the industrial opportunity supported by locally manufactured billets. They are not confirmed Chalinze products, facilities or operating capabilities; the company's primary planned product is steel billets.</p>
+      </section>
+    </>}
     {page.path === "/sustainability" && <section className="energy-management section-pad" aria-labelledby="energy-management-title">
       <div className="section-index">PROPOSED PROJECT STRATEGY</div>
       <div className="gallery-heading"><div><Pill>Energy & carbon management</Pill><h2 id="energy-management-title">Efficiency by<br /><em>design.</em></h2></div><p>Energy efficiency, responsible energy management and CO₂ reduction are integral to the project's operating strategy. The energy system and monitoring commitments below are proposed and are not presented as achieved results.</p></div>
