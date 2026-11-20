@@ -229,17 +229,7 @@ async function initialize() {
   );
   await db.run(
     "INSERT OR IGNORE INTO site_content (content_key, published_json, draft_json, updated_by, updated_at) VALUES ('news-media', ?, ?, 'system', ?)",
-    JSON.stringify({ items: [
-      { id: "news-corporate-news", title: "Corporate news & press releases", category: "No approved articles supplied", publishedAt: "", description: "Corporate announcements, press releases and executive communications are identified as future publishing categories. No articles, issue dates or quotations have been invented.", mediaType: "", mediaUrl: "", alt: "", sortOrder: 0 },
-      { id: "news-project-progress", title: "Project progress", category: "Progress evidence required", publishedAt: "", description: "The document calls for project updates but does not provide verified construction percentages, milestones, commissioning dates or operating results.", mediaType: "", mediaUrl: "", alt: "", sortOrder: 10 },
-      { id: "news-events-media", title: "Events & media centre", category: "Media assets pending", publishedAt: "", description: "Events, conferences, approved photography/video, media requests and corporate publications are identified as communications topics. No press kit or event schedule was supplied.", mediaType: "", mediaUrl: "", alt: "", sortOrder: 20 },
-      { id: "news-editorial-governance", title: "Editorial governance", category: "Company communications", publishedAt: "", description: "Company announcements and events are published only after authorized review against current company information.", mediaType: "", mediaUrl: "", alt: "", sortOrder: 30 },
-    ] }), JSON.stringify({ items: [
-      { id: "news-corporate-news", title: "Corporate news & press releases", category: "No approved articles supplied", publishedAt: "", description: "Corporate announcements, press releases and executive communications are identified as future publishing categories. No articles, issue dates or quotations have been invented.", mediaType: "", mediaUrl: "", alt: "", sortOrder: 0 },
-      { id: "news-project-progress", title: "Project progress", category: "Progress evidence required", publishedAt: "", description: "The document calls for project updates but does not provide verified construction percentages, milestones, commissioning dates or operating results.", mediaType: "", mediaUrl: "", alt: "", sortOrder: 10 },
-      { id: "news-events-media", title: "Events & media centre", category: "Media assets pending", publishedAt: "", description: "Events, conferences, approved photography/video, media requests and corporate publications are identified as communications topics. No press kit or event schedule was supplied.", mediaType: "", mediaUrl: "", alt: "", sortOrder: 20 },
-      { id: "news-editorial-governance", title: "Editorial governance", category: "Company communications", publishedAt: "", description: "Company announcements and events are published only after authorized review against current company information.", mediaType: "", mediaUrl: "", alt: "", sortOrder: 30 },
-    ] }), now,
+    JSON.stringify({ items: [] }), JSON.stringify({ items: [] }), now,
   );
 
   for (const profile of profiles) {
