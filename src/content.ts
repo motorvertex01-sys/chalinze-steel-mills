@@ -324,11 +324,11 @@ export const pages: SitePage[] = [
     path: "/news",
     title: "News & media",
     eyebrow: "Company newsroom",
-    summary: "Company announcements, independent steel-industry learning videos and approved media in one place. Company news is published only when verified and authorized.",
+    summary: "Company announcements, project updates and approved company-owned media in one place. News is published only after verification and authorization.",
     sections: [
       { title: "Corporate news & press releases", body: "Corporate announcements, press releases and executive communications are identified as future publishing categories. No articles, issue dates or quotations have been invented.", tag: "No approved articles supplied" },
       { title: "Project progress", body: "The document calls for project updates but does not provide verified construction percentages, milestones, commissioning dates or operating results.", tag: "Progress evidence required" },
-      { title: "Events & media centre", body: "Events, conferences, approved photography/video, media requests and corporate publications are identified as communications topics. No press kit or event schedule was supplied.", tag: "Media assets pending" },
+      { title: "Events & media centre", body: "Events, conferences, company-approved photography and video, media requests and corporate publications are identified as communications topics. No press kit or event schedule was supplied.", tag: "Media assets pending" },
       { title: "Editorial governance", body: "Company announcements and events are published only after authorized review against current company information.", tag: "Company communications" },
     ],
   },

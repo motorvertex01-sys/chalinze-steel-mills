@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import * as THREE from "three";
-import { ArrowUpRight, Image, Play } from "lucide-react";
+import { ArrowUpRight, Image } from "lucide-react";
 import { Link } from "react-router-dom";
 import type { SitePage } from "./content";
 
@@ -33,27 +33,6 @@ export type NewsMediaItem = {
 
 export type NewsMediaContent = { items: NewsMediaItem[] };
 type NewsMediaResponse = NewsMediaContent;
-
-const industryVideos = [
-  {
-    id: "1YS53kRjFAE",
-    title: "Steelmaking at Koverhar, 1982",
-    category: "Historic steelmaking · Finland",
-    description: "Historical steel production footage from the Koverhar steelworks. It is an independent industry reference and does not depict Chalinze Steel Mills.",
-    creator: "Kauko Helavuo",
-    source: "https://commons.wikimedia.org/wiki/File:HISTORIAA_%E2%80%A2_OVAKON_Koverharin_ter%C3%A4stehdas_1982_-_ter%C3%A4ksen_valmistus.webm",
-    license: "https://creativecommons.org/licenses/by/3.0/",
-  },
-  {
-    id: "I4r4mslT_lI",
-    title: "Annealing furnace",
-    category: "Furnace operations · Slovenia",
-    description: "A short industry recording of gas-fired burners heating an ingot for further processing at Metal Ravne. This reference does not indicate the selected route for the Chalinze project.",
-    creator: "Technical Museum of Slovenia · video by Barbara Grilc",
-    source: "https://commons.wikimedia.org/wiki/File:CER_annealing_furnace.webm",
-    license: "https://creativecommons.org/licenses/by/4.0/",
-  },
-];
 
 function AbstractSteelScene() {
   const hostRef = useRef<HTMLDivElement>(null);
@@ -229,17 +208,17 @@ export function NewsMediaPage({ page }: NewsMediaPageProps) {
   return <main className="visual-gallery-page news-media-page">
     <section className="visual-gallery-hero newsroom-hero">
       <div className="visual-gallery-copy">
-        <span className="gallery-kicker"><Image size={15} /> {page.eyebrow.toUpperCase()} · STEEL INDUSTRY · COMPANY MEDIA</span>
+        <span className="gallery-kicker"><Image size={15} /> {page.eyebrow.toUpperCase()} · OFFICIAL COMPANY MEDIA</span>
         <h1>News &<br /><em>media.</em></h1>
         <p>{page.summary}</p>
-        <div className="visual-gallery-cues"><a href="#news-updates"><ArrowUpRight size={14} /> Company updates</a><a href="#industry-videos"><Play size={14} /> Industry videos</a><a href="#media"><Image size={14} /> Photo gallery</a></div>
+        <div className="visual-gallery-cues"><a href="#news-updates"><ArrowUpRight size={14} /> Company updates</a><a href="#media"><Image size={14} /> Photo & video library</a></div>
       </div>
       <div className="visual-gallery-art"><AbstractSteelScene /><span className="visual-gallery-art-caption">DIGITAL STUDY / ABSTRACT STEEL FORM</span></div>
       <div className="visual-gallery-gridlines" aria-hidden="true" />
     </section>
     <section className="newsroom-updates section-pad" id="news-updates" aria-labelledby="newsroom-updates-title">
       <div className="section-index">CHALINZE STEEL MILLS · OFFICIAL UPDATES</div>
-      <div className="gallery-heading"><h2 id="newsroom-updates-title">Company news,<br /><em>carefully verified.</em></h2><p>Company announcements and project updates appear here after authorized review. Independent industry videos and company-approved photos are grouped below.</p></div>
+      <div className="gallery-heading"><h2 id="newsroom-updates-title">Company news,<br /><em>carefully verified.</em></h2><p>Company announcements and project updates appear here after authorized review. Company-owned and approved photos and videos are grouped below.</p></div>
       {newsLoading && <p className="visual-gallery-state" role="status">Loading company updates…</p>}
       {newsError && <p className="visual-gallery-state is-error" role="alert">{newsError}</p>}
       {!newsLoading && !newsError && <div className="newsroom-update-grid">{newsItems.map((item, index) => <article className="newsroom-update-card" key={item.id}>
@@ -250,23 +229,15 @@ export function NewsMediaPage({ page }: NewsMediaPageProps) {
           ? <img src={item.mediaUrl} alt={item.alt} loading="lazy" />
           : <video src={item.mediaUrl} controls playsInline preload="metadata" aria-label={item.alt} />}</div>}
       </article>)}</div>}
-      {!newsLoading && !newsError && !newsItems.length && <div className="visual-gallery-empty"><strong>No company updates are published yet.</strong><p>Verified company announcements will appear here after editorial approval.</p></div>}
+      {!newsLoading && !newsError && !newsItems.length && <div className="visual-gallery-empty"><strong>No company updates are published yet.</strong><p>Verified company announcements will appear here after editorial approval.</p><Link className="text-link" to="/admin#news-media">Company editors: manage newsroom <ArrowUpRight size={15} /></Link></div>}
       <p className="newsroom-status"><strong>Editorial status</strong> No unverified announcements, project milestones or operating results are presented as company news.</p>
-    </section>
-    <section className="industry-video-section section-pad" id="industry-videos" aria-labelledby="industry-video-title">
-      <div className="section-index">INDEPENDENT INDUSTRY REFERENCES</div>
-      <div className="gallery-heading"><h2 id="industry-video-title">Steel in<br /><em>motion.</em></h2><p>Educational and historical footage from other steel industry sources. These videos do not depict Chalinze Steel Mills or imply that its proposed project is operating.</p></div>
-      <div className="industry-video-grid">{industryVideos.map((video) => <article className="industry-video-card" key={video.id}>
-        <div className="industry-video-frame"><iframe src={`https://www.youtube-nocookie.com/embed/${video.id}?rel=0`} title={video.title} loading="lazy" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerPolicy="strict-origin-when-cross-origin" allowFullScreen /></div>
-        <div className="industry-video-copy"><span>{video.category}</span><h3>{video.title}</h3><p>{video.description}</p><small>Credit: {video.creator}</small><div><a href={video.source} target="_blank" rel="noreferrer">Source & media details <ArrowUpRight size={13} /></a><a href={video.license} target="_blank" rel="noreferrer">CC BY license <ArrowUpRight size={13} /></a></div></div>
-      </article>)}</div>
     </section>
     <section className="visual-media-section section-pad" id="media" aria-labelledby="visual-media-title">
       <div className="section-index">COMPANY PHOTO & VIDEO LIBRARY</div>
-      <div className="gallery-heading"><h2 id="visual-media-title">Our selected<br /><em>media.</em></h2><p>Company-approved images and videos are published by administrators. Conceptual artworks are identified as such and do not represent installed or operating facilities.</p></div>
+      <div className="gallery-heading"><h2 id="visual-media-title">Our selected<br /><em>media.</em></h2><p>Company-owned and approved images and videos are published by authorized administrators. Conceptual artworks are identified as such and do not represent installed or operating facilities.</p></div>
       {loading && <p className="visual-gallery-state" role="status">Loading published media…</p>}
       {error && <p className="visual-gallery-state is-error" role="alert">{error}</p>}
-      {!loading && !error && !items.length && <div className="visual-gallery-empty"><Image size={22} /><strong>Company media is being curated.</strong><p>Approved images and videos will appear here when published by the company.</p><Link className="text-link" to="/contact">Contact the company <ArrowUpRight size={15} /></Link></div>}
+      {!loading && !error && !items.length && <div className="visual-gallery-empty"><Image size={22} /><strong>No company media is published yet.</strong><p>Upload company-owned or approved photos and videos through the protected editor. They will appear here after an administrator publishes them.</p><Link className="text-link" to="/admin#visual-gallery">Company editors: upload and manage media <ArrowUpRight size={15} /></Link></div>}
       {!!items.length && <div className="visual-media-grid">{items.map((item, index) => <article className={`visual-media-card visual-media-card-${index % 4}`} key={item.id}>
         <div className="visual-media-frame">
           {item.mediaType === "image" ? <img src={item.mediaUrl} alt={item.alt} loading="lazy" /> : <video src={item.mediaUrl} controls playsInline preload="metadata" aria-label={item.alt} />}

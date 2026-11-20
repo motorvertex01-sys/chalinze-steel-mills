@@ -1033,7 +1033,7 @@ export function AdminPage() {
         </section>
         <section className="admin-visual-gallery" id="visual-gallery">
           <div className="admin-section-heading"><div><span className="leadership-kicker">PUBLIC MEDIA LIBRARY</span><h2><Image size={22} /> Visual gallery</h2></div></div>
-          <div className="admin-review-callout"><strong>Draft & approval</strong><span>Upload company-approved stills or short videos, add accessible descriptions and arrange their display order. Editors can prepare drafts; only administrators can publish them. Concept artwork on the gallery page is separately labeled and is not a facility photograph.</span></div>
+          <div className="admin-review-callout"><strong>Draft & approval</strong><span>Upload company-owned or properly licensed stills and short videos, add accessible descriptions and arrange their display order. Editors can prepare drafts; only administrators can publish them. Concept artwork on the gallery page is separately labeled and is not a facility photograph.</span></div>
           {galleryError && <p className="admin-feedback is-error" role="alert">{galleryError}</p>}
           {galleryNotice && <p className="admin-feedback" role="status">{galleryNotice}</p>}
           {!visualGallery ? <p className="leadership-load-state" role="status">Loading gallery draft…</p> : <>
