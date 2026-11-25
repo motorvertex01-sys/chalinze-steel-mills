@@ -308,7 +308,7 @@ function Home() {
 
     <section className="material-applications section-pad" id="material-applications" aria-labelledby="material-applications-title">
       <div className="section-index">04 — MATERIAL APPLICATIONS</div>
-      <div className="gallery-heading"><div><Pill>From resource to use</Pill><h2 id="material-applications-title">Materials with<br /><em>a clear purpose.</em></h2></div><p>See how the proposed value chain connects Tanzanian iron ore to billet feedstock for downstream steel processing. The downstream construction application is explored on the Products page; these stages and applications are illustrative, not claims of current production or customer relationships.</p></div>
+      <div className="gallery-heading"><div><Pill>From resource to use</Pill><h2 id="material-applications-title">Materials with<br /><em>a clear purpose.</em></h2></div><p>See how the proposed upstream value chain connects Tanzanian iron ore to billet feedstock. The billets are the core planned output; downstream steel processing shown here is the impact this upstream investment is designed to enable, not a current Chalinze operation. These stages and applications are illustrative, not claims of current production or customer relationships.</p></div>
       <ol className="material-flow" aria-label="Proposed material flow">
         {["Iron ore", "Beneficiation", "Ironmaking", "Steelmaking", "Continuous casting", "Steel billets", "Downstream steel products", "Construction & industry"].map((stage, index) => <li key={stage}><span>{String(index + 1).padStart(2, "0")}</span><strong>{stage}</strong></li>)}
       </ol>
@@ -528,10 +528,10 @@ function ContentPage({ page }: { page: SitePage }) {
         <div className="product-scenario-output"><span>PRINCIPAL PLANNED OUTPUT</span><strong>Steel billets</strong><p>Billets are semi-finished steel products for further processing. They are distinct from finished construction products such as rebar and welded wire mesh.</p><a className="text-link" href="#billet-product-specifications">View planned billet sizes <ArrowDown size={14} /></a></div>
       </section>
       <section className="product-scenario product-scenario-downstream section-pad" id="product-applications" aria-labelledby="downstream-products-title">
-        <div className="section-index">STEEL PRODUCTS & DOWNSTREAM APPLICATIONS</div>
+        <div className="section-index">IMPACT OF UPSTREAM / DOWNSTREAM OPPORTUNITIES</div>
         <div className="product-scenario-heading">
-          <div><Pill>Further processing · potential opportunities</Pill><h2 id="downstream-products-title">Steel products &amp;<br /><em>downstream applications.</em></h2></div>
-          <p>Steel billets are semi-finished products that can serve as feedstock for further downstream processing and manufacturing, including reinforcement bars, structural steel sections, wire rods and other value-added steel products. These represent potential applications of Chalinze Steel Mills Ltd's planned billet production and may inform a future downstream manufacturing phase. Any such phase remains subject to future project decisions and is not a confirmed company commitment.</p>
+          <div><Pill>Impact of upstream · not a Chalinze operation</Pill><h2 id="downstream-products-title">Steel products &amp;<br /><em>downstream applications.</em></h2></div>
+          <p>Steel billets are semi-finished products that can serve as feedstock for further downstream processing and manufacturing, including reinforcement bars, structural steel sections, wire rods and other value-added steel products. These represent the downstream impact that Chalinze Steel Mills Ltd's planned upstream billet production is designed to enable, and may inform a future downstream manufacturing phase. Chalinze has not started downstream production and is not currently producing any of these items; any such phase remains subject to future project decisions and is not a confirmed company commitment.</p>
         </div>
         <div className="downstream-product-group">
           <h3 id="primary-downstream-title">A. Primary downstream products — steel rolling</h3>
@@ -562,7 +562,7 @@ function ContentPage({ page }: { page: SitePage }) {
           </div>
           <ProcessGallery items={[applicationGallery[1]]} title="Illustrative downstream construction application" />
         </div>
-        <p className="product-scenario-disclaimer">These examples describe the wider downstream steel industry and the industrial opportunity supported by locally manufactured billets. They are not confirmed Chalinze products, facilities or operating capabilities; the company's primary planned product is steel billets.</p>
+        <p className="product-scenario-disclaimer">These examples describe the wider downstream steel industry and the industrial opportunity created by the impact of locally manufactured billets. They are not confirmed Chalinze products, facilities or operating capabilities. Chalinze has not started downstream production; the company's primary planned product is steel billets.</p>
       </section>
     </>}
     {page.path === "/sustainability" && <section className="energy-management section-pad" aria-labelledby="energy-management-title">

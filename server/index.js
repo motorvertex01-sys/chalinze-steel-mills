@@ -4,7 +4,6 @@ import multer from "multer";
 import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
-import sharp from "sharp";
 import { fileURLToPath } from "node:url";
 import { db, originalMediaDirectory, profileFromRow, ready, recordChange, uploadDirectory, writeAudit } from "./store.js";
 
@@ -359,7 +358,14 @@ function validManufacturingMedia(file) {
   return "";
 }
 
+let sharpModule;
+function loadSharp() {
+  sharpModule ??= import("sharp").then((module) => module.default);
+  return sharpModule;
+}
+
 async function optimizeUploadedImage(buffer) {
+  const sharp = await loadSharp();
   return sharp(buffer, { limitInputPixels: 40_000_000, animated: false })
     .rotate()
     .resize({ width: 1800, height: 1800, fit: "inside", withoutEnlargement: true })
