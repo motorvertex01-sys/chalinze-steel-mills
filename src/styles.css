@@ -38,7 +38,8 @@ button { cursor: pointer; }
 .site-header { position: absolute; z-index: 20; top: 0; left: 0; width: 100%; border-bottom: 1px solid rgba(255,255,255,.1); background: rgba(9,10,12,.54); backdrop-filter: blur(18px); }
 .header-inner { max-width: 1440px; height: 82px; margin: auto; padding: 0 6vw; display: flex; align-items: center; justify-content: space-between; gap: 30px; }
 .brand { display: flex; align-items: center; gap: 10px; min-width: 210px; }
-.brand-emblem { display: block; width: 43px; height: 43px; object-fit: cover; background: #fff; border: 1px solid rgba(255,255,255,.32); }
+.brand-emblem { display: block; width: 43px; height: 43px; flex: 0 0 auto; object-fit: contain; background: #fff; border: 1px solid rgba(255,255,255,.32); }
+.brand-emblem-full { width: min(var(--header-logo-size, 60px), 168px); height: min(var(--header-logo-size, 60px), 168px); border: 0; }
 .brand-copy { display: flex; flex-direction: column; letter-spacing: .16em; font: 600 11px var(--mono); }
 .brand-copy strong { font-size: 13px; letter-spacing: .12em; }
 .brand-copy small { margin-top: 3px; color: #a4a8aa; font-size: 8px; }

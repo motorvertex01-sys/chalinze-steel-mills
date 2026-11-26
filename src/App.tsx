@@ -77,6 +77,7 @@ function Header() {
   const headerRef = useRef<HTMLElement>(null);
   const location = useLocation();
   const config = useSiteConfig();
+  const showFullBrandLogo = config.header.layout === "stacked";
 
   useEffect(() => {
     let previousY = window.scrollY;
@@ -137,8 +138,12 @@ function Header() {
     >
       <div className="header-inner">
         <Link className="brand" to="/" onClick={closeMenus} aria-label="Chalinze Steel Mills Ltd home">
-          <img className="brand-emblem" src="/assets/brand/chalinze-emblem-approved.webp" alt="" />
-          <span className="brand-copy"><strong>CHALINZE</strong><small>STEEL MILLS LTD</small></span>
+          <img
+            className={`brand-emblem${showFullBrandLogo ? " brand-emblem-full" : ""}`}
+            src={showFullBrandLogo ? "/assets/brand/chalinze-logo-approved.webp" : "/assets/brand/chalinze-emblem-approved.webp"}
+            alt=""
+          />
+          {!showFullBrandLogo && <span className="brand-copy"><strong>CHALINZE</strong><small>STEEL MILLS LTD</small></span>}
         </Link>
         <nav className={`main-nav ${mobileOpen ? "is-open" : ""}`} aria-label="Main navigation">
           {config.navigation.map((group) => group.links.length === 1 && group.links[0].path === "/" ? (
