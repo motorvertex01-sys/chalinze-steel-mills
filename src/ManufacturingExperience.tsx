@@ -354,7 +354,7 @@ function SupportingManufacturing({ content }: { content: ManufacturingContent })
       <div className="sustainability-cards">{content.sustainability.map((item, index) => <article key={item.title}><span>{String(index + 1).padStart(2, "0")}</span><div><h3>{item.title}</h3><p>{item.detail}</p></div></article>)}</div>
     </section>
     <section className="manufacturing-industries section-pad" id="applications">
-      <div className="section-index">08 / POTENTIAL IMPACT OF THE UPSTREAM FOUNDATION</div><div className="manufacturing-section-heading"><div><span className="manufacturing-label">DOWNSTREAM CUSTOMER INDUSTRIES</span><h2>Steel for<br /><em>many sectors.</em></h2></div><p>These are potential industry applications of future downstream steel products that the integrated value chain could support—not named customers, secured supply agreements or existing operating relationships.</p></div>
+      <div className="section-index">08 / POTENTIAL IMPACT OF THE UPSTREAM FOUNDATION</div><div className="manufacturing-section-heading"><div><span className="manufacturing-label">DOWNSTREAM CUSTOMER INDUSTRIES</span><h2>Steel for<br /><em>Various Sectors</em></h2></div><p>These are potential industry applications of future downstream steel products that the integrated value chain could support—not named customers, secured supply agreements or existing operating relationships.</p></div>
       <div className="industry-grid">{content.industries.map((item, index) => <article key={item.title}><span>0{index + 1} / INDUSTRY</span><h3>{item.title}</h3><p>{item.detail}</p></article>)}</div>
     </section>
   </>;
