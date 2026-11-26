@@ -107,14 +107,83 @@ function ManufacturingHero({ content }: { content: ManufacturingContent }) {
         <ProjectStatus>{content.eyebrow}</ProjectStatus>
         <h1 id="manufacturing-title">{content.headline}</h1>
         <p>{content.introduction}</p>
-        <div className="manufacturing-hero-actions"><a className="button button-orange" href="#production-journey">Explore production <ArrowDown size={16} /></a><Link className="text-link" to="/products">Billet information <ArrowUpRight size={15} /></Link></div>
-        <span className="manufacturing-hero-output">PRIMARY MANUFACTURING OUTPUT <i /> STEEL BILLETS</span>
+        <div className="manufacturing-hero-actions"><a className="button button-orange" href="#production-journey">Explore upstream operations <ArrowDown size={16} /></a><Link className="text-link" to="/products#product-applications">Downstream impact <ArrowUpRight size={15} /></Link></div>
+        <span className="manufacturing-hero-output">PLANNED UPSTREAM OUTPUT <i /> IRON-BEARING RAW MATERIALS</span>
       </div>
       <div className="manufacturing-hero-mark" aria-hidden="true"><span>01</span><i />06</div>
       {introActive && <button className="manufacturing-skip" type="button" onClick={() => setIntroActive(false)}>Skip cinematic introduction</button>}
       <span className="manufacturing-hero-caption">CONCEPTUAL VISUALISATION · NOT AN AS-BUILT FACILITY</span>
     </section>
   );
+}
+
+function UpstreamFoundation() {
+  const equipment = [
+    ["Mining", "Drilling rigs, excavators, loaders and haul trucks"],
+    ["Crushing", "Jaw, gyratory and cone crushers"],
+    ["Screening & classification", "Vibrating screens and classifiers"],
+    ["Grinding", "SAG mills, ball mills and high-pressure grinding rolls (HPGR)"],
+    ["Beneficiation", "Magnetic and gravity separators; flotation cells where suitable"],
+    ["Dewatering", "Thickeners, filter presses and vacuum filters"],
+    ["Pelletizing (if required)", "Disc or drum pelletizers and induration furnaces"],
+    ["Material handling", "Conveyors, feeders, stackers and reclaimers"],
+    ["Quality control", "Sampling systems, laboratories and analysers"],
+  ];
+  const outputs = [
+    ["Calibrated lump ore", "Sized iron ore, where deposit characteristics and the selected route allow."],
+    ["Beneficiated concentrate", "Iron-enriched material after suitable mineral separation and concentration."],
+    ["Sinter feed", "Fine iron-bearing material for sintering where the selected ironmaking route requires it."],
+    ["Iron ore pellets", "Agglomerated and indurated feed made from suitable fine concentrate when required."],
+  ];
+  const benefits = [
+    ["Raw-material security", "Develops dependable access to iron-bearing resources; resource rights and supply remain to be confirmed."],
+    ["Quality assurance", "Enables characterization and control of iron content, impurities, sizing and moisture."],
+    ["Operational efficiency", "Aims to provide consistent feedstock for later ironmaking."],
+    ["Cost optimization", "Mine-to-plant integration may reduce avoidable handling and transport, subject to engineering and commercial studies."],
+    ["Industrial integration", "Creates the material foundation for the proposed mining-to-steel value chain."],
+    ["Resource value addition", "Prepares mineral resources into higher-value industrial feedstock."],
+  ];
+
+  return <section className="upstream-foundation section-pad" aria-labelledby="upstream-foundation-title">
+    <div className="section-index">UPSTREAM FOUNDATION · MINE TO METALLURGICAL-GRADE RAW MATERIALS</div>
+    <div className="upstream-foundation-intro">
+      <div>
+        <span className="manufacturing-label">THE VALUE CHAIN STARTS WITH THE ORE</span>
+        <h2 id="upstream-foundation-title">Prepare the<br /><em>raw material.</em></h2>
+        <p>The upstream segment is the foundation of the proposed iron-and-steel value chain. It covers extraction, handling, processing and preparation of iron-bearing raw materials for later ironmaking and steel production.</p>
+        <p>Run-of-mine (ROM) ore cannot always be charged directly into metallurgical furnaces. Its mineralogy, iron content, impurities and physical characteristics determine which preparation stages are suitable and what feedstock quality can be targeted.</p>
+        <p>The objective is a reliable, consistent and quality-controlled supply of prepared iron-bearing material. Specific grades, process yields, supply volumes and metallurgical specifications have not been confirmed.</p>
+      </div>
+      <figure className="upstream-value-chain-figure">
+        <img src="/assets/images/iron-industry-value-chain-illustration.webp" alt="Illustrative mine-to-market iron industry value chain, showing upstream mining and raw-material preparation, steel production, and downstream product examples." width="1152" height="768" loading="lazy" decoding="async" />
+        <figcaption>General industry illustration supplied for context; it is not an approved Chalinze plant design or selected process route. Downstream stages and products show potential value-chain impacts, not current company production. Pelletizing, sintering and ironmaking route selection remain subject to testing and engineering. <a href="/assets/images/iron-industry-value-chain-illustration.webp" target="_blank" rel="noreferrer">Open the full-size illustration</a>.</figcaption>
+      </figure>
+    </div>
+    <div className="upstream-reference-grid">
+      <section aria-labelledby="upstream-material-outputs-title">
+        <span className="manufacturing-label">RAW MATERIALS & PRODUCT OUTPUTS</span>
+        <h3 id="upstream-material-outputs-title">Prepared feedstock<br />depends on the ore.</h3>
+        <p className="upstream-reference-lede">Potential upstream outputs vary with ore characteristics and the selected processing route:</p>
+        <div className="upstream-output-grid">{outputs.map(([title, detail], index) => <article key={title}><span>0{index + 1} / POTENTIAL OUTPUT</span><h4>{title}</h4><p>{detail}</p></article>)}</div>
+      </section>
+      <section aria-labelledby="upstream-equipment-title">
+        <span className="manufacturing-label">TECHNOLOGY & EQUIPMENT REQUIREMENTS</span>
+        <h3 id="upstream-equipment-title">Typical equipment<br />by process area.</h3>
+        <div className="upstream-equipment-scroll" role="region" aria-label="Typical upstream process equipment" tabIndex={0}>
+          <table className="upstream-equipment-table">
+            <thead><tr><th scope="col">Process area</th><th scope="col">Typical equipment class</th></tr></thead>
+            <tbody>{equipment.map(([area, machines]) => <tr key={area}><th scope="row">{area}</th><td>{machines}</td></tr>)}</tbody>
+          </table>
+        </div>
+        <p className="upstream-equipment-note">Examples are generic industry equipment classes, not Chalinze selections, confirmed specifications or installed assets.</p>
+      </section>
+    </div>
+    <section className="upstream-strategic" aria-labelledby="upstream-strategic-title">
+      <div><span className="manufacturing-label">WHY THE UPSTREAM FOUNDATION MATTERS</span><h3 id="upstream-strategic-title">Value begins<br />before the furnace.</h3></div>
+      <ol>{benefits.map(([title, detail], index) => <li key={title}><span>0{index + 1}</span><div><strong>{title}</strong><p>{detail}</p></div></li>)}</ol>
+    </section>
+    <p className="upstream-route-caveat"><strong>Process selection caveat</strong> Beneficiation and agglomeration are distinct decisions. Not every deposit requires the same beneficiation stages, and not every ironmaking technology requires pellets. Mineralogical characterization, metallurgical testing and technology selection must establish the final configuration; no specific route is confirmed here.</p>
+  </section>;
 }
 
 function ProductionFlow({ stages, selected, onSelect }: { stages: ManufacturingStage[]; selected: number; onSelect: (index: number) => void }) {
@@ -171,8 +240,8 @@ function ProcessJourney({ stages, stageImages }: { stages: ManufacturingStage[];
 
   return (
     <section className="production-journey section-pad" id="production-journey">
-      <div className="section-index">02 / SCENARIO 1 · UPSTREAM PRIMARY STEEL MANUFACTURING</div>
-      <div className="manufacturing-section-heading"><div><span className="manufacturing-label">UPSTREAM PRODUCTION · IRON ORE TO STEEL BILLETS</span><h2>Six stages.<br /><em>One billet.</em></h2></div><p>{stages[0]?.description ? "Explore the proposed upstream chain from mineral feed to inspected steel billets. These semi-finished billets are the planned primary output; rebar and other finished steel products belong to separate downstream manufacturing." : ""}</p></div>
+      <div className="section-index">02 / UPSTREAM · MINE TO METALLURGICAL-GRADE RAW MATERIALS</div>
+      <div className="manufacturing-section-heading"><div><span className="manufacturing-label">UPSTREAM PRODUCTION · IRON ORE TO PREPARED IRON-BEARING MATERIALS</span><h2>Six stages.<br /><em>One feedstock.</em></h2></div><p>{stages[0]?.description ? "Explore the proposed upstream chain from mineral extraction to quality-controlled iron-bearing feedstock. These prepared materials are the planned upstream output that supplies downstream ironmaking; ironmaking, steelmaking, billets and finished steel products are downstream and are not yet in operation at Chalinze." : ""}</p></div>
       <ProductionFlow stages={stages} selected={selectedIndex} onSelect={setSelectedIndex} />
       <div className={`process-detail-layout${expanded ? " is-fullscreen" : ""}`}>
         <div className="process-scene-column">
@@ -212,7 +281,7 @@ function QualityJourney({ quality, stages }: { quality: ManufacturingContent["qu
   const active = quality[selected];
   return <section className="quality-journey section-pad" id="quality">
     <div className="section-index">03 / A PROCESS-WIDE SYSTEM</div>
-    <div className="manufacturing-section-heading"><div><span className="manufacturing-label">QUALITY ASSURANCE & PRODUCT INSPECTION</span><h2>Quality follows<br /><em>the process.</em></h2></div><p>Quality is planned throughout the value chain, from raw-material assessment to final billet inspection. This framework does not claim operating tests, certification, or standards compliance.</p></div>
+    <div className="manufacturing-section-heading"><div><span className="manufacturing-label">UPSTREAM QUALITY CONTROL</span><h2>Quality follows<br /><em>the feedstock.</em></h2></div><p>Quality planning covers material characterization, particle sizing, beneficiation, moisture management and dispatch traceability. Billet inspection belongs to downstream steelmaking and is not presented as an operating Chalinze capability.</p></div>
     <div className="quality-pathway">{quality.map((item, index) => <button key={item.stageId} type="button" className={`quality-pathway-step${selected === index ? " is-active" : ""}`} aria-pressed={selected === index} onClick={() => setSelected(index)}><span>{String(index + 1).padStart(2, "0")}</span><strong>{item.title}</strong><i aria-hidden="true" /></button>)}</div>
     <div className="quality-detail">
       <div className="quality-instrument" aria-hidden="true"><div className="quality-instrument-screen"><i /><b /><span /></div><div className="quality-instrument-stand" /><div className="quality-sample" /></div>
@@ -225,7 +294,7 @@ function BilletShowcase({ billet }: { billet: ManufacturingContent["billet"] }) 
   const [dimensionIndex, setDimensionIndex] = useState(0);
   const dimension = billet.dimensions[dimensionIndex];
   return <section className="billet-showcase" id="steel-billets">
-    <div className="billet-showcase-copy"><div className="section-index">04 / PRIMARY MANUFACTURING OUTPUT</div><ProjectStatus>PLANNED PRINCIPAL PRODUCT</ProjectStatus><h2>Steel<br /><em>billets.</em></h2><p>{billet.description}</p>
+    <div className="billet-showcase-copy"><div className="section-index">04 / DOWNSTREAM PRODUCT · NOT YET PRODUCED</div><ProjectStatus>DOWNSTREAM · NOT YET IN OPERATION</ProjectStatus><h2>Steel<br /><em>billets.</em></h2><p>{billet.description}</p>
       <div className="billet-dimension-selector" aria-label="Project-document billet cross-sections">{billet.dimensions.map((item, index) => <button key={item.label} type="button" className={index === dimensionIndex ? "is-selected" : ""} aria-pressed={index === dimensionIndex} onClick={() => setDimensionIndex(index)}><span>{item.label}</span><small>{item.status}</small></button>)}</div>
       <p className="billet-specification-note">{billet.specificationNote}</p>
       <Link className="button button-orange" to="/contact">Request product information <ArrowUpRight size={15} /></Link>
@@ -255,11 +324,11 @@ function DownstreamValueChain({ products }: { products: ManufacturingContent["do
   const selectedGroup = primaryRolledProductIds.has(selected?.id ?? "") ? "primary" : "secondary";
   return <section className="downstream-section section-pad" id="downstream">
     <div className="section-index">05 / UPSTREAM IMPACT · DOWNSTREAM OPPORTUNITY</div>
-    <div className="manufacturing-section-heading"><div><span className="manufacturing-label">IMPACT OF UPSTREAM · DOWNSTREAM OPPORTUNITY (NOT A CHALINZE OPERATION)</span><h2>From billet<br />to <em>finished steel.</em></h2></div><p>Chalinze Steel Mills Ltd is developing an integrated upstream operation with steel billets as its primary planned product. The downstream industry shown here is the impact that this upstream investment is designed to enable: it could use locally manufactured billets to produce rolled products and further-processed goods. Chalinze has not started, and is not currently producing, any downstream products; these examples show the potential industrial opportunity created by upstream billets, not a commitment by Chalinze to manufacture downstream products.</p></div>
+    <div className="manufacturing-section-heading"><div><span className="manufacturing-label">IMPACT OF UPSTREAM · DOWNSTREAM OPPORTUNITY (NOT YET IN OPERATION)</span><h2>From prepared feedstock<br />to <em>finished steel.</em></h2></div><p>Chalinze Steel Mills Ltd is developing the upstream foundation that prepares iron-bearing feedstock. In the proposed integrated value chain, this feedstock could supply later ironmaking, steelmaking and continuous casting, followed by rolling and further processing at downstream facilities. These examples show potential industrial impact; they are not current production or a confirmed commitment to operate every downstream facility.</p></div>
     <div className="value-chain-diagram">
-      <div className="value-chain-primary"><span>UPSTREAM · PRIMARY STEELMAKING (CHALINZE PLANNED CORE)</span><div className="value-chain-stages">{["ROM iron ore", "Beneficiation", "Ironmaking", "Steelmaking", "Continuous casting"].map((item, index) => <span key={item}><i>{String(index + 1).padStart(2, "0")}</i>{item}</span>)}</div><strong>PLANNED PRIMARY PRODUCT · STEEL BILLETS</strong></div>
-      <div className="value-chain-boundary"><i /><strong>UPSTREAM OUTPUT<br />STEEL BILLETS</strong><i /></div>
-      <div className="value-chain-downstream"><span>IMPACT OF UPSTREAM · DOWNSTREAM CONVERSION (NOT A CHALINZE OPERATION)</span><div><span>STEEL BILLETS</span><ArrowRight size={19} /><strong>ROLLING &amp;<br />PRODUCT FORMING</strong></div><b>PRIMARY ROLLED PRODUCTS → SECONDARY PROCESSING</b></div>
+      <div className="value-chain-primary"><span>UPSTREAM · MINE TO METALLURGICAL-GRADE RAW MATERIALS (CHALINZE PLANNED CORE)</span><div className="value-chain-stages">{["Iron ore mining", "Crushing & screening", "Beneficiation", "Dewatering & handling", "Agglomeration", "Stockpiling & dispatch"].map((item, index) => <span key={item}><i>{String(index + 1).padStart(2, "0")}</i>{item}</span>)}</div><strong>PLANNED UPSTREAM OUTPUT · IRON-BEARING RAW MATERIALS</strong></div>
+      <div className="value-chain-boundary"><i /><strong>UPSTREAM OUTPUT<br />PREPARED IRON-BEARING FEEDSTOCK</strong><i /></div>
+      <div className="value-chain-downstream"><span>IMPACT OF UPSTREAM · DOWNSTREAM (NOT YET IN OPERATION)</span><div><span>IRON-BEARING FEEDSTOCK</span><ArrowRight size={19} /><strong>IRONMAKING · STEELMAKING<br />&amp; CASTING</strong></div><b>BILLETS → ROLLING → FINISHED STEEL</b></div>
     </div>
     <div className="downstream-product-layout">
       <div className="downstream-product-catalog">{productGroups.map((group) => <section key={group.id} aria-labelledby={`downstream-${group.id}-heading`}>
@@ -268,7 +337,7 @@ function DownstreamValueChain({ products }: { products: ManufacturingContent["do
       </section>)}</div>
       {selected && <article className="downstream-product-detail" id="downstream-product-panel" role="tabpanel" aria-labelledby={`downstream-product-tab-${selected.id}`}>
         <div className="downstream-model"><ProductModel model={selected.model} title={`Representative conceptual illustration of ${selected.name}`} /><span>ILLUSTRATIVE MODEL · NOT A CHALINZE PRODUCT</span></div>
-        <div className="downstream-product-copy"><span className="manufacturing-label">UPSTREAM IMPACT · {selectedGroup === "primary" ? "PRIMARY DOWNSTREAM ROLLED PRODUCT" : "SECONDARY DOWNSTREAM PROCESSED PRODUCT"}</span><h3>{selected.name}</h3><p>{selected.description}</p><dl><div><dt>Typical application</dt><dd>{selected.applications}</dd></div><div><dt>Related industries</dt><dd>{selected.industries}</dd></div></dl><p className="downstream-boundary-note">These are illustrative industry products that illustrate the impact of upstream billets, not confirmed Chalinze products or operating capabilities. Chalinze has not started downstream production; its primary planned product is steel billets.</p></div>
+        <div className="downstream-product-copy"><span className="manufacturing-label">UPSTREAM IMPACT · {selectedGroup === "primary" ? "PRIMARY DOWNSTREAM ROLLED PRODUCT" : "SECONDARY DOWNSTREAM PROCESSED PRODUCT"}</span><h3>{selected.name}</h3><p>{selected.description}</p><dl><div><dt>Typical application</dt><dd>{selected.applications}</dd></div><div><dt>Related industries</dt><dd>{selected.industries}</dd></div></dl><p className="downstream-boundary-note">These are illustrative downstream industry products enabled by the wider iron-and-steel value chain. They are not confirmed Chalinze products or operating capabilities; the upstream feedstock and downstream plant specifications remain subject to project definition.</p></div>
       </article>}
     </div>
   </section>;
@@ -285,14 +354,14 @@ function SupportingManufacturing({ content }: { content: ManufacturingContent })
       <div className="sustainability-cards">{content.sustainability.map((item, index) => <article key={item.title}><span>{String(index + 1).padStart(2, "0")}</span><div><h3>{item.title}</h3><p>{item.detail}</p></div></article>)}</div>
     </section>
     <section className="manufacturing-industries section-pad" id="applications">
-      <div className="section-index">08 / INDUSTRIAL APPLICATIONS & CUSTOMER INDUSTRIES</div><div className="manufacturing-section-heading"><div><span className="manufacturing-label">DOWNSTREAM CUSTOMER INDUSTRIES</span><h2>Steel for<br /><em>many sectors.</em></h2></div><p>These are potential industry applications identified in company materials—not named customers, secured supply agreements or existing operating relationships.</p></div>
+      <div className="section-index">08 / POTENTIAL IMPACT OF THE UPSTREAM FOUNDATION</div><div className="manufacturing-section-heading"><div><span className="manufacturing-label">DOWNSTREAM CUSTOMER INDUSTRIES</span><h2>Steel for<br /><em>many sectors.</em></h2></div><p>These are potential industry applications of future downstream steel products that the integrated value chain could support—not named customers, secured supply agreements or existing operating relationships.</p></div>
       <div className="industry-grid">{content.industries.map((item, index) => <article key={item.title}><span>0{index + 1} / INDUSTRY</span><h3>{item.title}</h3><p>{item.detail}</p></article>)}</div>
     </section>
   </>;
 }
 
 function ManufacturingEnquiry({ note }: { note: string }) {
-  return <section className="manufacturing-enquiry section-pad" id="enquiries" tabIndex={-1}><div><span className="manufacturing-label">CUSTOMER ENQUIRIES & PRODUCT INFORMATION</span><h2>Start with<br /><em>the right detail.</em></h2><p>Product dimensions are project-document references. Obtain an approved specification and availability confirmation from the company before making commercial decisions.</p></div><div className="manufacturing-enquiry-actions"><Link className="button button-orange" to="/contact">Contact Chalinze Steel Mills <ArrowUpRight size={16} /></Link><Link className="text-link" to="/products">Product information <ArrowRight size={15} /></Link><Link className="text-link" to="/markets">Markets & applications <ArrowRight size={15} /></Link></div><p className="manufacturing-publication-note">{note}</p></section>;
+  return <section className="manufacturing-enquiry section-pad" id="enquiries" tabIndex={-1}><div><span className="manufacturing-label">PROJECT, FEEDSTOCK & PARTNERSHIP ENQUIRIES</span><h2>Start with<br /><em>the right detail.</em></h2><p>Contact the company for project information. Material forms and billet dimensions shown here are planning references, not confirmed sale specifications or availability.</p></div><div className="manufacturing-enquiry-actions"><Link className="button button-orange" to="/contact">Contact Chalinze Steel Mills <ArrowUpRight size={16} /></Link><Link className="text-link" to="/products">Feedstock & downstream applications <ArrowRight size={15} /></Link><Link className="text-link" to="/markets">Markets & potential impacts <ArrowRight size={15} /></Link></div><p className="manufacturing-publication-note">{note}</p></section>;
 }
 
 export function ManufacturingExperience() {
@@ -334,13 +403,14 @@ export function ManufacturingExperience() {
   return <main className="manufacturing-page">
     <ManufacturingHero content={content} />
     <nav className="manufacturing-subnav" aria-label="Manufacturing sections">
-      <a href="#production-journey">Primary steelmaking</a><a href="#quality">Quality assurance</a><a href="#steel-billets">Steel billets</a><a href="#downstream">Downstream products</a><a href="#infrastructure">Infrastructure</a>
+      <a href="#production-journey">Upstream production</a><a href="#quality">Quality assurance</a><a href="#steel-billets">Steel billets (downstream)</a><a href="#downstream">Downstream products</a><a href="#infrastructure">Infrastructure</a>
     </nav>
     {contentError && <p className="manufacturing-content-warning" role="status">{contentError}</p>}
     <section className="manufacturing-overview section-pad">
       <div className="section-index">01 / THE INTEGRATED MANUFACTURING MODEL</div><div className="manufacturing-overview-grid"><h2>Mineral resource.<br />Industrial <em>transformation.</em></h2><p>{content.valueStatement}</p></div>
-      <div className="primary-output-statement"><span>PRIMARY MANUFACTURING OUTPUT</span><strong>STEEL BILLETS</strong><i aria-hidden="true" /></div>
+      <div className="primary-output-statement"><span>PLANNED UPSTREAM OUTPUT</span><strong>IRON-BEARING RAW MATERIALS</strong><i aria-hidden="true" /></div>
     </section>
+    <UpstreamFoundation />
     <ProcessJourney stages={content.stages} stageImages={content.media?.stageImages} />
     <QualityJourney quality={content.quality} stages={content.stages} />
     <BilletShowcase billet={content.billet} />

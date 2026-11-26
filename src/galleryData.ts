@@ -59,7 +59,7 @@ export const manufacturingGallery: readonly GalleryItem[] = [
   {
     title: "Billet bundle",
     category: "Planned product",
-    description: "Steel billets are identified as the principal planned product. The photograph is reproduced from the supplied website document and is not verified as a photograph of Chalinze production.",
+    description: "Steel billets are a downstream product, not the upstream output; downstream production is not yet in operation. The photograph is reproduced from the supplied website document and is not verified as a photograph of Chalinze production.",
     technical: "The source does not identify this pictured bundle’s grade, dimensions, length or manufacturer. Use the product selector for the two documented nominal cross-sections.",
     status: "Illustrative billet image",
     image: "/assets/images/billet-bundle-concept.webp",

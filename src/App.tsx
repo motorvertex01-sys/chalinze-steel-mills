@@ -239,12 +239,12 @@ function Home() {
   const [stage, setStage] = useState(0);
   const { home } = useSiteConfig();
   const process = [
-    { name: "Iron ore mining", kind: "ore" as const, label: "01 / MINE", detail: "Tanzanian run-of-mine iron ore is identified as the planned feedstock; mine rights, reserves and supply are not confirmed." },
-    { name: "Beneficiation", kind: "process" as const, label: "02 / PREPARE", detail: "Ore processing and feed preparation are planned; equipment, recovery and concentrate grade are not specified." },
-    { name: "Ironmaking", kind: "process" as const, label: "03 / PRODUCE IRON", detail: "Ironmaking is part of the project concept, but the source material describes conflicting technology routes." },
-    { name: "Steelmaking", kind: "process" as const, label: "04 / MAKE STEEL", detail: "Electric Arc Furnace steelmaking is described as a planned stage; final design and operating status are unconfirmed." },
-    { name: "Billet casting", kind: "billet" as const, label: "05 / CAST", detail: "Continuous casting is planned to produce steel billets, the project's principal identified product." },
-    { name: "Billet inspection & dispatch", kind: "billet" as const, label: "06 / INSPECT & DISPATCH", detail: "The planned final stage includes billet inspection, storage, handling and dispatch for downstream steel processing." },
+    { name: "Iron ore mining", kind: "ore" as const, label: "01 / MINE", detail: "Extraction of iron-bearing minerals through drilling, blasting, excavation, loading and haulage of run-of-mine (ROM) ore. Mine rights, reserves and supply are not confirmed." },
+    { name: "Crushing & screening", kind: "process" as const, label: "02 / SIZE REDUCE", detail: "Primary, secondary and tertiary crushing with screening and classification to produce a controlled particle size. Equipment and duty are not specified." },
+    { name: "Beneficiation & concentration", kind: "process" as const, label: "03 / UPGRADE", detail: "Physical processing to improve iron content and reduce gangue through grinding, magnetic, gravity or flotation separation. The final route depends on ore mineralogy." },
+    { name: "Dewatering & material handling", kind: "process" as const, label: "04 / DEWATER", detail: "Thickening, filtration, moisture control, stockpiling and blending to achieve consistent concentrate quality. Capacities are not confirmed." },
+    { name: "Agglomeration & pelletizing", kind: "process" as const, label: "05 / AGGLOMERATE", detail: "Conversion of fine concentrates into pellets (with induration) or sinter where the selected ironmaking route requires it. The need for agglomeration is route-dependent." },
+    { name: "Stockpiling, blending & dispatch", kind: "process" as const, label: "06 / DISPATCH", detail: "Quality-controlled storage, blending, sampling and dispatch of prepared iron-bearing feedstock to downstream ironmaking facilities, which are not yet in operation." },
   ];
 
   return <main className="home-page">
@@ -258,7 +258,7 @@ function Home() {
         <div className="hero-meta" aria-label="Project location and focus">
           <span><b>01</b><span>TANZANIA</span></span>
           <span><b>02</b><span>VIGWAZA</span></span>
-          <span><b>03</b><span>STEEL BILLETS</span></span>
+          <span><b>03</b><span>IRON ORE</span></span>
         </div>
       </div>
       <div className="hero-object"><Scene kind="ore" /><div className="scene-caption"><span>RAW MATERIAL / CONCEPT</span><span>ROTATE TO EXPLORE ↗</span></div></div>
@@ -274,9 +274,9 @@ function Home() {
       </div>
       <aside className="upstream-positioning">
         <span>FOUNDATIONAL UPSTREAM INVESTMENT</span>
-        <p>Chalinze Steel Mills Ltd is more than a planned billet factory: it is an upstream steel manufacturing investment designed to support a wider downstream steel industry in Tanzania.</p>
+        <p>Chalinze Steel Mills Ltd is more than a planned steel mill: it is an upstream investment that prepares Tanzanian iron ore into metallurgical-grade iron-bearing feedstock. Downstream ironmaking, steelmaking and steel products are the intended impact of this upstream base and are not yet in operation.</p>
       </aside>
-      <div className="facts-strip"><div><span>PROPOSED PHASE 1 CAPACITY</span><strong>1.0 MTPA</strong><small>Earlier diagram: 1.2 MTPA · basis unresolved</small></div><div><span>PROJECT LOCATION</span><strong>Vigwaza</strong><small>Chalinze District, Pwani</small></div><div><span>VALUE CHAIN</span><strong>Ore → billets</strong><small>Six planned stages</small></div><div><span>PROJECT STATUS</span><strong>In development</strong><small>Not yet operational</small></div></div>
+      <div className="facts-strip"><div><span>PROPOSED PHASE 1 CAPACITY</span><strong>1.0 MTPA</strong><small>Earlier diagram: 1.2 MTPA · basis unresolved</small></div><div><span>PROJECT LOCATION</span><strong>Vigwaza</strong><small>Chalinze District, Pwani</small></div><div><span>VALUE CHAIN</span><strong>Ore → feedstock</strong><small>Six planned upstream stages</small></div><div><span>PROJECT STATUS</span><strong>In development</strong><small>Not yet operational</small></div></div>
     </section>
 
     <section className="brand-story">
@@ -296,7 +296,7 @@ function Home() {
 
     <section className="journey-section section-pad" id="journey">
       <div className="section-index">03 — MATERIAL JOURNEY</div>
-      <div className="journey-heading"><div><Pill>From resource to material</Pill><h2>One connected<br /><em>transformation.</em></h2></div><p>Six planned stages connect mineral extraction to inspected steel billets. The ironmaking route and final plant design remain unconfirmed.</p></div>
+      <div className="journey-heading"><div><Pill>From resource to material</Pill><h2>One connected<br /><em>transformation.</em></h2></div><p>Six planned upstream stages connect mineral extraction to prepared, metallurgical-grade iron-bearing feedstock. Downstream ironmaking, steelmaking and billets are not yet in operation.</p></div>
       <div className="journey-layout">
         <div className="stage-list" role="tablist" aria-label="Material journey stages">
           {process.map((item, index) => <button key={item.name} role="tab" aria-selected={stage === index} className={`stage-item ${stage === index ? "selected" : ""}`} onClick={() => setStage(index)}><span>{item.label}</span><strong>{item.name}</strong><ArrowUpRight size={16} /></button>)}
@@ -308,16 +308,16 @@ function Home() {
 
     <section className="material-applications section-pad" id="material-applications" aria-labelledby="material-applications-title">
       <div className="section-index">04 — MATERIAL APPLICATIONS</div>
-      <div className="gallery-heading"><div><Pill>From resource to use</Pill><h2 id="material-applications-title">Materials with<br /><em>a clear purpose.</em></h2></div><p>See how the proposed upstream value chain connects Tanzanian iron ore to billet feedstock. The billets are the core planned output; downstream steel processing shown here is the impact this upstream investment is designed to enable, not a current Chalinze operation. These stages and applications are illustrative, not claims of current production or customer relationships.</p></div>
+      <div className="gallery-heading"><div><Pill>From resource to use</Pill><h2 id="material-applications-title">Materials with<br /><em>a clear purpose.</em></h2></div><p>See how the proposed upstream value chain connects Tanzanian iron ore to prepared, metallurgical-grade iron-bearing feedstock. The feedstock is the core planned upstream output; downstream ironmaking, steelmaking and steel products are the impact this upstream base is designed to enable and are not yet in operation. These stages and applications are illustrative, not claims of current production or customer relationships.</p></div>
       <ol className="material-flow" aria-label="Proposed material flow">
-        {["Iron ore", "Beneficiation", "Ironmaking", "Steelmaking", "Continuous casting", "Steel billets", "Downstream steel products", "Construction & industry"].map((stage, index) => <li key={stage}><span>{String(index + 1).padStart(2, "0")}</span><strong>{stage}</strong></li>)}
+        {["Iron ore", "Crushing & screening", "Beneficiation", "Dewatering & handling", "Agglomeration & pelletizing", "Stockpiling & dispatch", "Ironmaking & steelmaking (downstream)", "Steel products (downstream)"].map((stage, index) => <li key={stage}><span>{String(index + 1).padStart(2, "0")}</span><strong>{stage}</strong></li>)}
       </ol>
       <ProcessGallery items={[manufacturingGallery[0], manufacturingGallery[1], manufacturingGallery[5]]} title="Illustrative materials, manufacturing stages and planned billets" />
       <Link className="text-link" to="/products">Explore material applications <ArrowUpRight size={15} /></Link>
     </section>
 
     <section className="product-feature">
-      <div className="product-copy"><div className="section-index">05 — PLANNED BILLET SIZES</div><Pill>Products / planned</Pill><h2>Designed for<br /><em>what’s ahead.</em></h2><p>Steel billets are the principal planned product. Two cross-section sizes are identified in the development brief; detailed specifications remain to be confirmed.</p><div className="sizes"><span>130 × 130 <small>MM</small></span><span>150 × 150 <small>MM</small></span></div><Link className="button button-outline" to="/products">Explore steel billets <ArrowRight size={16} /></Link><small className="fine-print">No grade, chemistry, tolerance or production availability is claimed.</small></div>
+      <div className="product-copy"><div className="section-index">05 — INTEGRATED-PROJECT DOWNSTREAM OUTPUT</div><Pill>Planned downstream stage · not yet produced</Pill><h2>Designed for<br /><em>what’s ahead.</em></h2><p>Steel billets are a planned downstream output of the wider integrated project, following ironmaking, steelmaking and casting. They are distinct from the iron-bearing feedstock prepared by the upstream operation.</p><div className="sizes"><span>130 × 130 <small>MM</small></span><span>150 × 150 <small>MM</small></span></div><Link className="button button-outline" to="/products">Explore products & applications <ArrowRight size={16} /></Link><small className="fine-print">These project-document references are not approved sale specifications or evidence of current production.</small></div>
       <div className="product-model"><Scene kind="billet" /><div className="model-dimension dimension-width">130 / 150 mm</div><div className="model-dimension dimension-length">BILLET / CONCEPT</div></div>
     </section>
 
@@ -488,50 +488,49 @@ function ContentPage({ page }: { page: SitePage }) {
   const faqsPage = page.path === "/faqs";
   if (page.path === "/news") return <Suspense fallback={<main className="visual-gallery-page"><p className="visual-gallery-state" role="status">Loading news and media…</p></main>}><NewsMediaPage page={page} /></Suspense>;
   const selectedBillet = billetSizes[selected];
-  const sceneKind = company ? "logo" : product ? "billet" : technology ? processStages[selected]?.kind ?? "ore" : manufacturing ? "ore" : "process";
+  const sceneKind = company ? "logo" : product || manufacturing ? "ore" : technology ? processStages[selected]?.kind ?? "ore" : "process";
 
   return <main className={`content-page page-layout-${"layout" in page ? page.layout : config.layout}`}>
-    <section className="inner-hero"><div className="inner-hero-copy"><Pill>{page.eyebrow}</Pill><h1>{page.title}</h1><p>{page.summary}</p><div className="breadcrumbs"><Link to="/">Home</Link><span>/</span><span>{page.eyebrow}</span></div></div><div className="inner-hero-visual"><Scene kind={sceneKind} size={product ? selectedBillet.size : undefined} /><span className="concept-stamp">{company ? "APPROVED BRAND / 3D PRESENTATION" : "CONCEPT VISUALIZATION"}</span></div></section>
-    {(technology || manufacturing) && <section className="explorer-section section-pad"><div className="section-index">INTERACTIVE PROCESS EXPLORER</div><h2>Follow the <em>transformation.</em></h2><div className="explorer-layout"><div className="explorer-tabs" role="tablist" aria-label="Process stages">{processStages.map((stage, index) => <button role="tab" aria-selected={selected === index} className={selected === index ? "selected" : ""} onClick={() => setSelected(index)} key={stage.title}><span>{String(index + 1).padStart(2, "0")}</span>{stage.title}<ArrowRight size={15} /></button>)}</div><div className="explorer-model"><Scene kind={processStages[selected]?.kind ?? "ore"} /><div className="process-stage-detail" aria-live="polite"><span>{String(selected + 1).padStart(2, "0")} / {processStages[selected].status}</span><h3>{processStages[selected].title}</h3><p>{processStages[selected].description}</p><dl className="process-data"><div><dt>Input</dt><dd>{processStages[selected].input}</dd></div><div><dt>Output</dt><dd>{processStages[selected].output}</dd></div><div><dt>Equipment & status</dt><dd>{processStages[selected].equipment}</dd></div></dl></div><p className="concept-disclaimer">Concept models illustrate process categories only; they are not the approved equipment selection or final plant configuration.</p></div></div></section>}
-    {product && <section className="product-select section-pad" id="billet-product-specifications">
-      <div className="product-selector-copy">
-        <div className="section-index">PRODUCT SIZE SELECTOR</div>
-        <h2>Choose your <em>billet.</em></h2>
-        <p>Select one of the two planned cross-sections. The interactive 3D billet updates to match your choice.</p>
-        <div className="product-tabs" role="tablist" aria-label="Choose billet cross-section">
-          {billetSizes.map((billet, index) => <button key={billet.size} role="tab" aria-selected={selected === index} className={selected === index ? "selected" : ""} onClick={() => setSelected(index)}>
-            <span>{billet.label}</span><small>Width {billet.width} mm · Height {billet.height} mm</small>
-          </button>)}
-        </div>
-        <div className="selected-dimensions" aria-live="polite">
-          <span>SELECTED CROSS-SECTION</span>
-          <strong>{selectedBillet.width} × {selectedBillet.height} <small>mm</small></strong>
-          <p>Width: {selectedBillet.width} mm <i /> Height: {selectedBillet.height} mm</p>
-        </div>
-        <p className="length-disclaimer">Billet length is not specified in the available company information. The 3D model’s length is illustrative and not a product specification.</p>
-      </div>
-      <div className="product-preview">
-        <div className="product-select-view"><Scene kind="billet" size={selectedBillet.size} /><span className="measure-label">INTERACTIVE 3D · DRAG TO ROTATE</span></div>
-        <BilletDimensions size={selectedBillet.width} />
-      </div>
-    </section>}
+    <section className="inner-hero"><div className="inner-hero-copy"><Pill>{page.eyebrow}</Pill><h1>{page.title}</h1><p>{page.summary}</p><div className="breadcrumbs"><Link to="/">Home</Link><span>/</span><span>{page.eyebrow}</span></div></div><div className="inner-hero-visual"><Scene kind={sceneKind} /><span className="concept-stamp">{company ? "APPROVED BRAND / 3D PRESENTATION" : "CONCEPT VISUALIZATION"}</span></div></section>
     {product && <>
       <section className="product-scenario product-scenario-upstream section-pad" id="upstream-products" aria-labelledby="upstream-products-title">
-        <div className="section-index">SCENARIO 1 / UPSTREAM PRIMARY STEEL MANUFACTURING</div>
+        <div className="section-index">UPSTREAM / MINE TO METALLURGICAL-GRADE RAW MATERIALS</div>
         <div className="product-scenario-heading">
-          <div><Pill>Core business · planned primary operation</Pill><h2 id="upstream-products-title">Iron ore to<br /><em>steel billets.</em></h2></div>
-          <p>Chalinze Steel Mills Ltd is developing an integrated iron ore-to-steel billet manufacturing operation. The proposed process begins with run-of-mine (ROM) iron ore and proceeds through beneficiation, ironmaking, steelmaking and continuous casting.</p>
+          <div><Pill>Core business · planned upstream operation</Pill><h2 id="upstream-products-title">Iron ore to<br /><em>iron-bearing feedstock.</em></h2></div>
+          <p>Chalinze Steel Mills Ltd is developing an integrated upstream operation that transforms run-of-mine (ROM) iron ore into carefully prepared, quality-controlled iron-bearing materials. The proposed process begins with iron ore mining and proceeds through crushing and screening, beneficiation and concentration, dewatering and material handling, agglomeration and pelletizing, and stockpiling, blending and dispatch.</p>
         </div>
         <ol className="product-scenario-flow" aria-label="Proposed upstream manufacturing stages">
-          {["ROM iron ore", "Beneficiation", "Ironmaking", "Steelmaking", "Continuous casting", "Steel billets"].map((stage, index) => <li key={stage}><span>{String(index + 1).padStart(2, "0")}</span><strong>{stage}</strong></li>)}
+          {["Iron ore mining", "Crushing & screening", "Beneficiation & concentration", "Dewatering & handling", "Agglomeration & pelletizing", "Stockpiling & dispatch"].map((stage, index) => <li key={stage}><span>{String(index + 1).padStart(2, "0")}</span><strong>{stage}</strong></li>)}
         </ol>
-        <div className="product-scenario-output"><span>PRINCIPAL PLANNED OUTPUT</span><strong>Steel billets</strong><p>Billets are semi-finished steel products for further processing. They are distinct from finished construction products such as rebar and welded wire mesh.</p><a className="text-link" href="#billet-product-specifications">View planned billet sizes <ArrowDown size={14} /></a></div>
+        <div className="product-scenario-output"><span>PLANNED UPSTREAM OUTPUT</span><strong>Iron-bearing raw materials</strong><p>Calibrated lump ore, beneficiated iron ore concentrate, sinter feed and iron ore pellets, depending on ore characteristics and the selected processing route. These feed downstream ironmaking, which is not yet in operation.</p><a className="text-link" href="#billet-product-specifications">View downstream billet sizes <ArrowDown size={14} /></a></div>
+      </section>
+      <section className="product-select section-pad" id="billet-product-specifications">
+        <div className="product-selector-copy">
+          <div className="section-index">PLANNED DOWNSTREAM BILLET REFERENCE</div>
+          <h2>Billets for a<br /><em>future steel chain.</em></h2>
+          <p>Steel billets are a planned downstream output of the wider integrated project, following ironmaking, steelmaking and continuous casting. They are not yet in production; this selector illustrates nominal cross-sections listed in planning material, subject to engineering confirmation.</p>
+          <div className="product-tabs" role="tablist" aria-label="Choose billet cross-section">
+            {billetSizes.map((billet, index) => <button key={billet.size} role="tab" aria-selected={selected === index} className={selected === index ? "selected" : ""} onClick={() => setSelected(index)}>
+              <span>{billet.label}</span><small>Width {billet.width} mm · Height {billet.height} mm</small>
+            </button>)}
+          </div>
+          <div className="selected-dimensions" aria-live="polite">
+            <span>SELECTED CROSS-SECTION</span>
+            <strong>{selectedBillet.width} × {selectedBillet.height} <small>mm</small></strong>
+            <p>Width: {selectedBillet.width} mm <i /> Height: {selectedBillet.height} mm</p>
+          </div>
+          <p className="length-disclaimer">Billet length is not specified in the available company information. The 3D model’s length is illustrative and not a product specification.</p>
+        </div>
+        <div className="product-preview">
+          <div className="product-select-view"><Scene kind="billet" size={selectedBillet.size} /><span className="measure-label">INTERACTIVE 3D · DRAG TO ROTATE</span></div>
+          <BilletDimensions size={selectedBillet.width} />
+        </div>
       </section>
       <section className="product-scenario product-scenario-downstream section-pad" id="product-applications" aria-labelledby="downstream-products-title">
         <div className="section-index">IMPACT OF UPSTREAM / DOWNSTREAM OPPORTUNITIES</div>
         <div className="product-scenario-heading">
-          <div><Pill>Impact of upstream · not a Chalinze operation</Pill><h2 id="downstream-products-title">Steel products &amp;<br /><em>downstream applications.</em></h2></div>
-          <p>Steel billets are semi-finished products that can serve as feedstock for further downstream processing and manufacturing, including reinforcement bars, structural steel sections, wire rods and other value-added steel products. These represent the downstream impact that Chalinze Steel Mills Ltd's planned upstream billet production is designed to enable, and may inform a future downstream manufacturing phase. Chalinze has not started downstream production and is not currently producing any of these items; any such phase remains subject to future project decisions and is not a confirmed company commitment.</p>
+          <div><Pill>Impact of upstream · illustrative industry opportunity</Pill><h2 id="downstream-products-title">Steel products &amp;<br /><em>downstream applications.</em></h2></div>
+          <p>Steel billets are semi-finished products that can serve as feedstock for further downstream processing and manufacturing, including reinforcement bars, structural steel sections, wire rods and other value-added steel products. These represent the downstream impact that Chalinze Steel Mills Ltd's planned upstream iron-bearing feedstock is designed to enable, and may inform a future downstream manufacturing phase. Chalinze has not started downstream production and is not currently producing any of these items; any such phase remains subject to future project decisions and is not a confirmed company commitment.</p>
         </div>
         <div className="downstream-product-group">
           <h3 id="primary-downstream-title">A. Primary downstream products — steel rolling</h3>
@@ -562,7 +561,7 @@ function ContentPage({ page }: { page: SitePage }) {
           </div>
           <ProcessGallery items={[applicationGallery[1]]} title="Illustrative downstream construction application" />
         </div>
-        <p className="product-scenario-disclaimer">These examples describe the wider downstream steel industry and the industrial opportunity created by the impact of locally manufactured billets. They are not confirmed Chalinze products, facilities or operating capabilities. Chalinze has not started downstream production; the company's primary planned product is steel billets.</p>
+        <p className="product-scenario-disclaimer">These examples describe the wider downstream steel industry and the industrial opportunity created by the impact of the planned upstream iron-bearing feedstock. They are not confirmed Chalinze products, facilities or operating capabilities. Chalinze has not started downstream production; the company's planned upstream output is metallurgical-grade iron-bearing raw materials.</p>
       </section>
     </>}
     {page.path === "/sustainability" && <section className="energy-management section-pad" aria-labelledby="energy-management-title">

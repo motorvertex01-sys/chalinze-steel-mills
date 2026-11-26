@@ -812,6 +812,41 @@ body.dialog-open { overflow: hidden; }
 .primary-output-statement span { color: #989e9e; font: 8px var(--mono); letter-spacing: .12em; }
 .primary-output-statement strong { color: #e5e6e2; font: 500 clamp(15px, 2vw, 22px) var(--display); letter-spacing: .02em; }
 .primary-output-statement i { width: 5px; height: 5px; margin-left: auto; transform: rotate(45deg); background: #829480; }
+.upstream-foundation { color: #e6e8e5; background: linear-gradient(145deg,#172027,#111518 72%); }
+.upstream-foundation-intro { display: grid; grid-template-columns: .82fr 1.18fr; align-items: center; gap: clamp(30px,5vw,76px); }
+.upstream-foundation-intro h2 { margin: 15px 0 20px; color: #eef0ed; font: 500 clamp(40px,5vw,62px)/1.02 var(--display); letter-spacing: -.065em; }
+.upstream-foundation-intro h2 em { color: var(--orange); font-style: normal; }
+.upstream-foundation-intro > div > p { margin: 0 0 14px; color: #c3c9c8; font-size: 15px; line-height: 1.8; }
+.upstream-value-chain-figure { margin: 0; padding: 10px; border: 1px solid rgba(214,221,225,.18); background: linear-gradient(145deg,rgba(255,255,255,.07),rgba(255,255,255,.015)); box-shadow: 0 20px 52px rgba(0,0,0,.24); }
+.upstream-value-chain-figure img { display: block; width: 100%; height: auto; }
+.upstream-value-chain-figure figcaption { padding: 13px 9px 5px; color: #c0c8c8; font-size: 13px; line-height: 1.7; }
+.upstream-value-chain-figure figcaption a { color: #f0c67f; text-decoration: underline; text-underline-offset: 3px; }
+.upstream-value-chain-figure figcaption a:hover, .upstream-value-chain-figure figcaption a:focus-visible { color: #fff; }
+.upstream-reference-grid { display: grid; grid-template-columns: 1fr 1fr; gap: clamp(28px,5vw,72px); margin-top: 72px; }
+.upstream-reference-grid > section, .upstream-equipment-scroll { min-width: 0; }
+.upstream-reference-grid h3, .upstream-strategic h3 { margin: 12px 0 14px; color: #edf0ed; font: 500 clamp(27px,3vw,39px)/1.1 var(--display); letter-spacing: -.045em; }
+.upstream-reference-lede, .upstream-equipment-note { margin: 0 0 17px; color: #c3c9c8; font-size: 14px; line-height: 1.7; }
+.upstream-output-grid { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 12px; }
+.upstream-output-grid article { min-width: 0; padding: 17px; border: 1px solid rgba(214,221,225,.15); background: linear-gradient(145deg,rgba(255,255,255,.055),rgba(255,255,255,.012)); box-shadow: 0 10px 24px rgba(0,0,0,.12); }
+.upstream-output-grid article > span { color: #e0b56d; font: 10px/1.5 var(--mono); letter-spacing: .05em; }
+.upstream-output-grid h4 { margin: 13px 0 8px; color: #f0f1ee; font: 500 18px/1.25 var(--display); }
+.upstream-output-grid p { margin: 0; color: #c3c9c8; font-size: 14px; line-height: 1.7; }
+.upstream-equipment-scroll { overflow-x: auto; border: 1px solid rgba(214,221,225,.16); }
+.upstream-equipment-table { width: 100%; border-collapse: collapse; background: rgba(255,255,255,.025); font-size: 14px; line-height: 1.6; }
+.upstream-equipment-table th, .upstream-equipment-table td { padding: 11px 13px; text-align: left; vertical-align: top; border-bottom: 1px solid rgba(214,221,225,.13); }
+.upstream-equipment-table thead th { color: #172B40; background: #dce2e5; font-weight: 600; }
+.upstream-equipment-table tbody th { width: 34%; color: #e5e8e5; font-weight: 600; }
+.upstream-equipment-table tbody td { color: #c3c9c8; }
+.upstream-equipment-table tbody tr:last-child th, .upstream-equipment-table tbody tr:last-child td { border-bottom: 0; }
+.upstream-equipment-note { margin: 12px 0 0; font-size: 13px; }
+.upstream-strategic { display: grid; grid-template-columns: .7fr 1.3fr; gap: 45px; margin-top: 74px; padding: 34px 0; border-top: 1px solid rgba(214,221,225,.17); border-bottom: 1px solid rgba(214,221,225,.17); }
+.upstream-strategic ol { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 18px 24px; padding: 0; margin: 0; list-style: none; }
+.upstream-strategic li { display: grid; grid-template-columns: 32px 1fr; gap: 12px; align-items: start; }
+.upstream-strategic li > span { color: #e0b56d; font: 11px var(--mono); }
+.upstream-strategic li strong { color: #eef0ed; font-size: 15px; }
+.upstream-strategic li p { margin: 5px 0 0; color: #c3c9c8; font-size: 14px; line-height: 1.65; }
+.upstream-route-caveat { margin: 28px 0 0; padding: 18px 20px; color: #e2e6e3; border-left: 3px solid var(--orange); background: linear-gradient(100deg,rgba(198,154,69,.15),rgba(198,154,69,.04)); box-shadow: 0 10px 24px rgba(0,0,0,.12); font-size: 14px; line-height: 1.75; }
+.upstream-route-caveat strong { margin-right: 7px; color: #f0c67f; }
 .section-pad.production-journey, .section-pad.quality-journey, .section-pad.downstream-section, .section-pad.manufacturing-infrastructure, .section-pad.responsible-production, .section-pad.manufacturing-industries { padding-right: max(8vw, calc((100% - 1220px)/2)); padding-left: max(8vw, calc((100% - 1220px)/2)); }
 .production-journey { background: linear-gradient(145deg,#15191b,#101315 66%); scroll-margin-top: 68px; }
 .manufacturing-section-heading { display: flex; align-items: end; justify-content: space-between; gap: 40px; margin: 0 0 42px; }
@@ -1022,6 +1057,14 @@ body.dialog-open { overflow: hidden; }
   .primary-output-statement i { position: absolute; right: 8vw; }
   .manufacturing-section-heading { display: block; margin-bottom: 29px; }
   .manufacturing-section-heading > p { width: auto; max-width: 490px; margin-top: 17px; }
+  .upstream-foundation-intro, .upstream-reference-grid, .upstream-strategic { grid-template-columns: 1fr; }
+  .upstream-foundation-intro { gap: 24px; }
+  .upstream-reference-grid { gap: 38px; margin-top: 48px; }
+  .upstream-strategic { gap: 18px; margin-top: 48px; padding: 25px 0; }
+  .upstream-strategic ol { grid-template-columns: 1fr; }
+  .upstream-value-chain-figure { padding: 6px; }
+  .upstream-value-chain-figure figcaption { padding: 10px 5px 4px; font-size: 13px; }
+  .upstream-equipment-table { min-width: 470px; }
   .production-timeline { grid-template-columns: repeat(6,minmax(124px,1fr)); overflow-x: auto; }
   .production-timeline-step { min-height: 82px; padding: 12px 10px; }
   .production-timeline-title { font-size: 8px; }
@@ -1547,9 +1590,11 @@ body { color: #172B40; background: var(--black); }
 .inner-hero { padding-top: 214px; }
 .leadership-hero { padding-top: 214px; }
 .visual-gallery-hero { padding-top: 214px; }
-.leader-card-media, .leader-portrait, .leader-placeholder, .leader-vacancy-art, .leader-support-art { max-height: 205px; }
-.leader-card-media { height: 205px; aspect-ratio: auto; }
-.is-featured-grid .leader-card-media, .is-featured-grid .leader-portrait { height: 220px; max-height: 220px; }
+.leader-card-media, .leader-placeholder, .leader-vacancy-art, .leader-support-art { max-height: 105px; }
+.leader-card-media { height: 105px; aspect-ratio: auto; }
+.leader-card-media .leader-portrait { max-height: 105px; }
+.is-featured-grid .leader-card-media, .is-featured-grid .leader-placeholder, .is-featured-grid .leader-vacancy-art, .is-featured-grid .leader-support-art { height: 105px; max-height: 105px; }
+.is-featured-grid .leader-card-media .leader-portrait { height: 100%; max-height: 105px; }
 .home-page p, .content-page p, .contact-card p, .corporate-document-card p, .location-experience-copy > p, .location-map-card > p, .faq-item > p { font-size: var(--text-body); }
 .newsroom-update-card p { font-size: max(14px,var(--text-body)); }
 .leadership-hero-copy > p, .leadership-section-heading > p, .governance-statement > p { font-size: var(--text-body); }
@@ -1587,9 +1632,11 @@ body[data-theme="dark"] .site-design-fields > h3 { color: #e9e9e4; }
   .main-nav { max-height: calc(100vh - 114px); }
   .hero { padding-top: 114px; }
   .inner-hero, .leadership-hero, .visual-gallery-hero { padding-top: 164px; }
-  .leader-card-media, .leader-portrait, .leader-placeholder, .leader-vacancy-art, .leader-support-art { max-height: 170px; }
-  .leader-card-media { height: 170px; }
-  .is-featured-grid .leader-card-media, .is-featured-grid .leader-portrait { height: 185px; max-height: 185px; }
+  .leader-card-media, .leader-placeholder, .leader-vacancy-art, .leader-support-art { max-height: 82px; }
+  .leader-card-media { height: 82px; }
+  .leader-card-media .leader-portrait { max-height: 82px; }
+  .is-featured-grid .leader-card-media, .is-featured-grid .leader-placeholder, .is-featured-grid .leader-vacancy-art, .is-featured-grid .leader-support-art { height: 82px; max-height: 82px; }
+  .is-featured-grid .leader-card-media .leader-portrait { height: 100%; max-height: 82px; }
   .admin-page .header-inner { min-height: 114px; }
 }
 body[data-theme="dark"] {
