@@ -8,6 +8,8 @@ Cloudflare Workers is the production host. The Worker API uses Cloudflare D1 for
 
 The Worker serves the Vite SPA and implements the existing public and admin API paths through an Express Node HTTP entrypoint using Cloudflare's `httpServerHandler`. Profiles, content, accounts, sessions, audit history, change history, upload metadata and uploaded media are held in D1. The existing Render disk remains an export source until migration and verification complete. Read [the data recovery report](./docs/DATA_RECOVERY_REPORT.md) before choosing an import source: local snapshots can differ from production.
 
+For Namecheap domain/DNS setup or a separate cPanel/VPS deployment, see the [Namecheap setup and deployment guide](./docs/NAMECHEAP_DEPLOYMENT_GUIDE.md). It documents the current D1-to-Node data migration limitation and warns against switching production before verifying imported content and media.
+
 ### Configure D1
 
 ```powershell
